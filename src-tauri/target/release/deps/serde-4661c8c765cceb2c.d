@@ -1,0 +1,14 @@
+/Users/adriandrew/Desktop/operator-os/src-tauri/target/release/deps/serde-4661c8c765cceb2c.d: /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/adriandrew/Desktop/operator-os/src-tauri/target/release/build/serde-0d6b5838e6c11494/out/private.rs
+
+/Users/adriandrew/Desktop/operator-os/src-tauri/target/release/deps/libserde-4661c8c765cceb2c.rlib: /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/adriandrew/Desktop/operator-os/src-tauri/target/release/build/serde-0d6b5838e6c11494/out/private.rs
+
+/Users/adriandrew/Desktop/operator-os/src-tauri/target/release/deps/libserde-4661c8c765cceb2c.rmeta: /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/adriandrew/Desktop/operator-os/src-tauri/target/release/build/serde-0d6b5838e6c11494/out/private.rs
+
+/Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/adriandrew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/adriandrew/Desktop/operator-os/src-tauri/target/release/build/serde-0d6b5838e6c11494/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/adriandrew/Desktop/operator-os/src-tauri/target/release/build/serde-0d6b5838e6c11494/out
