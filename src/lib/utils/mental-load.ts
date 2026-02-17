@@ -34,6 +34,19 @@ export function getTaskMLU(task: Pick<Task, 'weight' | 'energy'>): number {
   return MLU_TABLE[weight]?.[energy] ?? 2;
 }
 
+/**
+ * Estimate how long a task takes (in minutes) based on its weight.
+ * Maps directly to the auto-assigned category estimates:
+ *   low = ~5min, medium = ~30min, high = ~60min
+ * Returns the task's explicit estimated_minutes if set, otherwise derives from weight.
+ */
+const WEIGHT_MINUTES: Record<string, number> = { low: 5, medium: 30, high: 60 };
+
+export function getEstimatedMinutes(task: Pick<Task, 'weight' | 'energy'> & { estimated_minutes?: number | null }): number {
+  if (task.estimated_minutes && task.estimated_minutes > 0) return task.estimated_minutes;
+  return WEIGHT_MINUTES[task.weight || 'medium'] ?? 30;
+}
+
 export function calculateDailyLoad(tasks: Pick<Task, 'weight' | 'energy' | 'is_personal'>[]): number {
   return tasks
     .filter(t => !('is_personal' in t && t.is_personal))
@@ -51,7 +64,7 @@ export function getLoadLevel(mlu: number, capacity: number = DAILY_CAPACITY): Lo
 
 export function getLoadColor(level: LoadLevel): string {
   switch (level) {
-    case 'light': return 'text-emerald-400';
+    case 'light': return 'text-accent';
     case 'moderate': return 'text-accent';
     case 'heavy': return 'text-amber-400';
     case 'overloaded': return 'text-red-400';
@@ -60,7 +73,7 @@ export function getLoadColor(level: LoadLevel): string {
 
 export function getLoadBgColor(level: LoadLevel): string {
   switch (level) {
-    case 'light': return 'bg-emerald-500/10 border-emerald-500/20';
+    case 'light': return 'bg-accent/10 border-accent/20';
     case 'moderate': return 'bg-accent/10 border-accent/20';
     case 'heavy': return 'bg-amber-500/10 border-amber-500/20';
     case 'overloaded': return 'bg-red-500/10 border-red-500/20';
@@ -75,10 +88,11 @@ export function getOverloadSuggestion(tasks: Pick<Task, 'weight' | 'energy' | 'i
   const totalMLU = calculateDailyLoad(tasks);
   if (totalMLU <= capacity) return null;
 
+  const nonPersonal = tasks.filter(t => !('is_personal' in t && t.is_personal));
   const excess = totalMLU - capacity;
-  const highCount = tasks.filter(t => (t.weight || 'medium') === 'high').length;
-  const mediumCount = tasks.filter(t => (t.weight || 'medium') === 'medium').length;
-  const creativeCount = tasks.filter(t => (t.energy || 'admin') === 'creative').length;
+  const highCount = nonPersonal.filter(t => (t.weight || 'medium') === 'high').length;
+  const mediumCount = nonPersonal.filter(t => (t.weight || 'medium') === 'medium').length;
+  const creativeCount = nonPersonal.filter(t => (t.energy || 'admin') === 'creative').length;
 
   // Build contextual suggestion
   if (highCount >= 4) {

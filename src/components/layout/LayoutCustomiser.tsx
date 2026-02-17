@@ -24,7 +24,7 @@ export function LayoutCustomiser({ page, layout, onLayoutChange }: LayoutCustomi
   const keys = Object.keys(labels) as Array<string>;
   const section = layout[page] as Record<string, boolean>;
 
-  const onCount = keys.filter(k => section[k]).length;
+  const onCount = keys.filter(k => section[k] ?? true).length;
 
   // Close on outside click
   useEffect(() => {
@@ -40,7 +40,7 @@ export function LayoutCustomiser({ page, layout, onLayoutChange }: LayoutCustomi
   function handleToggle(key: string) {
     const updated = {
       ...layout,
-      [page]: { ...layout[page], [key]: !section[key] },
+      [page]: { ...layout[page], [key]: !(section[key] ?? true) },
     };
     onLayoutChange(updated);
     setSaved(false);
@@ -86,7 +86,7 @@ export function LayoutCustomiser({ page, layout, onLayoutChange }: LayoutCustomi
               <p className="text-[9px] text-text-tertiary mt-0.5">{onCount}/{keys.length} visible</p>
             </div>
             <div className="flex items-center gap-1.5">
-              {saved && <span className="text-[9px] text-emerald-400 animate-fade-in">Saved</span>}
+              {saved && <span className="text-[9px] text-accent animate-fade-in">Saved</span>}
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -108,17 +108,17 @@ export function LayoutCustomiser({ page, layout, onLayoutChange }: LayoutCustomi
               >
                 <span className={cn(
                   'text-[11px] transition-colors',
-                  section[key] ? 'text-text-primary' : 'text-text-tertiary'
+                  (section[key] ?? true) ? 'text-text-primary' : 'text-text-tertiary'
                 )}>
                   {(labels as Record<string, string>)[key]}
                 </span>
                 <div className={cn(
                   'relative w-8 h-[18px] rounded-full transition-colors duration-200 flex-shrink-0',
-                  section[key] ? 'bg-accent' : 'bg-surface-tertiary border border-border'
+                  (section[key] ?? true) ? 'bg-accent' : 'bg-surface-tertiary border border-border'
                 )}>
                   <span className={cn(
                     'absolute top-[3px] left-[3px] w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200',
-                    section[key] && 'translate-x-[14px]'
+                    (section[key] ?? true) && 'translate-x-[14px]'
                   )} />
                 </div>
               </button>

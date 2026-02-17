@@ -144,7 +144,7 @@ export function CelebrationBurst({ trigger, message = 'All done!' }: Celebration
           'px-6 py-3 rounded-2xl bg-accent/90 backdrop-blur-md shadow-lg shadow-accent/30',
           'animate-celebration-message'
         )}>
-          <p className="text-base font-bold text-black tracking-tight">{message}</p>
+          <p className="text-base font-bold text-white tracking-tight">{message}</p>
         </div>
       </div>
     </div>

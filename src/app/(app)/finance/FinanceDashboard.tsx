@@ -18,6 +18,8 @@ import { upsertClientOverride, deleteClientOverride, getClientOverridesForClient
 import { updateFinanceSettings } from '@/actions/settings';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import { toCSV, downloadCSV, fileDate } from '@/lib/utils/export';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 const BankImportModal = dynamic(() => import('@/components/finance/BankImportModal').then(m => ({ default: m.BankImportModal })), { ssr: false });
 const IncomeChart = dynamic(() => import('@/components/finance/IncomeChart').then(m => ({ default: m.IncomeChart })), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center text-xs text-text-tertiary">Loading chart...</div> });
@@ -83,7 +85,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [showSnapshotModal, setShowSnapshotModal] = useState(false);
   const [showBankImport, setShowBankImport] = useState(false);
-  const [expandedBox, setExpandedBox] = useState<'revenue' | 'expenses' | 'tax' | 'net' | null>(null);
+  const [expandedBox, setExpandedBox] = useState<'revenue' | 'expenses' | 'net' | 'possible' | null>(null);
   const [editingOverrideClientId, setEditingOverrideClientId] = useState<string | null>(null);
   const [overrideEditAmount, setOverrideEditAmount] = useState('');
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -177,7 +179,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   const monthlyExpenses = (!isCurrent && snapshot?.total_expenses != null) ? Number(snapshot.total_expenses) : totalBusinessCosts;
   const taxableProfit = Math.max(0, monthlyRevenue - monthlyExpenses);
   const taxReserve = taxableProfit * UK_CORP_TAX_RATE;
-  const leftInCompany = taxableProfit - taxReserve;
+  const leftInCompany = taxableProfit; // revenue - expenses (tax shown separately, paid at year end)
 
   // Pipeline projected revenue (unweighted total for backward compat)
   const pipelineRevenue = pipelineLeads
@@ -306,9 +308,14 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   const effectiveExpenses = isFuture ? totalBusinessCosts : monthlyExpenses; // carry forward current biz expenses + staff
   const effectiveTaxableProfit = Math.max(0, effectiveRevenue - effectiveExpenses);
   const effectiveTaxReserve = effectiveTaxableProfit * UK_CORP_TAX_RATE;
-  const effectiveLeftInCompany = effectiveTaxableProfit - effectiveTaxReserve;
+  const effectiveLeftInCompany = effectiveTaxableProfit; // revenue - expenses (tax shown separately)
 
   // ━━━ What-If Scenario Calculations ━━━
+  // Use effective values as baseline so What-If works correctly for future months too
+  const baselineRevenue = isFuture && futureProjection ? effectiveRevenue : monthlyRevenue;
+  const baselineExpenses = isFuture ? effectiveExpenses : monthlyExpenses;
+  const baselineLeftInCompany = isFuture ? effectiveLeftInCompany : leftInCompany;
+
   const whatIfCalc = useMemo(() => {
     if (!whatIfMode) return null;
     // Revenue: active clients minus excluded, plus hypotheticals
@@ -323,11 +330,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
     // Tax + profit
     const scenarioTaxableProfit = Math.max(0, scenarioRevenue - scenarioExpenses);
     const scenarioTaxReserve = scenarioTaxableProfit * UK_CORP_TAX_RATE;
-    const scenarioLeftInCompany = scenarioTaxableProfit - scenarioTaxReserve;
-    // Deltas
-    const revenueDelta = scenarioRevenue - monthlyRevenue;
-    const expensesDelta = scenarioExpenses - monthlyExpenses;
-    const profitDelta = scenarioLeftInCompany - leftInCompany;
+    const scenarioLeftInCompany = scenarioTaxableProfit; // revenue - expenses (tax shown separately)
+    // Deltas — compare against the effective baseline (handles future months correctly)
+    const revenueDelta = scenarioRevenue - baselineRevenue;
+    const expensesDelta = scenarioExpenses - baselineExpenses;
+    const profitDelta = scenarioLeftInCompany - baselineLeftInCompany;
     return {
       revenue: scenarioRevenue,
       expenses: scenarioExpenses,
@@ -339,7 +346,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
       expensesDelta,
       profitDelta,
     };
-  }, [whatIfMode, whatIfExcludedClients, whatIfHypotheticals, whatIfExpenseScale, whatIfStaffCostOverride, activeClients, liveBusinessExpenses, staffCost, monthlySalary, monthlyRevenue, monthlyExpenses, leftInCompany, overrideMap]);
+  }, [whatIfMode, whatIfExcludedClients, whatIfHypotheticals, whatIfExpenseScale, whatIfStaffCostOverride, activeClients, liveBusinessExpenses, staffCost, monthlySalary, baselineRevenue, baselineExpenses, baselineLeftInCompany, overrideMap]);
 
   function resetWhatIf() {
     setWhatIfExcludedClients(new Set());
@@ -349,6 +356,16 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
     setWhatIfNewClientName('');
     setWhatIfNewClientAmount('');
   }
+
+  // ━━━ Salary Allowance Tracker ━━━
+  // UK personal allowance: £12,570/year — salary above this is taxable (effectively a dividend for the company)
+  const annualSalaryProjected = monthlySalary * 12;
+  const salaryAllowanceUsedPct = annualSalaryProjected > 0 ? Math.min(100, (annualSalaryProjected / UK_PERSONAL_ALLOWANCE) * 100) : 0;
+  const salaryExceedsAllowance = annualSalaryProjected > UK_PERSONAL_ALLOWANCE;
+  const salaryExcess = Math.max(0, annualSalaryProjected - UK_PERSONAL_ALLOWANCE);
+  // How many months of current salary until allowance is hit
+  const monthsUntilAllowanceHit = monthlySalary > 0 ? Math.floor(UK_PERSONAL_ALLOWANCE / monthlySalary) : Infinity;
+  const monthlyAllowanceLimit = Math.floor(UK_PERSONAL_ALLOWANCE / 12); // £1,047/month
 
   // Revenue stability — Herfindahl-Hirschman Index weighted by renewal probability
   const { stabilityScore, stabilityInsights } = useMemo(() => {
@@ -422,15 +439,15 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   ];
 
   return (
-    <div className="space-y-6 relative z-0">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Finance</h1>
-          <p className="text-sm text-text-tertiary mt-1">Revenue, expenses & projections</p>
+    <div className="space-y-4 sm:space-y-6 relative z-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">Finance</h1>
+          <p className="text-xs sm:text-sm text-text-tertiary mt-0.5 sm:mt-1">Revenue, expenses & projections</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Month Navigator */}
-          <div className="relative flex items-center gap-1 bg-surface-tertiary/40 rounded-xl border border-border/50 px-1 py-0.5">
+          <div className="relative flex items-center gap-0.5 sm:gap-1 bg-surface-tertiary/40 rounded-xl border border-border/50 px-0.5 sm:px-1 py-0.5">
             <button
               onClick={() => navigateMonth(shiftMonth(currentMonth, -1))}
               className="p-1.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
@@ -443,7 +460,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             <button
               onClick={() => setShowMonthPicker(prev => !prev)}
               className={cn(
-                'px-3 py-1 text-xs font-medium rounded-lg transition-colors min-w-[120px] text-center cursor-pointer',
+                'px-1.5 sm:px-3 py-1 text-[11px] sm:text-xs font-medium rounded-lg transition-colors min-w-[90px] sm:min-w-[120px] text-center cursor-pointer',
                 isCurrent
                   ? 'text-accent'
                   : 'text-text-secondary hover:text-text-primary'
@@ -525,7 +542,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           <button
             onClick={() => { setWhatIfMode(prev => !prev); if (whatIfMode) resetWhatIf(); }}
             className={cn(
-              'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer',
+              'hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer',
               whatIfMode
                 ? 'bg-purple-500/15 text-purple-400 border-purple-500/40 shadow-lg shadow-purple-500/10'
                 : 'bg-surface-tertiary/40 text-text-secondary border-border/50 hover:text-text-primary hover:bg-surface-tertiary'
@@ -538,8 +555,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               {whatIfMode ? 'Exit What-If' : 'What-If'}
             </span>
           </button>
-          <Button size="sm" variant="secondary" onClick={() => setShowSnapshotModal(true)}>+ Monthly Record</Button>
-          <Button size="sm" variant="ghost" onClick={() => setShowBankImport(true)}>
+          <Button size="sm" variant="secondary" onClick={() => setShowSnapshotModal(true)} className="hidden sm:inline-flex">+ Monthly Record</Button>
+          <Button size="sm" variant="ghost" onClick={() => setShowBankImport(true)} className="hidden sm:inline-flex">
             <span className="flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -549,6 +566,55 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               Import CSV
             </span>
           </Button>
+          <ExportButton
+            className="hidden sm:flex"
+            options={[
+              {
+                label: 'Export Expenses (CSV)',
+                description: `${getMonthLabel(currentMonth)} expenses`,
+                action: () => {
+                  const csv = toCSV(expenses.map(e => ({
+                    Date: e.date,
+                    Description: e.description,
+                    Amount: e.amount,
+                    Category: e.category || '',
+                    Type: e.expense_type || 'business',
+                  })));
+                  downloadCSV(csv, `nexus-expenses-${currentMonth}-${fileDate()}.csv`);
+                },
+              },
+              {
+                label: 'Export Clients (CSV)',
+                description: 'Active clients with retainers',
+                action: () => {
+                  const csv = toCSV(clients.map(c => ({
+                    Name: c.name,
+                    Retainer: c.retainer_amount || 0,
+                    Active: c.is_active ? 'Yes' : 'No',
+                    'Risk Flag': c.risk_flag || 'None',
+                    'Contract End': c.contract_end || '',
+                    'Renewal %': c.renewal_probability ?? '',
+                  })));
+                  downloadCSV(csv, `nexus-clients-${fileDate()}.csv`);
+                },
+              },
+              {
+                label: 'Export Monthly History (CSV)',
+                description: 'All financial snapshots',
+                action: () => {
+                  const csv = toCSV(history.map(s => ({
+                    Month: s.month,
+                    Revenue: s.total_revenue || 0,
+                    Expenses: s.total_expenses || 0,
+                    'Corp Tax': s.corp_tax_reserve || 0,
+                    'Starting Balance': s.starting_balance || 0,
+                    'Dividend Paid': s.dividend_paid || 0,
+                  })));
+                  downloadCSV(csv, `nexus-financial-history-${fileDate()}.csv`);
+                },
+              },
+            ]}
+          />
         </div>
       </div>
 
@@ -750,14 +816,35 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         </div>
       )}
 
+      {/* Mobile action bar — What-If, Record, Import (hidden on desktop where they're in the header) */}
+      <div className="flex sm:hidden items-center gap-2 -mt-1">
+        <button
+          onClick={() => { setWhatIfMode(prev => !prev); if (whatIfMode) resetWhatIf(); }}
+          className={cn(
+            'px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all border cursor-pointer',
+            whatIfMode
+              ? 'bg-purple-500/15 text-purple-400 border-purple-500/40'
+              : 'bg-surface-tertiary/40 text-text-secondary border-border/50'
+          )}
+        >
+          {whatIfMode ? 'Exit What-If' : '🔧 What-If'}
+        </button>
+        <button onClick={() => setShowSnapshotModal(true)} className="px-2.5 py-1.5 rounded-xl text-[11px] font-medium bg-surface-tertiary/40 text-text-secondary border border-border/50 cursor-pointer">
+          + Record
+        </button>
+        <button onClick={() => setShowBankImport(true)} className="px-2.5 py-1.5 rounded-xl text-[11px] font-medium bg-surface-tertiary/40 text-text-secondary border border-border/50 cursor-pointer">
+          CSV
+        </button>
+      </div>
+
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-0 sm:gap-1 border-b border-border overflow-x-auto scrollbar-none overscroll-x-contain touch-pan-x">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              'px-4 py-2.5 text-sm font-medium transition-colors duration-200 border-b-2 -mb-px cursor-pointer',
+              'px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors duration-200 border-b-2 -mb-px cursor-pointer whitespace-nowrap flex-shrink-0',
               activeTab === tab.key
                 ? 'text-accent border-accent'
                 : 'text-text-secondary border-transparent hover:text-text-primary'
@@ -797,7 +884,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                   <p className="text-[9px] text-text-tertiary mt-1">Pipeline ≥60%</p>
                   <p className="text-[8px] text-amber-400/40 mt-1.5">Tap for breakdown</p>
                 </button>
-                <button onClick={() => setExpandedBox(expandedBox === 'tax' ? null : 'tax')} className={cn('card-surface border border-purple-500/30 rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'tax' ? 'ring-1 ring-purple-500/30' : '')}>
+                <button onClick={() => setExpandedBox(expandedBox === 'possible' ? null : 'possible')} className={cn('card-surface border border-purple-500/30 rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'possible' ? 'ring-1 ring-purple-500/30' : '')}>
                   <p className="text-[10px] font-semibold text-purple-400 uppercase tracking-wider mb-1">Possible</p>
                   <p className="text-xl font-bold text-purple-400">{formatCurrency(futureProjection.possible)}</p>
                   <p className="text-[9px] text-text-tertiary mt-1">Pipeline &lt;60%</p>
@@ -805,50 +892,36 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 </button>
               </div>
 
-              {/* Bottom row: expenses + tax on confirmed */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {/* Bottom row: expenses + left in company */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="card-surface border border-border rounded-2xl p-4">
                   <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Est. Expenses</p>
                   <p className="text-lg font-bold text-text-secondary">{formatCurrency(effectiveExpenses)}</p>
                   <p className="text-[9px] text-text-tertiary mt-1">Carried from current</p>
                 </div>
-                <div className="card-surface border border-border rounded-2xl p-4">
-                  <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Tax Reserve</p>
-                  <p className="text-lg font-bold text-text-secondary">{formatCurrency(effectiveTaxReserve)}</p>
-                  <p className="text-[9px] text-text-tertiary mt-1">19% on confirmed</p>
-                </div>
                 <div className="card-surface border border-accent/30 rounded-2xl p-4 bg-accent/5">
                   <p className="text-[10px] font-semibold text-accent uppercase tracking-wider mb-1">Est. Left in Co.</p>
                   <p className="text-lg font-bold text-accent">{formatCurrency(effectiveLeftInCompany)}</p>
-                  <p className="text-[9px] text-accent/60 mt-1">Confirmed only</p>
+                  <p className="text-[9px] text-amber-400/60 mt-1">~{formatCurrency(effectiveTaxReserve)} tax</p>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-surface border rounded-2xl card-hover p-5 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'border-accent/40 ring-1 ring-accent/20' : 'border-border')}>
-                <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Monthly Revenue</p>
+                <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Revenue</p>
                 <p className="text-2xl font-bold text-text-primary">{formatCurrency(monthlyRevenue)}</p>
-                <p className="text-[10px] text-text-tertiary mt-1">{activeClients.length} active client{activeClients.length !== 1 ? 's' : ''}</p>
-                <p className="text-[8px] text-text-tertiary/50 mt-2">Tap for breakdown</p>
+                <p className="text-[10px] text-text-tertiary mt-1">{activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
               </button>
               <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-surface border rounded-2xl card-hover p-5 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'border-accent/40 ring-1 ring-accent/20' : 'border-border')}>
-                <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Monthly Expenses</p>
+                <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Expenses</p>
                 <p className="text-2xl font-bold text-text-secondary">{formatCurrency(monthlyExpenses)}</p>
-                <p className="text-[10px] text-text-tertiary mt-1">{isCurrent ? 'This month' : getMonthLabel(currentMonth)}</p>
-                <p className="text-[8px] text-text-tertiary/50 mt-2">Tap for breakdown</p>
-              </button>
-              <button onClick={() => setExpandedBox(expandedBox === 'tax' ? null : 'tax')} className={cn('card-surface border rounded-2xl card-hover p-5 text-left transition-all cursor-pointer', expandedBox === 'tax' ? 'border-accent/40 ring-1 ring-accent/20' : 'border-border')}>
-                <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Tax Reserve</p>
-                <p className="text-2xl font-bold text-text-secondary">{formatCurrency(taxReserve)}</p>
-                <p className="text-[10px] text-text-tertiary mt-1">19% corp tax</p>
-                <p className="text-[8px] text-text-tertiary/50 mt-2">Tap for calculation</p>
+                <p className="text-[10px] text-text-tertiary mt-1">Inc. salary & staff</p>
               </button>
               <button onClick={() => setExpandedBox(expandedBox === 'net' ? null : 'net')} className={cn('card-surface border rounded-2xl card-hover p-5 text-left transition-all cursor-pointer', expandedBox === 'net' ? 'ring-1 ring-accent/30 border-accent/40' : 'border-accent/30 bg-accent/5')}>
                 <p className="text-[11px] font-semibold text-accent uppercase tracking-wider mb-1">Left in Company</p>
                 <p className="text-2xl font-bold text-accent">{formatCurrency(leftInCompany)}</p>
-                <p className="text-[10px] text-accent/60 mt-1">After tax & expenses</p>
-                <p className="text-[8px] text-accent/30 mt-2">Tap for breakdown</p>
+                <p className="text-[10px] text-amber-400/60 mt-1">~{formatCurrency(taxReserve)} tax</p>
               </button>
             </div>
           )}
@@ -1111,12 +1184,12 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               ) : expandedBox === 'expenses' && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-text-primary mb-3">Monthly Expenses Breakdown</p>
-                  {expenses.length === 0 ? (
+                  {businessExpensesList.length === 0 && monthlySalary === 0 && staffCost === 0 ? (
                     <p className="text-xs text-text-tertiary">No expenses recorded for this month</p>
                   ) : (
                     <>
                       {Object.entries(
-                        expenses.reduce<Record<string, number>>((acc, e) => {
+                        businessExpensesList.reduce<Record<string, number>>((acc, e) => {
                           acc[e.category] = (acc[e.category] || 0) + e.amount;
                           return acc;
                         }, {})
@@ -1126,13 +1199,34 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                           <span className="text-xs font-mono text-text-primary">{formatCurrency(total)}</span>
                         </div>
                       ))}
+                      {monthlySalary > 0 && (
+                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-text-secondary">Director salary</span>
+                            {salaryExceedsAllowance && (
+                              <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/15 text-red-400 font-medium">Over £{(UK_PERSONAL_ALLOWANCE / 1000).toFixed(1)}k</span>
+                            )}
+                          </div>
+                          <span className="text-xs font-mono text-text-primary">{formatCurrency(monthlySalary)}</span>
+                        </div>
+                      )}
+                      {staffCost > 0 && (
+                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                          <span className="text-xs text-text-secondary">Staff / contractors</span>
+                          <span className="text-xs font-mono text-text-primary">{formatCurrency(staffCost)}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between py-1.5 mt-1 pt-2 border-t border-border/40">
+                        <span className="text-xs font-semibold text-text-primary">Total</span>
+                        <span className="text-xs font-mono font-semibold text-text-primary">{formatCurrency(monthlyExpenses)}</span>
+                      </div>
                     </>
                   )}
                 </div>
               )}
-              {expandedBox === 'tax' && isFuture && futureProjection ? (
+              {expandedBox === 'possible' && isFuture && futureProjection && (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-purple-400 mb-2">Possible Revenue — Pipeline &lt;60% Probability</p>
+                  <p className="text-xs font-semibold text-purple-400 mb-2">Possible Revenue — Pipeline &lt;60%</p>
                   {futureProjection.possibleBreakdown.length === 0 ? (
                     <p className="text-xs text-text-tertiary">No possible pipeline leads</p>
                   ) : (
@@ -1147,68 +1241,38 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                     ))
                   )}
                 </div>
-              ) : expandedBox === 'tax' && (
+              )}
+              {expandedBox === 'net' && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-text-primary mb-3">Corporation Tax</p>
+                  <p className="text-xs font-semibold text-text-primary mb-3">Left in Company</p>
                   <div className="flex items-center justify-between py-1.5 border-b border-border/30">
                     <span className="text-xs text-text-secondary">Revenue</span>
                     <span className="text-xs font-mono text-text-primary">{formatCurrency(monthlyRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                    <span className="text-xs text-red-400">- Business costs</span>
+                    <span className="text-xs text-red-400">− Expenses</span>
                     <span className="text-xs font-mono text-red-400">{formatCurrency(monthlyExpenses)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                    <span className="text-xs text-text-secondary">Taxable profit</span>
-                    <span className="text-xs font-mono text-text-primary">{formatCurrency(taxableProfit)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                    <span className="text-xs text-text-secondary">Corp tax rate</span>
-                    <span className="text-xs font-mono text-text-primary">19%</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className="text-xs font-semibold text-text-primary">Corp tax reserve</span>
-                    <span className="text-xs font-mono font-semibold text-amber-400">{formatCurrency(taxReserve)}</span>
                   </div>
                   {(monthlySalary > 0 || staffCost > 0) && (
-                    <p className="text-[10px] text-text-tertiary mt-1">Business costs include{monthlySalary > 0 ? ` ${formatCurrency(monthlySalary)} salary` : ''}{monthlySalary > 0 && staffCost > 0 ? ' +' : ''}{staffCost > 0 ? ` ${formatCurrency(staffCost)} staff costs` : ''}.</p>
+                    <p className="text-[9px] text-text-tertiary -mt-1 mb-1 pl-3">
+                      Inc. {monthlySalary > 0 ? `${formatCurrency(monthlySalary)} salary` : ''}{monthlySalary > 0 && staffCost > 0 ? ', ' : ''}{staffCost > 0 ? `${formatCurrency(staffCost)} staff` : ''}
+                    </p>
                   )}
-                  {(Number(snapshot?.dividend_paid) || 0) > 0 && (
-                    <>
-                      <div className="border-t border-border/30 mt-3 pt-3">
-                        <p className="text-xs font-semibold text-purple-400 mb-2">Dividend Tax (Personal)</p>
-                        <div className="flex items-center justify-between py-1">
-                          <span className="text-xs text-text-secondary">Dividends paid</span>
-                          <span className="text-xs font-mono text-text-primary">{formatCurrency(Number(snapshot?.dividend_paid) || 0)}</span>
-                        </div>
-                        <div className="flex items-center justify-between py-1">
-                          <span className="text-xs text-text-secondary">Tax @ 8.75% (after {formatCurrency(UK_DIVIDEND_ALLOWANCE)} allowance)</span>
-                          <span className="text-xs font-mono text-purple-400">{formatCurrency(Math.max(0, (Number(snapshot?.dividend_paid) || 0) - UK_DIVIDEND_ALLOWANCE) * UK_DIVIDEND_TAX_RATE)}</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              {expandedBox === 'net' && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-text-primary mb-3">Net Income Calculation</p>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                    <span className="text-xs text-text-secondary">Monthly revenue</span>
-                    <span className="text-xs font-mono text-text-primary">{formatCurrency(monthlyRevenue)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                    <span className="text-xs text-red-400">- Expenses</span>
-                    <span className="text-xs font-mono text-red-400">{formatCurrency(monthlyExpenses)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                    <span className="text-xs text-amber-400">- Tax reserve (19%)</span>
-                    <span className="text-xs font-mono text-amber-400">{formatCurrency(taxReserve)}</span>
-                  </div>
                   <div className="flex items-center justify-between py-1.5">
                     <span className="text-xs font-semibold text-accent">= Left in company</span>
                     <span className="text-xs font-mono font-semibold text-accent">{formatCurrency(leftInCompany)}</span>
                   </div>
+                  <div className="flex items-center justify-between py-1 mt-1 pt-2 border-t border-border/20">
+                    <span className="text-[10px] text-amber-400/70">Est. corp tax (19%, year-end)</span>
+                    <span className="text-[10px] font-mono text-amber-400/70">{formatCurrency(taxReserve)}</span>
+                  </div>
+                  {monthlySalary > 0 && salaryExceedsAllowance && (
+                    <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 mt-2">
+                      <p className="text-[10px] text-red-400">
+                        Salary ({formatCurrency(annualSalaryProjected)}/yr) exceeds £{(UK_PERSONAL_ALLOWANCE / 1000).toFixed(1)}k allowance by {formatCurrency(salaryExcess)}. Excess is taxed as income — pay as dividends instead.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1725,7 +1789,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             revenue: rev,
             expenses: exp,
             tax: tax,
-            net: rev - exp - tax,
+            net: Math.max(0, rev - exp), // left in company (before tax)
             isLive: isCurrentLive,
             hasOverride,
           });
@@ -1736,7 +1800,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         const ytdRevenue = allMonths.reduce((s, m) => s + m.revenue, 0);
         const ytdExpenses = allMonths.reduce((s, m) => s + m.expenses, 0);
         const ytdTax = allMonths.reduce((s, m) => s + m.tax, 0);
-        const ytdNet = ytdRevenue - ytdExpenses - ytdTax;
+        const ytdNet = Math.max(0, ytdRevenue - ytdExpenses); // left in company (before tax)
         const ytdDividends = fySnapshots.reduce((s, snap) => s + (Number(snap.dividend_paid) || 0), 0);
         const monthsElapsed = allMonths.length;
         const avgMonthlyRevenue = monthsElapsed > 0 ? ytdRevenue / monthsElapsed : 0;
@@ -1757,7 +1821,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             </div>
 
             {/* YTD Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <div className="card-surface border border-accent/20 rounded-xl p-3 sm:p-4 bg-accent/5">
                 <p className="text-[9px] text-accent uppercase tracking-wider font-medium">YTD Revenue</p>
                 <p className="text-lg sm:text-xl font-bold text-accent mt-1">{formatCurrency(ytdRevenue)}</p>
@@ -1766,14 +1830,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 <p className="text-[9px] text-text-tertiary uppercase tracking-wider font-medium">YTD Expenses</p>
                 <p className="text-lg sm:text-xl font-bold text-text-secondary mt-1">{formatCurrency(ytdExpenses)}</p>
               </div>
-              <div className="card-surface border border-border rounded-xl p-3 sm:p-4">
-                <p className="text-[9px] text-text-tertiary uppercase tracking-wider font-medium">Corp Tax Reserve</p>
-                <p className="text-lg sm:text-xl font-bold text-amber-400 mt-1">{formatCurrency(ytdTax)}</p>
-                <p className="text-[8px] text-text-tertiary mt-0.5">19% of gross profit</p>
-              </div>
-              <div className={cn('card-surface border rounded-xl p-3 sm:p-4', ytdNet >= 0 ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5')}>
-                <p className={cn('text-[9px] uppercase tracking-wider font-medium', ytdNet >= 0 ? 'text-emerald-400' : 'text-red-400')}>YTD Net Profit</p>
-                <p className={cn('text-lg sm:text-xl font-bold mt-1', ytdNet >= 0 ? 'text-emerald-400' : 'text-red-400')}>{formatCurrency(ytdNet)}</p>
+              <div className={cn('card-surface border rounded-xl p-3 sm:p-4', ytdNet > 0 ? 'border-accent/30 bg-accent/5' : 'border-red-500/20 bg-red-500/5')}>
+                <p className={cn('text-[9px] uppercase tracking-wider font-medium', ytdNet > 0 ? 'text-accent' : 'text-red-400')}>Left in Company</p>
+                <p className={cn('text-lg sm:text-xl font-bold mt-1', ytdNet > 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(ytdNet)}</p>
+                <p className="text-[8px] text-amber-400/60 mt-0.5">~{formatCurrency(ytdTax)} tax</p>
               </div>
             </div>
 
@@ -1827,8 +1887,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       <th className="text-left px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px]">Month</th>
                       <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px]">Revenue</th>
                       <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px] hidden sm:table-cell">Expenses</th>
-                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px] hidden sm:table-cell" title="19% of gross profit (Revenue − Expenses), not of net">Tax (19%)</th>
-                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px]" title="Revenue − Expenses − Corp Tax">Net</th>
+                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px]">Left in Co.</th>
+                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary/50 font-medium uppercase tracking-wider text-[9px] hidden sm:table-cell" title="Estimated 19% corp tax (paid year-end)">Tax est.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1926,8 +1986,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                               </span>
                             )}
                           </td>
-                          <td className="text-right px-3 sm:px-4 py-2.5 text-amber-400/70 hidden sm:table-cell">{formatCurrency(m.tax)}</td>
-                          <td className={cn('text-right px-3 sm:px-4 py-2.5 font-medium', m.net >= 0 ? 'text-emerald-400' : 'text-red-400')}>{formatCurrency(m.net)}</td>
+                          <td className={cn('text-right px-3 sm:px-4 py-2.5 font-medium', m.net > 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(m.net)}</td>
+                          <td className="text-right px-3 sm:px-4 py-2.5 text-amber-400/40 hidden sm:table-cell">{formatCurrency(m.tax)}</td>
                         </tr>
                       );
                     })}
@@ -1937,8 +1997,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       <td className="px-3 sm:px-4 py-2.5 text-text-primary">Total</td>
                       <td className="text-right px-3 sm:px-4 py-2.5 text-accent">{formatCurrency(ytdRevenue)}</td>
                       <td className="text-right px-3 sm:px-4 py-2.5 text-text-secondary hidden sm:table-cell">{formatCurrency(ytdExpenses)}</td>
-                      <td className="text-right px-3 sm:px-4 py-2.5 text-amber-400/70 hidden sm:table-cell">{formatCurrency(ytdTax)}</td>
-                      <td className={cn('text-right px-3 sm:px-4 py-2.5', ytdNet >= 0 ? 'text-emerald-400' : 'text-red-400')}>{formatCurrency(ytdNet)}</td>
+                      <td className={cn('text-right px-3 sm:px-4 py-2.5', ytdNet > 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(ytdNet)}</td>
+                      <td className="text-right px-3 sm:px-4 py-2.5 text-amber-400/40 hidden sm:table-cell">{formatCurrency(ytdTax)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -2031,11 +2091,8 @@ function ForecastTab({
       }
 
       const expenses = liveExpenses;
-      const monthTaxableProfit = Math.max(0, confirmed - expenses);
-      const monthTax = monthTaxableProfit * UK_CORP_TAX_RATE;
-      const monthNet = monthTaxableProfit - monthTax;
-      const optimisticProfit = Math.max(0, (confirmed + likely + possible) - expenses);
-      const monthNetOptimistic = optimisticProfit - (optimisticProfit * UK_CORP_TAX_RATE);
+      const monthNet = Math.max(0, confirmed - expenses); // left in company = revenue - expenses (tax paid year-end)
+      const monthNetOptimistic = Math.max(0, (confirmed + likely + possible) - expenses);
 
       if (i > 0) {
         cumulativeCash += monthNet;
@@ -2163,9 +2220,7 @@ function ForecastTab({
                 const likelyPct = maxRevenue > 0 ? (row.likely / maxRevenue) * 100 : 0;
                 const possiblePct = maxRevenue > 0 ? (row.possible / maxRevenue) * 100 : 0;
                 const expenses = liveExpenses;
-                const taxable = Math.max(0, row.confirmed - expenses);
-                const tax = taxable * 0.19;
-                const net = taxable - tax;
+                const net = Math.max(0, row.confirmed - expenses);
                 return (
                   <div key={i} className="group/bar relative flex items-center gap-3">
                     <span className="text-[10px] text-text-tertiary w-14 text-right font-mono">{row.month}</span>
@@ -2202,12 +2257,8 @@ function ForecastTab({
                             <span className="text-text-tertiary">− Expenses</span>
                             <span className="font-mono text-red-400">{formatCurrency(expenses)}</span>
                           </div>
-                          <div className="flex justify-between text-[10px]">
-                            <span className="text-text-tertiary">− Tax (19%)</span>
-                            <span className="font-mono text-amber-400">{formatCurrency(tax)}</span>
-                          </div>
                           <div className="flex justify-between text-[10px] font-semibold pt-1">
-                            <span className={net >= 0 ? 'text-accent' : 'text-red-400'}>Net (confirmed)</span>
+                            <span className={net >= 0 ? 'text-accent' : 'text-red-400'}>Left in co.</span>
                             <span className={cn('font-mono', net >= 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(net)}</span>
                           </div>
                         </div>
@@ -2388,26 +2439,22 @@ function ForecastTab({
           <div className="w-1 h-5 rounded-full bg-amber-500" />
           <h2 className="text-sm font-bold text-text-primary">Monthly P&amp;L Breakdown</h2>
           <InfoBox title="P&L Breakdown">
-            <p>Profit &amp; Loss: Revenue minus expenses and 19% UK corporation tax reserve.</p>
-            <p className="mt-1">&quot;Left in Co.&quot; is what remains in the business after all deductions.</p>
+            <p>Revenue minus expenses = what stays in the business each month.</p>
           </InfoBox>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="p-3 rounded-xl bg-surface-tertiary/50">
-            <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Monthly Revenue</p>
+            <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Revenue</p>
             <p className="text-sm font-bold text-text-primary">{formatCurrency(monthlyRevenue)}</p>
           </div>
           <div className="p-3 rounded-xl bg-surface-tertiary/50">
-            <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">- Expenses</p>
-            <p className="text-sm font-bold text-red-400">{formatCurrency(monthlyExpenses)}</p>
-          </div>
-          <div className="p-3 rounded-xl bg-surface-tertiary/50">
-            <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">- Tax (19%)</p>
-            <p className="text-sm font-bold text-amber-400">{formatCurrency(Math.max(0, monthlyRevenue - monthlyExpenses) * UK_CORP_TAX_RATE)}</p>
+            <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Expenses</p>
+            <p className="text-sm font-bold text-text-secondary">{formatCurrency(monthlyExpenses)}</p>
           </div>
           <div className="p-3 rounded-xl bg-accent/10 border border-accent/20">
-            <p className="text-[10px] text-accent uppercase tracking-wider mb-1">= Left in Co.</p>
+            <p className="text-[10px] text-accent uppercase tracking-wider mb-1">Left in Co.</p>
             <p className="text-sm font-bold text-accent">{formatCurrency(leftInCompany)}</p>
+            <p className="text-[8px] text-amber-400/60 mt-0.5">~{formatCurrency(Math.max(0, monthlyRevenue - monthlyExpenses) * UK_CORP_TAX_RATE)} tax</p>
           </div>
         </div>
       </section>

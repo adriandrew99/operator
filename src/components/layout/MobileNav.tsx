@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
@@ -23,18 +23,6 @@ function getWeekId(): string {
   const d = new Date();
   d.setDate(d.getDate() - d.getDay() + 1);
   return d.toISOString().split('T')[0];
-}
-
-/** Trigger haptic feedback on supported devices.
- *  - Android/Chrome: navigator.vibrate()
- *  - iOS Safari: No vibrate API exists. We rely on CSS active:scale transforms
- *    which produce a native-feeling press response on iOS. True haptics
- *    (Taptic Engine) are only available via native apps, not web. */
-function haptic() {
-  if (typeof navigator === 'undefined') return;
-  if ('vibrate' in navigator) {
-    try { navigator.vibrate(6); } catch { /* ignore */ }
-  }
 }
 
 interface MobileNavProps {
@@ -60,8 +48,6 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
   // Close "more" menu on navigate
   useEffect(() => { setMoreOpen(false); }, [pathname]);
 
-  const handleTap = useCallback(() => { haptic(); }, []);
-
   const isMoreActive = MORE_ITEMS.some(item => pathname.startsWith(item.href));
 
   return (
@@ -69,22 +55,21 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
       {/* More menu overlay */}
       {moreOpen && (
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/40" />
           <div className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-3 right-3 animate-slide-up">
-            <div className="card-surface border border-border rounded-2xl p-1.5 shadow-2xl shadow-black/50">
+            <div className="bg-surface-secondary border border-border rounded-xl p-1.5">
               {MORE_ITEMS.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={handleTap}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3.5 rounded-xl transition-colors',
-                      isActive ? 'bg-accent/10 text-accent' : 'text-text-secondary active:bg-surface-tertiary'
+                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                      isActive ? 'bg-surface-tertiary text-text-primary' : 'text-text-secondary active:bg-surface-tertiary'
                     )}
                   >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d={item.icon} />
                     </svg>
                     <span className="text-sm font-medium">{item.label}</span>
@@ -97,7 +82,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
       )}
 
       {/* Bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-secondary/95 backdrop-blur-2xl border-t border-border/40">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-primary border-t border-border">
         <div className="flex items-stretch justify-around safe-area-inset-bottom">
           {MOBILE_ITEMS.map((item) => {
             const isActive = pathname.startsWith(item.href);
@@ -106,39 +91,38 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={handleTap}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 py-2 pt-2.5 flex-1 min-h-[52px] transition-colors duration-150 active:scale-90 active:opacity-70',
+                  'flex flex-col items-center justify-center gap-1 py-2 pt-2.5 flex-1 min-h-[52px] transition-colors duration-150',
                   isActive ? 'text-accent' : 'text-text-tertiary'
                 )}
               >
                 <div className="relative">
-                  {isActive && (
-                    <div className="absolute -inset-2 rounded-full bg-accent/10" />
-                  )}
                   <svg
                     width="22"
                     height="22"
                     viewBox="0 0 24 24"
-                    fill={isActive ? 'currentColor' : 'none'}
+                    fill="none"
                     stroke="currentColor"
-                    strokeWidth={isActive ? '0' : '1.5'}
+                    strokeWidth={isActive ? '2' : '1.5'}
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="relative"
                   >
                     <path d={item.icon} />
                   </svg>
                   {showDot && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                    <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
                     </span>
                   )}
                 </div>
+                {/* Active dot */}
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-accent" />
+                )}
                 <span className={cn(
-                  'text-[11px] font-medium leading-none',
-                  isActive && 'text-accent'
+                  'text-[10px] leading-none',
+                  isActive ? 'font-semibold text-accent' : 'font-medium'
                 )}>{item.label}</span>
               </Link>
             );
@@ -146,23 +130,21 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
 
           {/* More button */}
           <button
-            onClick={() => { haptic(); setMoreOpen(prev => !prev); }}
+            onClick={() => setMoreOpen(prev => !prev)}
             className={cn(
-              'flex flex-col items-center justify-center gap-1 py-2 pt-2.5 flex-1 min-h-[52px] transition-colors duration-150 active:scale-90 active:opacity-70',
+              'flex flex-col items-center justify-center gap-1 py-2 pt-2.5 flex-1 min-h-[52px] transition-colors duration-150',
               moreOpen || isMoreActive ? 'text-accent' : 'text-text-tertiary'
             )}
           >
-            <div className="relative">
-              {(moreOpen || isMoreActive) && (
-                <div className="absolute -inset-2 rounded-full bg-accent/10" />
-              )}
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="relative">
-                <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-              </svg>
-            </div>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
+            </svg>
+            {(moreOpen || isMoreActive) && (
+              <span className="w-1 h-1 rounded-full bg-accent" />
+            )}
             <span className={cn(
-              'text-[11px] font-medium leading-none',
-              (moreOpen || isMoreActive) && 'text-accent'
+              'text-[10px] leading-none',
+              (moreOpen || isMoreActive) ? 'font-semibold text-accent' : 'font-medium'
             )}>More</span>
           </button>
         </div>

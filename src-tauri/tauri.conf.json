@@ -1,19 +1,19 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
-  "productName": "Operator OS",
+  "productName": "Nexus",
   "version": "1.0.0",
-  "identifier": "com.operatoros.desktop",
+  "identifier": "com.nexus.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:3000",
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "http://localhost:3000"
+    "frontendDist": "https://operator-os-rho.vercel.app"
   },
   "app": {
     "windows": [
       {
         "label": "main",
-        "title": "Operator OS",
+        "title": "Nexus",
         "width": 1280,
         "height": 860,
         "minWidth": 900,

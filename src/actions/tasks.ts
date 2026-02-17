@@ -34,6 +34,7 @@ export async function createTask(taskData: {
   is_revenue_generating?: boolean;
   is_low_energy?: boolean;
   is_urgent?: boolean;
+  is_personal?: boolean;
   flagged_for_today?: boolean;
   scheduled_date?: string;
   scheduled_time_block?: string;
@@ -54,6 +55,7 @@ export async function createTask(taskData: {
     const safeData = { ...taskData };
     delete safeData.flagged_for_today;
     delete safeData.is_urgent;
+    delete safeData.is_personal;
     delete safeData.scheduled_date;
     delete safeData.scheduled_time_block;
     const { error: retryError } = await supabase

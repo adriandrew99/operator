@@ -2,13 +2,13 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Operator OS',
-    short_name: 'OperatorOS',
+    name: 'Nexus',
+    short_name: 'Nexus',
     description: 'Personal command centre for focused founders',
     start_url: '/today',
     display: 'standalone',
-    background_color: '#0a0a0a',
-    theme_color: '#0a0a0a',
+    background_color: '#1a1918',
+    theme_color: '#1a1918',
     orientation: 'portrait-primary',
     icons: [
       {
@@ -22,7 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
       },
       {
-        src: '/icons/icon-512x512.png',
+        src: '/icons/icon-512x512-maskable.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

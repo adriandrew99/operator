@@ -25,13 +25,13 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEIGHT_DOT: Record<string, string> = {
   high: 'bg-red-400',
   medium: 'bg-amber-400',
-  low: 'bg-emerald-400',
+  low: 'bg-accent',
 };
 
 const WEIGHT_BADGE: Record<string, string> = {
   high: 'bg-red-500/15 text-red-400',
   medium: 'bg-amber-500/15 text-amber-400',
-  low: 'bg-emerald-500/15 text-emerald-400',
+  low: 'bg-accent/15 text-accent',
 };
 
 const ENERGY_COLORS: Record<string, string> = {
@@ -276,16 +276,16 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-medium text-accent uppercase tracking-widest">Week Overview</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <p className="text-[10px] font-medium text-accent uppercase tracking-widest flex-shrink-0">Week</p>
           <InfoBox title="Week View">
             <p>See all your scheduled and recurring tasks for the week. Recurring daily tasks automatically appear on their assigned days.</p>
             <p className="mt-1">Click any day to expand it. <strong>Drag tasks</strong> between days to reschedule. <strong>Click a task</strong> to edit it. Use <strong>+ Add Task</strong> to schedule a task to a specific day.</p>
           </InfoBox>
-          <span className="text-[10px] text-text-tertiary">{totalTasks} tasks</span>
+          <span className="text-[10px] text-text-tertiary flex-shrink-0">{totalTasks} tasks</span>
           {highCount > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-400">{highCount} high</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-400 flex-shrink-0">{highCount} high</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -314,7 +314,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
       )}
 
       {/* Day strip — drop targets */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none sm:grid sm:grid-cols-7 sm:overflow-visible">
         {weekDays.map((dateStr, i) => {
           const dayTasks = tasksByDay[dateStr] || [];
           const dayRecurring = recurringByDayIndex[i] || [];
@@ -337,9 +337,10 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
               onDragLeave={(e) => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverDay(null); }}
               onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDrop(e, dateStr); }}
               className={cn(
-                'flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-xl transition-all duration-200 cursor-pointer select-none',
-                isToday && 'ring-1 ring-accent/40',
-                isExpanded ? 'bg-accent/10 shadow-sm' : 'hover:bg-surface-tertiary/60',
+                'flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-xl transition-all duration-200 cursor-pointer select-none min-w-[48px] sm:min-w-0 flex-shrink-0',
+                isToday && 'bg-accent/8 border border-accent/20',
+                !isToday && !isExpanded && !isDragTarget && 'border border-transparent',
+                isExpanded ? 'bg-accent/10 shadow-sm border-accent/25' : 'hover:bg-surface-tertiary/60',
                 isPast && !isToday && 'opacity-60',
                 isDragTarget && 'ring-2 ring-accent bg-accent/15 scale-[1.06]'
               )}
@@ -365,7 +366,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                       <div
                         className={cn(
                           'h-full rounded-full',
-                          level === 'light' && 'bg-emerald-400',
+                          level === 'light' && 'bg-accent',
                           level === 'moderate' && 'bg-accent',
                           level === 'heavy' && 'bg-amber-400',
                           level === 'overloaded' && 'bg-red-400',
@@ -383,7 +384,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
 
       {/* Week summary stats */}
       {totalTasks > 0 && (
-        <div className="flex items-center gap-4 px-2 text-[10px] text-text-tertiary">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap px-2 text-[10px] text-text-tertiary">
           <span className="font-medium">{totalTasks} tasks</span>
           {totalEstimatedMinutes > 0 && (
             <span>~{totalEstimatedMinutes >= 60 ? `${Math.round(totalEstimatedMinutes / 60)}h${totalEstimatedMinutes % 60 > 0 ? ` ${totalEstimatedMinutes % 60}m` : ''}` : `${totalEstimatedMinutes}m`} est.</span>
@@ -391,7 +392,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
           <div className="flex items-center gap-2 ml-auto">
             {highCount > 0 && <span className="text-red-400 font-mono">{highCount}H</span>}
             {mediumCount > 0 && <span className="text-amber-400 font-mono">{mediumCount}M</span>}
-            {lowCount > 0 && <span className="text-emerald-400 font-mono">{lowCount}L</span>}
+            {lowCount > 0 && <span className="text-accent font-mono">{lowCount}L</span>}
           </div>
         </div>
       )}
@@ -468,7 +469,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                         <div className={cn('w-2 h-2 rounded-full flex-shrink-0', WEIGHT_DOT[task.weight] || WEIGHT_DOT.medium)} />
                         <span className={cn('text-xs flex-1 truncate transition-colors', isCompleted ? 'text-text-tertiary line-through' : 'text-text-primary')}>{task.title}</span>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 ml-4">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 ml-4 flex-wrap">
                         {task.is_urgent && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-md font-semibold bg-red-500/20 text-red-400">URGENT</span>
                         )}
@@ -482,7 +483,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                       </div>
                     </div>
                     {/* Move to today + Edit on hover */}
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                       {expandedDay !== todayStr && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMoveToToday(task.id); }}
@@ -539,7 +540,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                           <div className={cn('w-2 h-2 rounded-full flex-shrink-0', WEIGHT_DOT[rt.weight || 'low'] || WEIGHT_DOT.low)} />
                           <span className={cn('text-xs flex-1 truncate transition-colors', isChecked ? 'text-text-tertiary line-through' : 'text-text-primary')}>{rt.title}</span>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 ml-4">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 ml-4 flex-wrap">
                           <span className="text-[9px] px-1.5 py-0.5 rounded-md font-medium bg-cyan-500/15 text-cyan-400">recurring</span>
                           {rt.energy && (
                             <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', ENERGY_COLORS[rt.energy] || '')}>{rt.energy}</span>

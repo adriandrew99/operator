@@ -2,6 +2,8 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { TopBar } from '@/components/layout/TopBar';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
+import { FocusRefresh } from '@/components/layout/FocusRefresh';
+import { CommandPalette } from '@/components/layout/CommandPalette';
 import { DebriefPopup } from '@/components/insights/DebriefPopup';
 import { isWeeklyDebriefReady } from '@/actions/insights';
 
@@ -20,6 +22,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </main>
       <MobileNav debriefReady={debriefReady} />
+      <FocusRefresh />
+      <CommandPalette />
       <DebriefPopup debriefReady={debriefReady} />
     </div>
   );

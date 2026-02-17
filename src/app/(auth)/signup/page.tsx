@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
+import { NexusLogo } from '@/components/ui/NexusLogo';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -44,10 +45,11 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2 text-center">
-        <h1 className="text-xl font-bold text-text-primary tracking-tight">
-          OPERATOR OS
+    <div className="space-y-10">
+      <div className="space-y-3 text-center">
+        <NexusLogo size="lg" className="mx-auto" />
+        <h1 className="text-3xl font-semibold text-text-primary tracking-tight">
+          Nexus
         </h1>
         <p className="text-sm text-text-secondary">Create your account</p>
       </div>
@@ -80,7 +82,7 @@ export default function SignupPage() {
         />
 
         {error && (
-          <p className="text-xs text-danger">{error}</p>
+          <p className="text-xs text-danger bg-danger/10 rounded-lg px-3 py-2">{error}</p>
         )}
 
         <Button type="submit" className="w-full" disabled={loading}>

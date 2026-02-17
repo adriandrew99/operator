@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { TASK_CATEGORIES, ENERGY_TYPES, TASK_WEIGHTS, DAY_NAMES } from '@/lib/constants';
-import { toggleRecurringTaskCompletion, createRecurringTask, updateRecurringTask, deleteRecurringTask } from '@/actions/recurring';
+import { toggleRecurringTaskCompletion, createRecurringTask, updateRecurringTask, deleteRecurringTask, skipRecurringTask } from '@/actions/recurring';
 import { getTaskMLU } from '@/lib/utils/mental-load';
 import type { RecurringTaskWithStatus } from '@/lib/types/recurring';
 import type { Client } from '@/lib/types/database';
@@ -16,6 +16,7 @@ interface DailyTasksProps {
   tasks: RecurringTaskWithStatus[];
   allTasks?: RecurringTaskWithStatus[];
   clients: Client[];
+  streaks?: Record<string, number>;
 }
 
 const FREQUENCY_OPTIONS = [
@@ -26,7 +27,7 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const WEIGHT_COLORS: Record<string, string> = {
-  low: 'bg-emerald-500/15 text-emerald-400',
+  low: 'bg-accent/15 text-accent',
   medium: 'bg-amber-500/10 text-amber-400/70',
   high: 'bg-red-500/15 text-red-400',
 };
@@ -45,7 +46,7 @@ function formatTime12h(time24: string): string {
   return `${hour12}:${m} ${ampm}`;
 }
 
-export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
+export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTasksProps) {
   const [todayItems, setTodayItems] = useState(tasks);
   const [allItems, setAllItems] = useState(allTasks || tasks);
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
@@ -76,6 +77,20 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
       console.error('Failed to toggle:', e);
       const revert = (prev: RecurringTaskWithStatus[]) =>
         prev.map((t) => t.id === task.id ? { ...t, completedToday: !newCompleted } : t);
+      setTodayItems(revert);
+      setAllItems(revert);
+    });
+  }
+
+  function handleSkip(task: RecurringTaskWithStatus) {
+    const updater = (prev: RecurringTaskWithStatus[]) =>
+      prev.map((t) => t.id === task.id ? { ...t, completedToday: true } : t);
+    setTodayItems(updater);
+    setAllItems(updater);
+    skipRecurringTask(task.id).catch(e => {
+      console.error('Failed to skip:', e);
+      const revert = (prev: RecurringTaskWithStatus[]) =>
+        prev.map((t) => t.id === task.id ? { ...t, completedToday: false } : t);
       setTodayItems(revert);
       setAllItems(revert);
     });
@@ -222,7 +237,7 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
         <form onSubmit={isEditing ? handleUpdate : handleCreate} className="space-y-4">
           <Input name="title" label="Task" required placeholder="e.g., Check comments on accounts" defaultValue={task?.title || ''} />
           <Input name="description" label="Notes (optional)" placeholder="Any extra detail..." defaultValue={task?.description || ''} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Select
               name="category"
               label="Category"
@@ -238,7 +253,7 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Select
               name="weight"
               label="Mental Weight"
@@ -263,7 +278,7 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
             />
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Scheduled Time */}
             <Input name="scheduled_time" label="Scheduled Time (optional)" type="time" defaultValue={task?.scheduled_time || ''} />
             <Input name="estimated_minutes" label="Focus Time (min)" type="number" placeholder="e.g., 15" defaultValue={task?.estimated_minutes ? String(task.estimated_minutes) : ''} />
@@ -283,14 +298,14 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
           {selectedFrequency === 'custom' && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-text-secondary">Select Days</label>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 {DAY_NAMES.map((day, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => handleDayToggle(i)}
                     className={cn(
-                      'w-10 h-8 text-[10px] font-medium border transition-colors',
+                      'w-9 h-9 sm:w-10 sm:h-8 text-[10px] font-medium border transition-colors rounded-md',
                       selectedDays.includes(i)
                         ? 'bg-accent text-black border-accent'
                         : 'bg-surface-secondary text-text-secondary border-border hover:border-text-tertiary'
@@ -407,13 +422,20 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
               <div className="w-4 h-4 border border-border/30 flex-shrink-0" title="Not due today" />
             )}
             <div className="flex-1 min-w-0">
-              <span className={cn(
-                'text-sm transition-colors',
-                task.completedToday ? 'text-text-tertiary line-through' : 'text-text-secondary'
-              )}>
-                {task.title}
-              </span>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className={cn(
+                  'text-sm transition-colors',
+                  task.completedToday ? 'text-text-tertiary line-through' : 'text-text-secondary'
+                )}>
+                  {task.title}
+                </span>
+                {(streaks[task.id] ?? 0) >= 2 && (
+                  <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-amber-400/80 bg-amber-500/10 px-1.5 py-0.5 rounded-md" title={`${streaks[task.id]}-day streak`}>
+                    🔥 {streaks[task.id]}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                 {task.energy && (
                   <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', ENERGY_COLORS[task.energy] || '')}>
                     {task.energy}
@@ -436,7 +458,7 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
               {task.scheduled_time && (
                 <span className="text-[10px] text-accent/70 font-medium">
                   {formatTime12h(task.scheduled_time)}
@@ -451,7 +473,19 @@ export function DailyTasks({ tasks, allTasks, clients }: DailyTasksProps) {
                 <span className="text-[10px] text-text-tertiary">{task.frequency}</span>
               )}
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              {isDueToday && !task.completedToday && (
+                <button
+                  onClick={() => handleSkip(task)}
+                  className="text-text-tertiary hover:text-amber-400 transition-all p-1 rounded-lg hover:bg-amber-500/10"
+                  title="Skip for today"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 4 15 12 5 20 5 4" />
+                    <line x1="19" y1="5" x2="19" y2="19" />
+                  </svg>
+                </button>
+              )}
               <button
                 onClick={() => openEdit(task)}
                 className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"

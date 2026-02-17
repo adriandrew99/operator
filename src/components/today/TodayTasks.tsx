@@ -35,7 +35,7 @@ interface TodayTasksProps {
 const WEIGHT_COLORS: Record<string, string> = {
   high: 'bg-red-500/15 text-red-400',
   medium: 'bg-amber-500/15 text-amber-400',
-  low: 'bg-emerald-500/15 text-emerald-400',
+  low: 'bg-accent/15 text-accent',
 };
 
 const WEIGHT_DEFAULT_MINUTES: Record<string, number> = {
@@ -101,6 +101,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   const [newEnergy, setNewEnergy] = useState<'creative' | 'admin'>('admin');
   const [newClientId, setNewClientId] = useState('');
   const [newUrgent, setNewUrgent] = useState(false);
+  const [newPersonal, setNewPersonal] = useState(false);
   const [dragOverWeight, setDragOverWeight] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -120,6 +121,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   const [loadingDayTasks, setLoadingDayTasks] = useState(false);
   const [deletedTaskIds, setDeletedTaskIds] = useState<Set<string>>(new Set());
   const [fetchTrigger, setFetchTrigger] = useState(0);
+  const [uncompletingIds, setUncompletingIds] = useState<Set<string>>(new Set());
 
   // Fetch tasks for non-current weeks when cycling days, or after create/delete
   useEffect(() => {
@@ -302,6 +304,9 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   }
 
   function handleUncomplete(taskId: string) {
+    // Trigger amber glow animation
+    setUncompletingIds(prev => new Set(prev).add(taskId));
+    setTimeout(() => setUncompletingIds(prev => { const n = new Set(prev); n.delete(taskId); return n; }), 500);
     // Store snapshot for error recovery
     const allCompleted = [...completedTodayTasks, ...localCompletedTasks];
     const snapshot = allCompleted.find(t => t.id === taskId);
@@ -420,6 +425,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
     const clientVal = newClientId;
     const energyVal = newEnergy;
     const urgentVal = newUrgent;
+    const personalVal = newPersonal;
     const deadlineVal = selectedDay;
     setIsPending(true);
     setNewTitle('');
@@ -427,6 +433,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
     setNewEnergy('admin');
     setNewClientId('');
     setNewUrgent(false);
+    setNewPersonal(false);
     setShowAdd(false);
     setShowAddForWeight(null);
 
@@ -454,7 +461,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
       is_revenue_generating: false,
       is_low_energy: false,
       is_urgent: urgentVal,
-      is_personal: false,
+      is_personal: personalVal,
       scheduled_date: !isToday ? deadlineVal : null,
       scheduled_time_block: null,
       completed_at: null,
@@ -474,6 +481,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
       scheduled_date: !isToday ? deadlineVal : undefined,
       flagged_for_today: isToday ? true : undefined,
       is_urgent: urgentVal || undefined,
+      is_personal: personalVal || undefined,
     }).then(() => {
       // Refetch for non-current weeks so the real task replaces the optimistic one
       if (!isCurrentWeek) {
@@ -528,7 +536,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
           <button
             onClick={() => setSelectedDay(today)}
             className={cn(
-              'text-[10px] font-medium uppercase tracking-widest transition-colors btn-press cursor-pointer w-[110px] sm:w-[140px] text-center',
+              'text-[10px] font-medium uppercase tracking-widest transition-colors btn-press cursor-pointer min-w-[100px] sm:min-w-[140px] text-center',
               isToday ? 'text-text-tertiary' : 'text-accent hover:text-accent/80'
             )}
           >
@@ -618,6 +626,20 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
               <span className="hidden sm:inline">Priority</span>
+            </button>
+            <button
+              onClick={() => setNewPersonal(!newPersonal)}
+              className={cn(
+                'flex items-center gap-1 text-[10px] px-2 py-1 sm:px-2.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
+                newPersonal ? 'bg-text-tertiary/15 text-text-secondary' : 'text-text-tertiary/50 hover:text-text-secondary hover:bg-text-tertiary/10'
+              )}
+              title="Mark as Personal"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill={newPersonal ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span className="hidden sm:inline">Personal</span>
             </button>
             {clients.length > 0 && (
               <select
@@ -734,7 +756,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                       'text-sm font-medium transition-all duration-300',
                       isCompleting ? 'text-text-tertiary line-through' : 'text-text-primary'
                     )}>{task.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                       {task.weight && (
                         <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', WEIGHT_COLORS[task.weight])}>
                           {task.weight}
@@ -757,7 +779,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                       )}
                     </div>
                   </div>
-                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all flex-shrink-0">
+                  <div className="sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-0.5 transition-all flex-shrink-0">
                     {!isRecurringTask(task.id) && !isToday && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleMoveToToday(task.id); }}
@@ -879,6 +901,20 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                       </button>
                     ))}
                   </div>
+                  <button
+                    onClick={() => setNewPersonal(!newPersonal)}
+                    className={cn(
+                      'flex items-center gap-1 text-[10px] px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
+                      newPersonal ? 'bg-text-tertiary/15 text-text-secondary' : 'text-text-tertiary/50 hover:text-text-secondary hover:bg-text-tertiary/10'
+                    )}
+                    title="Mark as Personal"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill={newPersonal ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <span className="hidden sm:inline">Personal</span>
+                  </button>
                   {clients.length > 0 && (
                     <select
                       value={newClientId}
@@ -951,7 +987,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                         'text-sm transition-all duration-300',
                         isCompleting ? 'text-text-tertiary line-through' : 'text-text-primary'
                       )}>{task.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                         {isRecurringTask(task.id) && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-md font-medium bg-cyan-500/15 text-cyan-400">
                             recurring
@@ -979,7 +1015,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                         )}
                       </div>
                     </div>
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all flex-shrink-0">
+                    <div className="sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-0.5 transition-all flex-shrink-0">
                       {/* Star / prioritise toggle */}
                       {!isRecurringTask(task.id) && (
                         <button
@@ -1113,7 +1149,10 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
               {mergedCompleted.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 py-2 px-3 rounded-xl group"
+                  className={cn(
+                    'flex items-center gap-3 py-2 px-3 rounded-xl group',
+                    uncompletingIds.has(task.id) && 'animate-task-uncomplete-glow'
+                  )}
                 >
                   <AnimatedCheckbox
                     checked={true}
@@ -1122,7 +1161,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-text-tertiary line-through">{task.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                       {isRecurringTask(task.id) && (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-md font-medium bg-cyan-500/10 text-cyan-400/50">
                           recurring
@@ -1152,7 +1191,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   </div>
                   <button
                     onClick={() => handleUncomplete(task.id)}
-                    className="opacity-0 group-hover:opacity-100 text-[10px] text-text-tertiary hover:text-accent transition-all px-2 py-1"
+                    className="sm:opacity-0 sm:group-hover:opacity-100 text-[10px] text-text-tertiary hover:text-accent transition-all px-2 py-1"
                   >
                     Undo
                   </button>
@@ -1336,7 +1375,7 @@ function LoadBarWithTooltip({
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500',
-            loadLevel === 'light' && 'bg-emerald-400',
+            loadLevel === 'light' && 'bg-accent',
             loadLevel === 'moderate' && 'bg-accent',
             loadLevel === 'heavy' && 'bg-amber-400',
             loadLevel === 'overloaded' && 'bg-red-400',
@@ -1375,7 +1414,7 @@ function LoadBarWithTooltip({
             )}
             {lowCount > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-emerald-400">{lowCount} low</span>
+                <span className="text-[10px] text-accent">{lowCount} low</span>
                 <span className="text-[9px] text-text-tertiary font-mono">{Math.round(calculateDailyLoad(allDayTasks.filter(t => t.weight === 'low')))} MLU</span>
               </div>
             )}

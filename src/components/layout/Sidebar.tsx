@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
+import { NexusLogo } from '@/components/ui/NexusLogo';
 
 const NAV_ITEMS = [
   { href: '/today', label: 'Today', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
@@ -30,7 +31,6 @@ export function Sidebar({ debriefReady }: SidebarProps) {
   const pathname = usePathname();
   const [debriefViewed, setDebriefViewed] = useState(false);
 
-  // Mark as viewed when user visits analytics, and check on mount
   useEffect(() => {
     const weekId = getWeekId();
     const viewed = localStorage.getItem('debrief-viewed') === weekId;
@@ -53,16 +53,14 @@ export function Sidebar({ debriefReady }: SidebarProps) {
   }, []);
 
   return (
-    <aside className="hidden md:flex flex-col w-[240px] h-screen sticky top-0 bg-surface-secondary border-r border-border overflow-y-auto">
+    <aside className="hidden md:flex flex-col w-[240px] h-screen sticky top-0 bg-surface-primary border-r border-border overflow-y-auto">
       {/* Logo — drag region for Tauri */}
       <div className="px-6 pt-7 pb-6" onMouseDown={handleDrag}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
-            <span className="text-black text-sm font-black tracking-tight">O</span>
-          </div>
+          <NexusLogo size="md" />
           <div>
             <h1 className="text-sm font-bold text-text-primary tracking-tight">
-              Operator OS
+              Nexus
             </h1>
             <p className="text-[10px] text-text-tertiary mt-0.5 font-medium">Command Centre</p>
           </div>
@@ -70,7 +68,7 @@ export function Sidebar({ debriefReady }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-2 px-3 space-y-1">
+      <nav className="flex-1 py-2 px-3 space-y-0.5">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const showDot = item.href === '/analytics' && debriefReady && !debriefViewed;
@@ -79,12 +77,16 @@ export function Sidebar({ debriefReady }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3.5 py-2.5 text-[13px] rounded-xl transition-all duration-150 nav-item',
+                'flex items-center gap-3 px-3.5 py-2.5 text-sm rounded-xl transition-colors duration-150 relative',
                 isActive
-                  ? 'text-text-primary bg-accent/12 font-semibold border border-accent/20'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary/70'
+                  ? 'text-text-primary bg-surface-tertiary font-medium'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary/60'
               )}
             >
+              {/* Active indicator — solid accent left bar */}
+              {isActive && (
+                <div className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full bg-accent" />
+              )}
               <svg
                 width="18"
                 height="18"
@@ -94,7 +96,7 @@ export function Sidebar({ debriefReady }: SidebarProps) {
                 strokeWidth={isActive ? '2' : '1.5'}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={isActive ? 'text-accent' : ''}
+                className={isActive ? 'text-text-primary' : ''}
               >
                 <path d={item.icon} />
               </svg>
@@ -111,8 +113,8 @@ export function Sidebar({ debriefReady }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t border-border/50">
-        <p className="text-[9px] text-text-tertiary/40 uppercase tracking-widest font-medium">v1.0</p>
+      <div className="px-6 py-4 border-t border-border">
+        <p className="text-[9px] text-text-tertiary/40 uppercase tracking-widest font-medium">v3.0</p>
       </div>
     </aside>
   );

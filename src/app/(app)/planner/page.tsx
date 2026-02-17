@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getCalendarEvents, getScheduledTasks, getCompletedScheduledTasks } from '@/actions/calendar';
-import { WeeklyPlanner } from '@/components/planner/WeeklyPlanner';
+import { getWeeklyGoals, getDayThemes } from '@/actions/planner';
+import { WeekStrategyBoard } from '@/components/planner/WeekStrategyBoard';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,8 @@ export default async function PlannerPage({
     allActiveTasksRes,
     clientsRes,
     profileRes,
+    weeklyGoals,
+    dayThemes,
   ] = await Promise.all([
     getCalendarEvents(weekStart, weekEnd).catch(() => []),
     getScheduledTasks(weekStart, weekEnd).catch(() => []),
@@ -70,6 +73,8 @@ export default async function PlannerPage({
         .order('name', { ascending: true })
     ).catch(() => ({ data: [] })),
     Promise.resolve(supabase.from('profiles').select('daily_mlu_capacity').eq('id', user.id).single()).catch(() => ({ data: null })),
+    getWeeklyGoals(weekStart).catch(() => []),
+    getDayThemes(weekStart).catch(() => []),
   ]);
 
   const allTasks = allActiveTasksRes.data || [];
@@ -79,7 +84,7 @@ export default async function PlannerPage({
 
   return (
     <div className="space-y-6">
-      <WeeklyPlanner
+      <WeekStrategyBoard
         weekStart={weekStart}
         tasks={allTasks}
         scheduledTasks={scheduledTasks}
@@ -88,6 +93,8 @@ export default async function PlannerPage({
         calendarEvents={calendarEvents}
         clients={clientsList}
         dailyCapacity={profileRes?.data?.daily_mlu_capacity ?? undefined}
+        weeklyGoals={weeklyGoals}
+        dayThemes={dayThemes}
       />
     </div>
   );

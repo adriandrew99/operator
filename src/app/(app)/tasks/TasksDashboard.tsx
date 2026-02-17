@@ -33,7 +33,7 @@ const ENERGY_COLORS: Record<string, string> = {
 };
 
 const WEIGHT_COLORS: Record<string, string> = {
-  low: 'bg-emerald-500/15 text-emerald-400',
+  low: 'bg-accent/15 text-accent',
   medium: 'bg-amber-500/15 text-amber-400',
   high: 'bg-red-500/15 text-red-400',
 };
@@ -240,7 +240,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
               { value: 'none' as const, label: 'All Energy' },
               { value: 'high' as const, label: 'High', color: 'text-red-400' },
               { value: 'medium' as const, label: 'Medium', color: 'text-amber-400' },
-              { value: 'low' as const, label: 'Low', color: 'text-emerald-400' },
+              { value: 'low' as const, label: 'Low', color: 'text-accent' },
             ].map((f) => (
               <button
                 key={f.value}

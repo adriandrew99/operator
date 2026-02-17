@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
-
 interface AnimatedCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -17,7 +16,7 @@ interface Particle {
   color: string;
 }
 
-const PARTICLE_COLORS = ['#22c55e', '#16a34a', '#4ade80', '#eab308', '#3b82f6', '#a78bfa'];
+const PARTICLE_COLORS = ['#c2653a', '#ae5630', '#d4956e', '#da7756', '#e8a87c', '#b87333'];
 
 // Punchy "level up" completion sound — Xbox-achievement inspired
 function playCompletionSound() {
@@ -77,11 +76,14 @@ function playCompletionSound() {
 export function AnimatedCheckbox({ checked, onChange, disabled, size = 'md' }: AnimatedCheckboxProps) {
   const [particles, setParticles] = useState<Particle[]>([]);
   const [animating, setAnimating] = useState(false);
+  const [unchecking, setUnchecking] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const uncheckTimeoutRef = useRef<NodeJS.Timeout>(null);
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (uncheckTimeoutRef.current) clearTimeout(uncheckTimeoutRef.current);
     };
   }, []);
 
@@ -92,7 +94,7 @@ export function AnimatedCheckbox({ checked, onChange, disabled, size = 'md' }: A
     onChange(newChecked);
 
     if (newChecked) {
-      // Play completion sound
+      // Completion sound
       playCompletionSound();
 
       // Generate confetti particles
@@ -114,6 +116,12 @@ export function AnimatedCheckbox({ checked, onChange, disabled, size = 'md' }: A
         setParticles([]);
         setAnimating(false);
       }, 600);
+    } else {
+      // Uncheck animation — springy reverse pop, no confetti or sound
+      setUnchecking(true);
+      uncheckTimeoutRef.current = setTimeout(() => {
+        setUnchecking(false);
+      }, 300);
     }
   }, [checked, onChange, disabled]);
 
@@ -132,7 +140,8 @@ export function AnimatedCheckbox({ checked, onChange, disabled, size = 'md' }: A
           checked
             ? 'bg-accent border-accent shadow-sm shadow-accent/30'
             : 'border-border-light hover:border-accent/50',
-          animating && 'animate-checkbox-pop',
+          animating && !unchecking && 'animate-checkbox-pop',
+          unchecking && 'animate-checkbox-unpop',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
       >
@@ -142,7 +151,7 @@ export function AnimatedCheckbox({ checked, onChange, disabled, size = 'md' }: A
             height={svgSize}
             viewBox="0 0 14 14"
             fill="none"
-            className="text-black"
+            className="text-white"
           >
             <path
               d="M2.5 7L5.5 10L11.5 4"

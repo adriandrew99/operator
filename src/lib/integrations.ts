@@ -1,10 +1,10 @@
 /**
- * Integration scaffolds for Operator OS.
+ * Integration scaffolds for Nexus.
  * 
  * Each integration follows this pattern:
  * 1. OAuth flow or API key entry (stored in profiles table or separate integrations table)
  * 2. Webhook receiver or polling function
- * 3. Data mapper to convert external items into Operator OS tasks
+ * 3. Data mapper to convert external items into Nexus tasks
  * 
  * None of these integrations are live yet — they are scaffolded
  * so you can plug in credentials and go.
@@ -104,8 +104,8 @@ export function slackMessageToTask(message: SlackMessage) {
  * 
  * Sync approach:
  * - Poll ClickUp tasks API every 15 min
- * - Map ClickUp task status to Operator OS task status
- * - Two-way: completing in Operator OS updates ClickUp
+ * - Map ClickUp task status to Nexus task status
+ * - Two-way: completing in Nexus updates ClickUp
  */
 export function getClickUpHeaders(apiToken: string) {
   return {

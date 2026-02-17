@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="112" ry="112" fill="#c2653a"/>
+
+  <!-- Geometric mountain peak - upward pointing triangle/chevron -->
+  <path d="M256 110 L400 350 L320 350 L256 230 L192 350 L112 350 Z" fill="white"/>
+</svg>

@@ -44,6 +44,41 @@ export interface EnergyTrend {
   taskCount: number;
 }
 
+export interface MonthlyTrend {
+  month: string;
+  label: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+  taskCount: number;
+  totalMLU: number;
+  avgMLUPerTask: number;
+  creativePct: number;
+  clientCount: number;
+  deltas: {
+    revenue: number | null;
+    profit: number | null;
+    taskCount: number | null;
+    totalMLU: number | null;
+    creativePct: number | null;
+    clientCount: number | null;
+  };
+}
+
+export interface ClientHealthScore {
+  clientId: string;
+  name: string;
+  healthScore: number;
+  factors: {
+    velocity: number;
+    efficiency: number;
+    risk: number;
+    renewal: number;
+    balance: number;
+  };
+  trend: 'improving' | 'stable' | 'declining';
+}
+
 // ━━━ Client Energy Profiles ━━━
 export async function getClientEnergyProfiles(): Promise<ClientEnergyProfile[]> {
   const supabase = await createClient();
@@ -59,7 +94,7 @@ export async function getClientEnergyProfiles(): Promise<ClientEnergyProfile[]> 
   const [tasksRes, clientsRes, recurringRes, recurringCompletionsRes, overridesRes] = await Promise.all([
     supabase
       .from('tasks')
-      .select('client_id, weight, energy, estimated_minutes, status, is_personal, completed_at')
+      .select('client_id, weight, energy, estimated_minutes, status, completed_at')
       .eq('user_id', user.id)
       .eq('status', 'completed')
       .not('client_id', 'is', null)
@@ -121,7 +156,7 @@ export async function getClientEnergyProfiles(): Promise<ClientEnergyProfile[]> 
 
   // Regular completed tasks (skip personal)
   for (const task of (tasksRes.data || [])) {
-    if (!task.client_id || task.is_personal) continue;
+    if (!task.client_id) continue;
     addToClient(task.client_id, task.weight, task.energy);
   }
 
@@ -256,6 +291,267 @@ export async function getEnergyTrends(): Promise<EnergyTrend[]> {
   }
 
   return Object.values(weeks).sort((a, b) => a.week.localeCompare(b.week));
+}
+
+// ━━━ Monthly Trends Comparison ━━━
+export async function getMonthlyTrends(): Promise<MonthlyTrend[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Get last 6 months of snapshots
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const sixMonthsAgoKey = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}`;
+
+  const [snapshotsRes, tasksRes, clientsRes] = await Promise.all([
+    supabase
+      .from('financial_snapshots')
+      .select('month, total_revenue, total_expenses')
+      .eq('user_id', user.id)
+      .gte('month', sixMonthsAgoKey)
+      .order('month', { ascending: true }),
+    supabase
+      .from('tasks')
+      .select('client_id, weight, energy, completed_at')
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .gte('completed_at', sixMonthsAgo.toISOString()),
+    supabase
+      .from('clients')
+      .select('id, is_active, termination_date')
+      .eq('user_id', user.id),
+  ]);
+
+  if (snapshotsRes.error) throw snapshotsRes.error;
+  if (tasksRes.error) throw tasksRes.error;
+
+  const snapshots = snapshotsRes.data || [];
+  const tasks = tasksRes.data || [];
+  const allClients = clientsRes.data || [];
+
+  // Group tasks by month
+  const tasksByMonth: Record<string, typeof tasks> = {};
+  for (const task of tasks) {
+    if (!task.completed_at) continue;
+    const date = new Date(task.completed_at);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    if (!tasksByMonth[monthKey]) tasksByMonth[monthKey] = [];
+    tasksByMonth[monthKey].push(task);
+  }
+
+  // Build monthly data
+  const months: MonthlyTrend[] = [];
+  for (const snapshot of snapshots) {
+    const monthKey = snapshot.month;
+    const monthTasks = tasksByMonth[monthKey] || [];
+    const revenue = snapshot.total_revenue || 0;
+    const expenses = snapshot.total_expenses || 0;
+    const profit = revenue - expenses;
+    const taskCount = monthTasks.length;
+
+    // Calculate MLU
+    let totalMLU = 0;
+    let creativeCount = 0;
+    const clientIds = new Set<string>();
+    for (const task of monthTasks) {
+      totalMLU += getTaskMLU({ weight: task.weight, energy: task.energy });
+      const rawEnergy = (task.energy || 'admin') as string;
+      if (rawEnergy === 'creative' || rawEnergy === 'deep') creativeCount++;
+      if (task.client_id) clientIds.add(task.client_id);
+    }
+
+    // Also count active clients for that month (those without termination before month end)
+    const monthEnd = new Date(monthKey + '-01');
+    monthEnd.setMonth(monthEnd.getMonth() + 1);
+    const activeClientCount = allClients.filter(c => {
+      if (!c.is_active && !c.termination_date) return false;
+      if (c.termination_date && new Date(c.termination_date) < new Date(monthKey + '-01')) return false;
+      return true;
+    }).length;
+    const clientCount = Math.max(clientIds.size, activeClientCount);
+
+    const creativePct = taskCount > 0 ? Math.round((creativeCount / taskCount) * 100) : 0;
+    const avgMLUPerTask = taskCount > 0 ? Math.round((totalMLU / taskCount) * 10) / 10 : 0;
+
+    months.push({
+      month: monthKey,
+      label: new Date(monthKey + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }),
+      revenue,
+      expenses,
+      profit,
+      taskCount,
+      totalMLU: Math.round(totalMLU * 10) / 10,
+      avgMLUPerTask,
+      creativePct,
+      clientCount,
+      deltas: { revenue: null, profit: null, taskCount: null, totalMLU: null, creativePct: null, clientCount: null },
+    });
+  }
+
+  // Calculate deltas (compare each month to previous)
+  for (let i = 1; i < months.length; i++) {
+    const curr = months[i];
+    const prev = months[i - 1];
+    curr.deltas = {
+      revenue: prev.revenue > 0 ? Math.round(((curr.revenue - prev.revenue) / prev.revenue) * 100) : null,
+      profit: prev.profit !== 0 ? Math.round(((curr.profit - prev.profit) / Math.abs(prev.profit)) * 100) : null,
+      taskCount: prev.taskCount > 0 ? Math.round(((curr.taskCount - prev.taskCount) / prev.taskCount) * 100) : null,
+      totalMLU: prev.totalMLU > 0 ? Math.round(((curr.totalMLU - prev.totalMLU) / prev.totalMLU) * 100) : null,
+      creativePct: prev.creativePct > 0 ? Math.round(curr.creativePct - prev.creativePct) : null,
+      clientCount: prev.clientCount > 0 ? Math.round(((curr.clientCount - prev.clientCount) / prev.clientCount) * 100) : null,
+    };
+  }
+
+  return months;
+}
+
+// ━━━ Client Health Scores ━━━
+export async function getClientHealthScores(): Promise<ClientHealthScore[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const sixtyDaysAgo = new Date(Date.now() - 60 * 86400000).toISOString();
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const [clientsRes, recentTasksRes, olderTasksRes, overridesRes] = await Promise.all([
+    supabase.from('clients').select('id, name, retainer_amount, is_active, risk_flag, renewal_probability, termination_date')
+      .eq('user_id', user.id).eq('is_active', true),
+    supabase.from('tasks').select('client_id, weight, energy, status, completed_at')
+      .eq('user_id', user.id).eq('status', 'completed').not('client_id', 'is', null)
+      .gte('completed_at', thirtyDaysAgo),
+    supabase.from('tasks').select('client_id, weight, energy, status, completed_at')
+      .eq('user_id', user.id).eq('status', 'completed').not('client_id', 'is', null)
+      .gte('completed_at', sixtyDaysAgo).lt('completed_at', thirtyDaysAgo),
+    Promise.resolve(
+      supabase.from('client_monthly_overrides').select('client_id, amount').eq('user_id', user.id).eq('month', currentMonthKey)
+    ).then(res => res.error ? { data: [] as { client_id: string; amount: number }[] } : res)
+     .catch(() => ({ data: [] as { client_id: string; amount: number }[] })),
+  ]);
+
+  if (clientsRes.error) throw clientsRes.error;
+
+  const clients = clientsRes.data || [];
+  const recentTasks = recentTasksRes.data || [];
+  const olderTasks = olderTasksRes.data || [];
+
+  const overrideMap = new Map<string, number>();
+  const overrideData = (overridesRes as { data: { client_id: string; amount: number }[] | null })?.data || [];
+  for (const o of overrideData) overrideMap.set(o.client_id, Number(o.amount));
+
+  const getRetainer = (c: { id: string; retainer_amount: number | null }) =>
+    overrideMap.has(c.id) ? overrideMap.get(c.id)! : (c.retainer_amount || 0);
+
+  // Aggregate recent tasks by client
+  const recentByClient: Record<string, { count: number; mlu: number; creative: number; admin: number }> = {};
+  for (const t of recentTasks) {
+    if (!t.client_id) continue;
+    if (!recentByClient[t.client_id]) recentByClient[t.client_id] = { count: 0, mlu: 0, creative: 0, admin: 0 };
+    recentByClient[t.client_id].count++;
+    recentByClient[t.client_id].mlu += getTaskMLU({ weight: t.weight, energy: t.energy });
+    const rawEnergy = (t.energy || 'admin') as string;
+    if (rawEnergy === 'creative' || rawEnergy === 'deep') recentByClient[t.client_id].creative++;
+    else recentByClient[t.client_id].admin++;
+  }
+
+  // Aggregate older tasks by client (for trend comparison)
+  const olderByClient: Record<string, { count: number; mlu: number }> = {};
+  for (const t of olderTasks) {
+    if (!t.client_id) continue;
+    if (!olderByClient[t.client_id]) olderByClient[t.client_id] = { count: 0, mlu: 0 };
+    olderByClient[t.client_id].count++;
+    olderByClient[t.client_id].mlu += getTaskMLU({ weight: t.weight, energy: t.energy });
+  }
+
+  // Calculate portfolio avg revenue per MLU
+  const totalPortfolioMLU = Object.values(recentByClient).reduce((s, v) => s + v.mlu, 0);
+  const totalPortfolioRevenue = clients.reduce((s, c) => s + getRetainer(c), 0);
+  const avgRevenuePerMLU = totalPortfolioMLU > 0 ? totalPortfolioRevenue / totalPortfolioMLU : 0;
+
+  const scores: ClientHealthScore[] = [];
+
+  for (const client of clients) {
+    const recent = recentByClient[client.id] || { count: 0, mlu: 0, creative: 0, admin: 0 };
+    const older = olderByClient[client.id] || { count: 0, mlu: 0 };
+    const retainer = getRetainer(client);
+
+    // Factor 1: Task completion velocity (max 30pts)
+    // At least 1 task/week = healthy. Scale from 0-4+ tasks/month
+    const velocityScore = Math.min(30, Math.round((recent.count / 4) * 30));
+
+    // Factor 2: Revenue per MLU efficiency (max 25pts)
+    // Above avg = full points, scale down from there
+    let efficiencyScore = 0;
+    if (recent.mlu > 0 && avgRevenuePerMLU > 0) {
+      const clientRevPerMLU = retainer / recent.mlu;
+      const ratio = clientRevPerMLU / avgRevenuePerMLU;
+      efficiencyScore = Math.min(25, Math.round(ratio * 25));
+    } else if (recent.mlu === 0 && retainer > 0) {
+      // Paid but no work — could be good (light scope) or bad (disengaged)
+      efficiencyScore = 15;
+    }
+
+    // Factor 3: Risk flag status (max 20pts)
+    const riskScore = (!client.risk_flag || client.risk_flag === 'none') ? 20 : 0;
+
+    // Factor 4: Renewal probability (max 15pts)
+    let renewalScore = 0;
+    if (client.renewal_probability !== null && client.renewal_probability !== undefined) {
+      renewalScore = Math.round((client.renewal_probability / 100) * 15);
+    } else {
+      renewalScore = 10; // unknown = neutral
+    }
+
+    // Factor 5: Energy balance (max 10pts)
+    // Best = 30-70% creative. Pure one-type = lower score
+    let balanceScore = 0;
+    const totalTasks = recent.creative + recent.admin;
+    if (totalTasks > 0) {
+      const creativePct = (recent.creative / totalTasks) * 100;
+      if (creativePct >= 25 && creativePct <= 75) {
+        balanceScore = 10;
+      } else if (creativePct >= 10 && creativePct <= 90) {
+        balanceScore = 6;
+      } else {
+        balanceScore = 3;
+      }
+    } else {
+      balanceScore = 5; // no tasks = neutral
+    }
+
+    const healthScore = Math.min(100, velocityScore + efficiencyScore + riskScore + renewalScore + balanceScore);
+
+    // Determine trend based on task volume + MLU comparison
+    let trend: 'improving' | 'stable' | 'declining' = 'stable';
+    if (older.count > 0) {
+      const countChange = ((recent.count - older.count) / older.count) * 100;
+      if (countChange > 20) trend = 'improving';
+      else if (countChange < -20) trend = 'declining';
+    } else if (recent.count > 0) {
+      trend = 'improving'; // went from no tasks to some tasks
+    }
+
+    scores.push({
+      clientId: client.id,
+      name: client.name,
+      healthScore,
+      factors: {
+        velocity: velocityScore,
+        efficiency: efficiencyScore,
+        risk: riskScore,
+        renewal: renewalScore,
+        balance: balanceScore,
+      },
+      trend,
+    });
+  }
+
+  // Sort by health score ascending (lowest first to highlight attention needed)
+  scores.sort((a, b) => a.healthScore - b.healthScore);
+  return scores;
 }
 
 // ━━━ Auto-Generated Insights ━━━

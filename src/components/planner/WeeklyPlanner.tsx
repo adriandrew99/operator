@@ -31,26 +31,26 @@ const HOURS = Array.from({ length: 16 }, (_, i) => i + 6);
 const WEIGHT_COLORS: Record<string, string> = {
   high: 'border-l-red-400 bg-red-500/8',
   medium: 'border-l-amber-400 bg-amber-500/8',
-  low: 'border-l-emerald-400 bg-emerald-500/8',
+  low: 'border-l-accent bg-accent/8',
 };
 
 const WEIGHT_DOT: Record<string, string> = {
   high: 'bg-red-400',
   medium: 'bg-amber-400',
-  low: 'bg-emerald-400',
+  low: 'bg-accent',
 };
 
 const EVENT_COLORS: Record<string, string> = {
   fixed: 'bg-blue-500/15 border-l-blue-400 text-blue-300',
   deep_work: 'bg-purple-500/15 border-l-purple-400 text-purple-300',
   admin: 'bg-surface-tertiary border-l-text-tertiary text-text-secondary',
-  break: 'bg-emerald-500/10 border-l-emerald-400 text-emerald-300',
+  break: 'bg-accent/10 border-l-accent text-accent',
 };
 
 const COMPLETED_COLORS: Record<string, string> = {
   high: 'border-l-red-400/30 bg-red-500/4',
   medium: 'border-l-amber-400/30 bg-amber-500/4',
-  low: 'border-l-emerald-400/30 bg-emerald-500/4',
+  low: 'border-l-accent/30 bg-accent/4',
 };
 
 function formatHour(h: number): string {
@@ -462,7 +462,7 @@ export function WeeklyPlanner({
                     'w-1.5 h-1.5 rounded-full',
                     dayLoad.level === 'overloaded' ? 'bg-red-400' :
                     dayLoad.level === 'heavy' ? 'bg-amber-400' :
-                    dayLoad.level === 'moderate' ? 'bg-accent' : 'bg-emerald-400'
+                    dayLoad.level === 'moderate' ? 'bg-accent' : 'bg-accent'
                   )} />
                   <span className="text-[9px] text-text-tertiary">{dayTaskCount}</span>
                 </div>
@@ -477,7 +477,7 @@ export function WeeklyPlanner({
         <div className={cn(
           'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium animate-fade-in transition-all',
           autoScheduleResult.count > 0
-            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+            ? 'bg-accent/10 text-accent border border-accent/20'
             : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
         )}>
           {autoScheduleResult.count > 0 ? '✓' : '→'} {autoScheduleResult.message}
@@ -592,7 +592,7 @@ export function WeeklyPlanner({
                           className={cn(
                             'h-full rounded-full transition-all',
                             dayLoad.mlu === 0 && 'bg-transparent',
-                            dayLoad.level === 'light' && 'bg-emerald-400',
+                            dayLoad.level === 'light' && 'bg-accent',
                             dayLoad.level === 'moderate' && 'bg-accent',
                             dayLoad.level === 'heavy' && 'bg-amber-400',
                             dayLoad.level === 'overloaded' && 'bg-red-400',
@@ -929,7 +929,7 @@ function PlannerTaskEditor({
   const WEIGHT_BADGE_INLINE: Record<string, string> = {
     high: 'bg-red-500/15 text-red-400',
     medium: 'bg-amber-500/15 text-amber-400',
-    low: 'bg-emerald-500/15 text-emerald-400',
+    low: 'bg-accent/15 text-accent',
   };
 
   const ENERGY_BADGE_INLINE: Record<string, string> = {

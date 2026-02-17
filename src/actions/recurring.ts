@@ -161,6 +161,93 @@ export async function deleteRecurringTask(id: string) {
   revalidatePath('/today');
 }
 
+/**
+ * Skip a recurring task for today — records it as completed (clears from the list).
+ */
+export async function skipRecurringTask(recurringTaskId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const today = getToday();
+
+  const { error } = await supabase
+    .from('recurring_task_completions')
+    .insert({
+      user_id: user.id,
+      recurring_task_id: recurringTaskId,
+      date: today,
+    });
+  if (error && !error.message.includes('duplicate')) throw error;
+  revalidatePath('/today');
+}
+
+/**
+ * Get completion streaks for all active recurring tasks.
+ * Counts consecutive expected days completed, walking back from today.
+ */
+export async function getRecurringStreaks(): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const sixtyDaysAgo = new Date(Date.now() - 60 * 86400000).toISOString().split('T')[0];
+  const [{ data: completions }, { data: tasks }] = await Promise.all([
+    supabase
+      .from('recurring_task_completions')
+      .select('recurring_task_id, date')
+      .eq('user_id', user.id)
+      .gte('date', sixtyDaysAgo)
+      .order('date', { ascending: false }),
+    supabase
+      .from('recurring_tasks')
+      .select('id, frequency, days_of_week, day_of_week')
+      .eq('user_id', user.id)
+      .eq('is_active', true),
+  ]);
+
+  if (!completions || !tasks) return {};
+
+  const streaks: Record<string, number> = {};
+  const completionsByTask: Record<string, Set<string>> = {};
+  for (const c of completions) {
+    if (!completionsByTask[c.recurring_task_id]) completionsByTask[c.recurring_task_id] = new Set();
+    completionsByTask[c.recurring_task_id].add(c.date);
+  }
+
+  for (const task of tasks) {
+    const dates = completionsByTask[task.id];
+    if (!dates) { streaks[task.id] = 0; continue; }
+
+    let streak = 0;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    if (dates.has(todayStr)) streak++;
+
+    for (let i = 1; i <= 60; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dStr = d.toISOString().split('T')[0];
+      const dow = d.getDay();
+
+      const isExpected =
+        task.frequency === 'daily' ? true :
+        task.frequency === 'weekdays' ? (dow >= 1 && dow <= 5) :
+        task.frequency === 'weekly' ? (dow === (task.day_of_week ?? 1)) :
+        task.frequency === 'custom' && task.days_of_week ? task.days_of_week.includes(dow) :
+        false;
+
+      if (!isExpected) continue;
+      if (dates.has(dStr)) streak++;
+      else break;
+    }
+
+    streaks[task.id] = streak;
+  }
+
+  return streaks;
+}
+
 export async function toggleRecurringTaskCompletion(recurringTaskId: string, completed: boolean) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

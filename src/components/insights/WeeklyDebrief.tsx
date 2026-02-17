@@ -220,7 +220,7 @@ export function WeeklyDebrief({ debrief, collapsible }: WeeklyDebriefProps) {
                             <td className="py-2 text-right text-text-secondary font-mono">{client.perHour > 0 ? `\u00A3${client.perHour}` : '\u2014'}</td>
                             <td className={cn(
                               'py-2 text-right font-mono pr-1',
-                              isBest ? 'text-emerald-400 font-medium' : isWorst ? 'text-red-400 font-medium' : 'text-text-secondary'
+                              isBest ? 'text-accent font-medium' : isWorst ? 'text-red-400 font-medium' : 'text-text-secondary'
                             )}>
                               {client.perMLU > 0 ? `\u00A3${client.perMLU.toFixed(0)}` : '\u2014'}
                             </td>

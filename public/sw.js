@@ -1,5 +1,5 @@
-// Operator OS Service Worker — PWA offline + caching
-const CACHE_NAME = 'operator-os-v1';
+// Nexus Service Worker — PWA offline + caching
+const CACHE_NAME = 'nexus-v2';
 
 // Static shell to pre-cache
 const PRECACHE_URLS = [
@@ -73,5 +73,52 @@ self.addEventListener('fetch', (event) => {
         )
     );
     return;
+  }
+});
+
+// ━━━ Push Notifications ━━━
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() || {};
+  const title = data.title || 'Nexus';
+  const options = {
+    body: data.body || '',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    tag: data.tag || 'nexus-notification',
+    data: { url: data.url || '/today' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click — open the app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/today';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus existing window if open
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      // Otherwise open new window
+      return self.clients.openWindow(url);
+    })
+  );
+});
+
+// Message handler — for triggering notifications from the app
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SHOW_NOTIFICATION') {
+    const { title, body, tag, url } = event.data;
+    self.registration.showNotification(title || 'Nexus', {
+      body: body || '',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: tag || 'nexus-notification',
+      data: { url: url || '/today' },
+    });
   }
 });

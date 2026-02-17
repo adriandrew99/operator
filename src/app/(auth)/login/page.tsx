@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
+import { NexusLogo } from '@/components/ui/NexusLogo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -36,13 +37,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div className="space-y-3 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-accent/15 flex items-center justify-center mx-auto">
-          <span className="text-accent text-xl font-bold">O</span>
-        </div>
-        <h1 className="text-xl font-bold text-text-primary tracking-tight">
-          Operator OS
+        <NexusLogo size="lg" className="mx-auto" />
+        <h1 className="text-3xl font-semibold text-text-primary tracking-tight">
+          Nexus
         </h1>
         <p className="text-sm text-text-secondary">Sign in to your command centre</p>
       </div>

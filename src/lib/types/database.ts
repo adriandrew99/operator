@@ -6,6 +6,7 @@ export type LeadStage = 'lead' | 'conversation' | 'proposal_sent' | 'closed' | '
 export type KnowledgeEntryType = 'reading' | 'idea' | 'lesson' | 'quote' | 'mental_model' | 'content_hook';
 export type ReadingStatus = 'to_read' | 'reading' | 'completed';
 export type ExpenseCategoryType = 'software' | 'hosting' | 'marketing' | 'office' | 'travel' | 'professional' | 'insurance' | 'subscriptions' | 'other';
+export type TimePeriod = 'morning' | 'afternoon' | 'evening';
 
 export interface Profile {
   id: string;
@@ -302,6 +303,27 @@ export interface IdentityGoal {
   unit: string;
   direction: 'up' | 'down';
   sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeeklyGoal {
+  id: string;
+  user_id: string;
+  week_start: string;
+  title: string;
+  completed: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DayTheme {
+  id: string;
+  user_id: string;
+  week_start: string;
+  day_index: number;
+  theme: string;
   created_at: string;
   updated_at: string;
 }

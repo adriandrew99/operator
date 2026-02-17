@@ -309,7 +309,7 @@ function LeadCard({
           <span className={cn(
             'text-[10px] font-medium px-1.5 py-0.5 rounded-md',
             (lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0) >= 60
-              ? 'bg-emerald-500/15 text-emerald-400'
+              ? 'bg-accent/15 text-accent'
               : (lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0) >= 30
                 ? 'bg-amber-500/15 text-amber-400'
                 : 'bg-surface-tertiary text-text-tertiary'

@@ -7,7 +7,7 @@ export default function OfflinePage() {
         <div className="text-4xl">📡</div>
         <h1 className="text-lg font-semibold text-text-primary">You&apos;re offline</h1>
         <p className="text-sm text-text-secondary">
-          Operator OS needs an internet connection. Check your WiFi or cellular data and try again.
+          Nexus needs an internet connection. Check your WiFi or cellular data and try again.
         </p>
         <button
           onClick={() => window.location.reload()}

@@ -143,16 +143,7 @@ export function HabitInsights({
   if (insights.length === 0) return null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <p className="text-[10px] font-medium text-accent uppercase tracking-widest">
-          AI Insights
-        </p>
-        <span className="text-[9px] text-text-tertiary px-1.5 py-0.5 rounded-md bg-accent/10 text-accent">
-          Smart
-        </span>
-      </div>
-      <div className="space-y-2">
+    <div className="space-y-2">
         {insights.map((insight) => (
           <div
             key={insight.id}
@@ -174,7 +165,6 @@ export function HabitInsights({
             </p>
           </div>
         ))}
-      </div>
     </div>
   );
 }

@@ -19,6 +19,8 @@ import { DAILY_CAPACITY, deriveCapacityFromQuiz, suggestCapacityFromHistory } fr
 import { INTEGRATIONS } from '@/lib/integrations';
 import { useRouter } from 'next/navigation';
 import type { Profile, IdentityGoal, CustomFundamental } from '@/lib/types/database';
+import { saveSlackWebhookUrl, testSlackWebhook, sendSlackDailySummary } from '@/actions/slack';
+import { generateCalendarToken, getCalendarFeedUrl, revokeCalendarToken } from '@/actions/calendar-feed';
 
 /* ━━━ Emoji Picker ━━━ */
 const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
@@ -98,9 +100,11 @@ interface SettingsDashboardProps {
   completionHistory?: { date: string; totalMLU: number }[];
   calendarSources?: CalendarSource[];
   dashboardLayout?: DashboardLayoutPreferences;
+  slackWebhookUrl?: string | null;
+  calendarFeedUrl?: string | null;
 }
 
-export function SettingsDashboard({ profile, goals, fundamentals, userEmail, completionHistory = [], calendarSources: initialCalendarSources, dashboardLayout }: SettingsDashboardProps) {
+export function SettingsDashboard({ profile, goals, fundamentals, userEmail, completionHistory = [], calendarSources: initialCalendarSources, dashboardLayout, slackWebhookUrl: initialSlackUrl, calendarFeedUrl: initialFeedUrl }: SettingsDashboardProps) {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<IdentityGoal | null>(null);
   const [showFundamentalForm, setShowFundamentalForm] = useState(false);
@@ -344,6 +348,12 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
       {/* Calendar Integration */}
       <CalendarSection initialSources={initialCalendarSources || []} />
 
+      {/* Slack Integration */}
+      <SlackSection initialWebhookUrl={initialSlackUrl || null} />
+
+      {/* Calendar Feed (Outgoing) */}
+      <CalendarFeedSection initialFeedUrl={initialFeedUrl || null} />
+
       {/* Integrations */}
       <div className="space-y-3">
         <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
@@ -564,7 +574,7 @@ function MentalLoadSection({
                     className={cn(
                       'flex-1 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer',
                       quizLow === n
-                        ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30'
+                        ? 'bg-accent/15 text-accent ring-1 ring-accent/30'
                         : 'bg-surface-secondary text-text-tertiary hover:text-text-secondary'
                     )}
                   >
@@ -790,7 +800,7 @@ function CalendarSection({ initialSources }: { initialSources: CalendarSource[] 
                   onClick={() => updateSource(source.id, { enabled: !source.enabled })}
                   className={cn(
                     'text-[10px] px-1.5 py-0.5 rounded transition-colors flex-shrink-0',
-                    source.enabled ? 'text-emerald-400 bg-emerald-400/10' : 'text-text-tertiary bg-surface-tertiary'
+                    source.enabled ? 'text-accent bg-accent/10' : 'text-text-tertiary bg-surface-tertiary'
                   )}
                   title={source.enabled ? 'Disable calendar' : 'Enable calendar'}
                 >
@@ -815,7 +825,7 @@ function CalendarSection({ initialSources }: { initialSources: CalendarSource[] 
                       Testing...
                     </p>
                   ) : testResults[source.id] ? (
-                    <p className={`text-[10px] flex items-center gap-1 ${testResults[source.id].ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <p className={`text-[10px] flex items-center gap-1 ${testResults[source.id].ok ? 'text-accent' : 'text-red-400'}`}>
                       {testResults[source.id].ok ? (
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       ) : (
@@ -868,10 +878,10 @@ function DashboardLayoutSection({ initialLayout }: { initialLayout: DashboardLay
     setSaved(false);
   }
 
-  function toggleAnalytics(key: keyof DashboardLayoutPreferences['analytics']) {
+  function toggleAnalytics(key: string) {
     setLayout(prev => ({
       ...prev,
-      analytics: { ...prev.analytics, [key]: !prev.analytics[key] },
+      analytics: { ...prev.analytics, [key]: !(prev.analytics as Record<string, boolean>)[key] },
     }));
     setSaved(false);
   }
@@ -885,10 +895,10 @@ function DashboardLayoutSection({ initialLayout }: { initialLayout: DashboardLay
   }
 
   const todayKeys = Object.keys(TODAY_SECTION_LABELS) as Array<keyof DashboardLayoutPreferences['today']>;
-  const analyticsKeys = Object.keys(ANALYTICS_SECTION_LABELS) as Array<keyof DashboardLayoutPreferences['analytics']>;
+  const analyticsKeys = Object.keys(ANALYTICS_SECTION_LABELS) as Array<string>;
 
   const todayOnCount = todayKeys.filter(k => layout.today[k]).length;
-  const analyticsOnCount = analyticsKeys.filter(k => layout.analytics[k]).length;
+  const analyticsOnCount = analyticsKeys.filter(k => (layout.analytics as Record<string, boolean>)[k]).length;
 
   return (
     <div className="space-y-3">
@@ -897,7 +907,7 @@ function DashboardLayoutSection({ initialLayout }: { initialLayout: DashboardLay
           Dashboard Layout
         </p>
         <div className="flex items-center gap-2">
-          {saved && <span className="text-[10px] text-emerald-400 animate-fade-in">Saved</span>}
+          {saved && <span className="text-[10px] text-accent animate-fade-in">Saved</span>}
           <Button size="sm" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save Layout'}
           </Button>
@@ -955,7 +965,7 @@ function DashboardLayoutSection({ initialLayout }: { initialLayout: DashboardLay
               <ToggleRow
                 key={key}
                 label={ANALYTICS_SECTION_LABELS[key]}
-                enabled={layout.analytics[key]}
+                enabled={(layout.analytics as Record<string, boolean>)[key] ?? true}
                 onToggle={() => toggleAnalytics(key)}
               />
             ))}
@@ -1015,6 +1025,251 @@ function FinanceSettingsSection({ profile }: { profile: Profile | null }) {
         <div className="flex justify-end">
           <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ━━━ Slack Integration Section ━━━ */
+function SlackSection({ initialWebhookUrl }: { initialWebhookUrl: string | null }) {
+  const [webhookUrl, setWebhookUrl] = useState(initialWebhookUrl || '');
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const isConnected = !!initialWebhookUrl;
+
+  async function handleSave() {
+    setSaving(true);
+    setStatus(null);
+    try {
+      await saveSlackWebhookUrl(webhookUrl.trim());
+      setStatus({ ok: true, message: webhookUrl.trim() ? 'Webhook URL saved.' : 'Webhook URL removed.' });
+    } catch (e) {
+      setStatus({ ok: false, message: e instanceof Error ? e.message : 'Failed to save.' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    if (!webhookUrl.trim()) {
+      setStatus({ ok: false, message: 'Enter a webhook URL first.' });
+      return;
+    }
+    setTesting(true);
+    setStatus(null);
+    try {
+      const result = await testSlackWebhook(webhookUrl.trim());
+      setStatus(result);
+    } catch {
+      setStatus({ ok: false, message: 'Test failed.' });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function handleSendNow() {
+    setSending(true);
+    setStatus(null);
+    try {
+      await sendSlackDailySummary();
+      setStatus({ ok: true, message: 'Daily summary sent to Slack.' });
+    } catch (e) {
+      setStatus({ ok: false, message: e instanceof Error ? e.message : 'Failed to send summary.' });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+          Slack Daily Summary
+        </p>
+        {isConnected && (
+          <span className="flex items-center gap-1.5 text-[10px] text-accent">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            Connected
+          </span>
+        )}
+      </div>
+      <div className="card-surface border border-border rounded-2xl p-4 sm:p-5 space-y-4">
+        <p className="text-xs text-text-secondary">
+          Receive a daily task summary in Slack. Create an{' '}
+          <a
+            href="https://api.slack.com/messaging/webhooks"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:text-accent/80 underline underline-offset-2"
+          >
+            Incoming Webhook
+          </a>
+          {' '}in your Slack workspace and paste the URL below.
+        </p>
+
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={webhookUrl}
+            onChange={(e) => { setWebhookUrl(e.target.value); setStatus(null); }}
+            placeholder="https://hooks.slack.com/services/..."
+            className="flex-1 bg-surface-tertiary border border-border rounded-xl px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary/40 outline-none focus:border-accent transition-all font-mono"
+          />
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={handleTest} disabled={testing || !webhookUrl.trim()}>
+            {testing ? 'Testing...' : 'Test Webhook'}
+          </Button>
+          {isConnected && (
+            <Button size="sm" variant="secondary" onClick={handleSendNow} disabled={sending}>
+              {sending ? 'Sending...' : 'Send Summary Now'}
+            </Button>
+          )}
+        </div>
+
+        {status && (
+          <p className={cn(
+            'text-[11px] flex items-center gap-1.5',
+            status.ok ? 'text-accent' : 'text-red-400'
+          )}>
+            {status.ok ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+            )}
+            {status.message}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ━━━ Calendar Feed (Outgoing) Section ━━━ */
+function CalendarFeedSection({ initialFeedUrl }: { initialFeedUrl: string | null }) {
+  const [feedUrl, setFeedUrl] = useState(initialFeedUrl || '');
+  const [generating, setGenerating] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasToken = !!feedUrl;
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setError(null);
+    try {
+      await generateCalendarToken();
+      const url = await getCalendarFeedUrl();
+      setFeedUrl(url || '');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to generate feed URL.');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleRevoke() {
+    setRevoking(true);
+    setError(null);
+    try {
+      await revokeCalendarToken();
+      setFeedUrl('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to revoke token.');
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  function handleCopy() {
+    if (!feedUrl) return;
+    navigator.clipboard.writeText(feedUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Fallback: select text in a temporary input
+      const input = document.createElement('input');
+      input.value = feedUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+          Calendar Feed
+        </p>
+        {hasToken && (
+          <span className="flex items-center gap-1.5 text-[10px] text-accent">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            Active
+          </span>
+        )}
+      </div>
+      <div className="card-surface border border-border rounded-2xl p-4 sm:p-5 space-y-4">
+        <p className="text-xs text-text-secondary">
+          Subscribe to your Nexus tasks from any calendar app. This feed includes today&apos;s flagged tasks, upcoming deadlines (14 days), and recurring tasks.
+        </p>
+
+        {hasToken ? (
+          <>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={feedUrl}
+                readOnly
+                className="flex-1 bg-surface-tertiary border border-border rounded-xl px-3 py-2 text-xs text-text-primary font-mono select-all outline-none"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button size="sm" variant="secondary" onClick={handleCopy}>
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={generating}>
+                {generating ? 'Regenerating...' : 'Regenerate URL'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleRevoke} disabled={revoking}>
+                {revoking ? 'Revoking...' : 'Revoke Access'}
+              </Button>
+            </div>
+
+            <p className="text-[10px] text-text-tertiary leading-relaxed">
+              Add this URL to Google Calendar, Apple Calendar, or any calendar app that supports iCal subscriptions. Regenerating will invalidate the previous URL.
+            </p>
+          </>
+        ) : (
+          <>
+            <Button size="sm" onClick={handleGenerate} disabled={generating}>
+              {generating ? 'Generating...' : 'Generate Feed URL'}
+            </Button>
+            <p className="text-[10px] text-text-tertiary leading-relaxed">
+              Generate a unique URL to subscribe to your Nexus tasks from Google Calendar, Apple Calendar, or any app that supports iCal subscriptions.
+            </p>
+          </>
+        )}
+
+        {error && (
+          <p className="text-[11px] text-red-400 flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );

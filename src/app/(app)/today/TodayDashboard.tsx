@@ -13,8 +13,8 @@ import { LayoutCustomiser } from '@/components/layout/LayoutCustomiser';
 import { InfoBox } from '@/components/ui/InfoBox';
 import { CelebrationBurst } from '@/components/ui/CelebrationBurst';
 import { DayOverview } from '@/components/today/DayOverview';
+import { DayInReview } from '@/components/today/DayInReview';
 import { useUndoStack } from '@/hooks/useUndoStack';
-import { formatCurrency } from '@/lib/utils/currency';
 import { cn } from '@/lib/utils/cn';
 import type { CustomFundamental, Task, Client, CalendarEvent } from '@/lib/types/database';
 import type { RecurringTaskWithStatus } from '@/lib/types/recurring';
@@ -39,6 +39,7 @@ interface TodayDashboardProps {
   calendarEvents?: CalendarEvent[];
   userName?: string;
   dashboardLayout?: DashboardLayoutPreferences;
+  recurringStreaks?: Record<string, number>;
 }
 
 export function TodayDashboard({
@@ -59,21 +60,18 @@ export function TodayDashboard({
   calendarEvents = [],
   userName,
   dashboardLayout,
+  recurringStreaks,
 }: TodayDashboardProps) {
   const [liveLayout, setLiveLayout] = useState<DashboardLayoutPreferences>(dashboardLayout ?? DEFAULT_DASHBOARD_LAYOUT);
   const layout = liveLayout.today;
-  // Shared completed task IDs — lets WeekView know when TodayTasks completes a task
   const [sharedCompletedIds, setSharedCompletedIds] = useState<Set<string>>(new Set());
-  // Track IDs of tasks whose completion was undone externally (Cmd+Z)
   const [externalUncompletedIds, setExternalUncompletedIds] = useState<Set<string>>(new Set());
 
   const handleUndo = useCallback((entry: import('@/hooks/useUndoStack').UndoEntry) => {
     if (entry.type === 'complete') {
-      // Undo a completion → task should reappear as active
       setSharedCompletedIds(prev => { const n = new Set(prev); n.delete(entry.taskId); return n; });
       setExternalUncompletedIds(prev => new Set(prev).add(entry.taskId));
     } else if (entry.type === 'uncomplete') {
-      // Undo an uncomplete → task should go back to completed
       setSharedCompletedIds(prev => new Set(prev).add(entry.taskId));
     }
   }, []);
@@ -87,16 +85,13 @@ export function TodayDashboard({
 
   const onTaskCompleted = useCallback((taskId: string) => {
     setSharedCompletedIds(prev => new Set(prev).add(taskId));
-    // Clear from external uncompleted set since user is re-completing
     setExternalUncompletedIds(prev => { const n = new Set(prev); n.delete(taskId); return n.size === prev.size ? prev : n; });
   }, []);
   const onTaskUncompleted = useCallback((taskId: string) => {
     setSharedCompletedIds(prev => { const n = new Set(prev); n.delete(taskId); return n; });
   }, []);
 
-  // Celebration: track completion states (only fires on false→true transition, not on mount)
-  // Deduplicate: sharedCompletedIds may overlap with completedTodayTasks after server revalidation
-  // Also, todayTasks (server active) may still include tasks that are in sharedCompletedIds (pre-revalidation)
+  // Celebration tracking
   const serverCompletedIds = new Set(completedTodayTasks.map(t => t.id));
   const allCompletedIds = new Set([...sharedCompletedIds, ...serverCompletedIds]);
   const stillActiveTasks = todayTasks.filter(t => !allCompletedIds.has(t.id));
@@ -105,14 +100,14 @@ export function TodayDashboard({
   const allFundamentalsDone = fundamentalsTotal > 0 && fundamentalsHitCount >= fundamentalsTotal;
 
   return (
-    <div className="space-y-6 stagger-in">
+    <div className="space-y-8 stagger-in">
 
       {/* ━━━ LAYOUT CUSTOMISER ━━━ */}
-      <div className="flex justify-end -mb-3">
+      <div className="flex justify-end -mb-4">
         <LayoutCustomiser page="today" layout={liveLayout} onLayoutChange={setLiveLayout} />
       </div>
 
-      {/* ━━━ DAY OVERVIEW ━━━ */}
+      {/* ━━━ DAY OVERVIEW (open typography — no card wrapper) ━━━ */}
       {layout.day_overview && <DayOverview
         todayTasks={todayTasks}
         completedTodayTasks={completedTodayTasks}
@@ -132,10 +127,9 @@ export function TodayDashboard({
       />}
 
       {/* ━━━ TODAY'S PLAN ━━━ */}
-      <section className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-1 h-5 rounded-full bg-accent" />
-          <h2 className="text-sm font-bold text-text-primary tracking-tight">Today&apos;s Plan</h2>
+      <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">Today&apos;s Plan</h2>
           <InfoBox title="Today's Plan">
             <p>Tasks flagged for today or with today&apos;s deadline. Add tasks inline with weight + client assignment.</p>
           </InfoBox>
@@ -145,18 +139,17 @@ export function TodayDashboard({
 
       {/* ━━━ WEEK OVERVIEW ━━━ */}
       {layout.week_overview && (
-        <section className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
+        <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
           <WeekView weekTasks={weekTasks} todayStr={today} recurringTasks={recurringTasks} clients={clients} externalCompletedIds={sharedCompletedIds} pushUndo={pushUndo} dailyCapacity={dailyCapacity} />
         </section>
       )}
 
       {/* ━━━ FUNDAMENTALS ━━━ */}
       {layout.fundamentals && (
-        <section id="fundamentals-section" className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-amber-500" />
-            <h2 className="text-sm font-bold text-text-primary tracking-tight">Fundamentals</h2>
-            <span className="text-xs text-text-tertiary ml-auto font-mono">{fundamentalsHitCount}/{fundamentalsTotal}</span>
+        <section id="fundamentals-section" className="bg-surface-secondary rounded-xl p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-text-primary">Fundamentals</h2>
+            <span className="text-xs text-text-tertiary font-mono">{fundamentalsHitCount}/{fundamentalsTotal}</span>
           </div>
           <FundamentalsTracker
             fundamentals={customFundamentals}
@@ -165,54 +158,19 @@ export function TodayDashboard({
         </section>
       )}
 
-      {/* ━━━ REVENUE GOAL ━━━ */}
-      {layout.revenue_goal && monthlyRevenue > 0 && (
-        <section className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-1 h-5 rounded-full bg-accent" />
-            <h2 className="text-sm font-bold text-text-primary tracking-tight">Revenue Goal</h2>
-            <InfoBox title="Revenue Goal">
-              <p>Shows current monthly revenue status from your active clients, synced with your Finance page.</p>
-            </InfoBox>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <div className="p-2.5 sm:p-3 rounded-xl bg-accent/5 border border-accent/20">
-              <p className="text-[10px] text-accent uppercase tracking-wider mb-0.5">Revenue</p>
-              <p className="text-base sm:text-lg font-bold text-accent">{formatCurrency(monthlyRevenue)}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-surface-tertiary/40">
-              <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-0.5">Expenses</p>
-              <p className="text-lg font-bold text-text-secondary">{formatCurrency(monthlyExpenses)}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-surface-tertiary/40">
-              <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-0.5">Net</p>
-              <p className={cn('text-lg font-bold', leftInCompany >= 0 ? 'text-accent' : 'text-red-400')}>
-                {formatCurrency(leftInCompany)}
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ━━━ RECURRING + ENERGY ━━━ */}
+      {/* ━━━ RECURRING + ENERGY ROUTER ━━━ */}
       {(layout.recurring_tasks || layout.energy_router) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {layout.recurring_tasks && (
-            <section className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-1 h-5 rounded-full bg-cyan-500" />
-                <h2 className="text-sm font-bold text-text-primary tracking-tight">Recurring Tasks</h2>
-              </div>
-              <DailyTasks tasks={recurringTasks} allTasks={allRecurringTasks || recurringTasks} clients={clients} />
+            <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Recurring Tasks</h2>
+              <DailyTasks tasks={recurringTasks} allTasks={allRecurringTasks || recurringTasks} clients={clients} streaks={recurringStreaks} />
             </section>
           )}
 
           {layout.energy_router && (
-            <section className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-1 h-5 rounded-full bg-orange-500" />
-                <h2 className="text-sm font-bold text-text-primary tracking-tight">Energy Router</h2>
-              </div>
+            <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Energy Router</h2>
               <EnergyRouter
                 todayTasks={todayTasks}
                 fundamentalsCompleted={fundamentalsHitCount}
@@ -225,20 +183,16 @@ export function TodayDashboard({
 
       {/* ━━━ REVENUE RADAR ━━━ */}
       {layout.revenue_radar && clients.length > 0 && (
-        <section className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-emerald-500" />
-            <h2 className="text-sm font-bold text-text-primary tracking-tight">Revenue Radar</h2>
-          </div>
+        <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
+          <h2 className="text-lg font-semibold text-text-primary mb-4">Revenue Radar</h2>
           <RevenueRadar clients={clients} />
         </section>
       )}
 
       {/* ━━━ AI INSIGHTS ━━━ */}
-      {layout.ai_insights && <section className="card-surface border border-border rounded-2xl p-4 sm:p-6 card-hover">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-1 h-5 rounded-full bg-violet-500" />
-          <h2 className="text-sm font-bold text-text-primary tracking-tight">AI Insights</h2>
+      {layout.ai_insights && <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">AI Insights</h2>
           <InfoBox title="AI Habit Insights">
             <p>Pattern analysis across your tasks and fundamentals. Surfaces trends and suggestions.</p>
           </InfoBox>
@@ -255,9 +209,20 @@ export function TodayDashboard({
       {/* ━━━ MONKEY BRAIN OVERRIDE ━━━ */}
       {layout.monkey_brain && <MonkeyBrainOverride />}
 
+      {/* ━━━ DAY IN REVIEW ━━━ */}
+      <DayInReview
+        todayTasks={todayTasks}
+        completedTodayTasks={completedTodayTasks}
+        clients={clients}
+        fundamentalsHit={fundamentalsHitCount}
+        fundamentalsTotal={fundamentalsTotal}
+        allTasksDone={allTasksDone}
+        dailyCapacity={dailyCapacity}
+      />
+
       {/* ━━━ CELEBRATIONS ━━━ */}
-      <CelebrationBurst trigger={allTasksDone} message="All tasks done! 🏆" />
-      <CelebrationBurst trigger={allFundamentalsDone} message="Fundamentals crushed! 💪" />
+      <CelebrationBurst trigger={allTasksDone} message="All tasks done!" />
+      <CelebrationBurst trigger={allFundamentalsDone} message="Fundamentals crushed!" />
 
       {/* ━━━ UNDO TOAST ━━━ */}
       {undoToast && (

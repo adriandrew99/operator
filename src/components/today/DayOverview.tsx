@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
-import { calculateDailyLoad, getLoadLevel, DAILY_CAPACITY } from '@/lib/utils/mental-load';
+import { calculateDailyLoad, DAILY_CAPACITY } from '@/lib/utils/mental-load';
 import type { Task, Client, CalendarEvent } from '@/lib/types/database';
 import type { RecurringTaskWithStatus } from '@/lib/types/recurring';
 
@@ -35,6 +35,14 @@ function getGreeting(): string {
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
+}
+
+function formatFullDate(): string {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 }
 
 const WEATHER_ICONS: Record<string, string> = {
@@ -103,65 +111,59 @@ export function DayOverview({
   const capacity = dailyCapacity ?? DAILY_CAPACITY;
   const allTasks = [...todayTasks, ...completedTodayTasks];
   const dailyLoad = calculateDailyLoad(allTasks);
-  const loadLevel = getLoadLevel(dailyLoad, capacity);
   const totalCount = allTasks.length;
   const doneCount = completedTodayTasks.length;
 
   const greeting = getGreeting();
   const firstName = userName?.split(' ')[0] || '';
+  const dateStr = formatFullDate();
 
   // Current time for event highlighting
   const now = new Date();
   const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   return (
-    <section className="card-surface border border-border rounded-2xl px-4 sm:px-6 py-4 sm:py-5">
-      {/* Greeting row */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <h2 className="text-base sm:text-lg font-bold text-text-primary tracking-tight truncate">
-            {greeting}{firstName ? `, ${firstName}` : ''}
-          </h2>
+    <section className="space-y-5">
+      {/* ━━━ Greeting — open typography, no card ━━━ */}
+      <div>
+        <h2 className="text-3xl sm:text-4xl font-semibold text-text-primary tracking-tight">
+          {greeting}{firstName ? `, ${firstName}` : ''}
+        </h2>
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <p className="text-base text-text-secondary">{dateStr}</p>
+          {weather && (
+            <span className="text-sm text-text-tertiary">
+              {weather.icon} {weather.temp}
+            </span>
+          )}
           {streakDays > 0 && (
-            <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full flex-shrink-0">
-              {streakDays}d streak
+            <span className="text-sm text-text-tertiary ml-1">
+              · {streakDays}d streak
             </span>
           )}
         </div>
-        {weather && (
-          <span className="text-xs text-text-secondary flex-shrink-0">
-            {weather.icon} {weather.temp}
-          </span>
+      </div>
+
+      {/* ━━━ Inline stats — quiet, typographic ━━━ */}
+      <p className="text-sm text-text-tertiary font-sans">
+        <span className="text-text-secondary">{doneCount}</span>
+        <span>/{totalCount} tasks</span>
+        <span className="mx-2 text-border">·</span>
+        <span className="text-text-secondary">{Math.round(dailyLoad)}</span>
+        <span>/{capacity} MLU</span>
+        {fundamentalsTotal > 0 && (
+          <>
+            <span className="mx-2 text-border">·</span>
+            <span className="text-text-secondary">{fundamentalsHit}</span>
+            <span>/{fundamentalsTotal} fundamentals</span>
+          </>
         )}
-      </div>
+      </p>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3">
-        <Stat
-          label="Tasks"
-          value={`${doneCount}/${totalCount}`}
-          done={doneCount >= totalCount && totalCount > 0}
-        />
-        <Stat
-          label="Load"
-          value={`${Math.round(dailyLoad)}/${capacity}`}
-          color={
-            loadLevel === 'light' ? 'text-emerald-400' :
-            loadLevel === 'moderate' ? 'text-accent' :
-            loadLevel === 'heavy' ? 'text-amber-400' : 'text-red-400'
-          }
-        />
-        <Stat
-          label="Habits"
-          value={`${fundamentalsHit}/${fundamentalsTotal}`}
-          done={fundamentalsHit >= fundamentalsTotal && fundamentalsTotal > 0}
-        />
-      </div>
-
-      {/* Calendar events — show all today's events */}
+      {/* ━━━ Calendar events ━━━ */}
       {calendarEvents.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-border/30 space-y-1.5">
-          <p className="text-[9px] text-text-tertiary uppercase tracking-wider font-medium mb-1.5">Schedule</p>
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium font-sans mb-1.5">Schedule</p>
           {calendarEvents
             .filter(e => e.date === today)
             .sort((a, b) => a.start_time.localeCompare(b.start_time))
@@ -181,8 +183,8 @@ export function DayOverview({
                     )}
                     style={event.color ? { backgroundColor: isPast ? undefined : event.color, opacity: isPast ? 0.3 : undefined } : undefined}
                   />
-                  <span className="text-[10px] text-text-tertiary font-mono w-[72px] flex-shrink-0">
-                    {event.start_time.slice(0, 5)}{event.end_time ? `–${event.end_time.slice(0, 5)}` : ''}
+                  <span className="text-[10px] text-text-tertiary font-mono w-auto sm:w-[72px] flex-shrink-0 whitespace-nowrap">
+                    {event.start_time.slice(0, 5)}{event.end_time ? `\u2013${event.end_time.slice(0, 5)}` : ''}
                   </span>
                   <span className={cn(
                     'text-xs truncate',
@@ -194,19 +196,5 @@ export function DayOverview({
         </div>
       )}
     </section>
-  );
-}
-
-function Stat({ label, value, done, color }: { label: string; value: string; done?: boolean; color?: string }) {
-  return (
-    <div className="text-center">
-      <p className={cn(
-        'text-sm sm:text-base font-bold font-mono leading-none',
-        done ? 'text-accent' : color || 'text-text-primary'
-      )}>
-        {value}
-      </p>
-      <p className="text-[9px] text-text-tertiary uppercase tracking-wider mt-1">{label}</p>
-    </div>
   );
 }

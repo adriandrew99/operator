@@ -84,9 +84,32 @@ export const STAGE_PROBABILITY_DEFAULTS: Record<string, number> = {
   lost: 0,
 };
 
+export const TIME_PERIODS = [
+  { value: 'morning', label: 'Morning', hours: '6am – 12pm' },
+  { value: 'afternoon', label: 'Afternoon', hours: '12pm – 5pm' },
+  { value: 'evening', label: 'Evening', hours: '5pm +' },
+] as const;
+
+export const DAY_THEME_PRESETS = [
+  'Deep Work',
+  'Client Day',
+  'Admin & Catch-up',
+  'Strategy & Planning',
+  'Content Day',
+  'Light Day',
+  'Off / Recovery',
+] as const;
+
+export const ENERGY_PERIOD_MAP: Record<string, { ideal_energy: string; ideal_weights: string[] }> = {
+  morning: { ideal_energy: 'creative', ideal_weights: ['high', 'medium'] },
+  afternoon: { ideal_energy: 'admin', ideal_weights: ['medium'] },
+  evening: { ideal_energy: 'admin', ideal_weights: ['low'] },
+};
+
 export type TaskCategory = typeof TASK_CATEGORIES[number]['value'];
 export type EnergyType = typeof ENERGY_TYPES[number]['value'];
 export type LeadStage = typeof LEAD_STAGES[number]['value'];
 export type KnowledgeType = typeof KNOWLEDGE_TYPES[number]['value'];
 export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number]['value'];
 export type TaskWeight = typeof TASK_WEIGHTS[number]['value'];
+export type TimePeriodValue = typeof TIME_PERIODS[number]['value'];

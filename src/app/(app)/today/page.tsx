@@ -4,6 +4,7 @@ import { formatDateLong } from '@/lib/utils/date';
 import { getCustomFundamentals, getTodayCompletions } from '@/actions/fundamentals';
 import { getClientsWithOverrides, getExpenses } from '@/actions/finance';
 import { getTasksForWeek } from '@/actions/tasks';
+import { getRecurringStreaks } from '@/actions/recurring';
 import { isWeeklyDebriefReady } from '@/actions/insights';
 import { getExternalCalendarEvents } from '@/actions/external-calendar';
 import { UK_CORP_TAX_RATE } from '@/lib/constants';
@@ -51,6 +52,7 @@ export default async function TodayPage() {
     profileRes,
     debriefReady,
     calendarEventsRes,
+    recurringStreaks,
   ] = await Promise.all([
     supabase
       .from('operator_scores')
@@ -110,6 +112,7 @@ export default async function TodayPage() {
       .or(`date.eq.${today},and(is_recurring.eq.true)`)
       .order('start_time', { ascending: true })
     ).catch(() => ({ data: [] })),
+    getRecurringStreaks().catch(() => ({} as Record<string, number>)),
   ]);
 
   // Build recurring tasks with today's completion status
@@ -268,6 +271,7 @@ export default async function TodayPage() {
         calendarEvents={calendarEvents as import('@/lib/types/database').CalendarEvent[]}
         userName={profileRes?.data?.full_name ?? undefined}
         dashboardLayout={dashboardLayout}
+        recurringStreaks={recurringStreaks as Record<string, number>}
       />
     </div>
   );

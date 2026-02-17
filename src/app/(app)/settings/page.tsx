@@ -3,6 +3,8 @@ import { getCustomFundamentals } from '@/actions/fundamentals';
 import { getTaskMLU } from '@/lib/utils/mental-load';
 import { getCalendarSources } from '@/actions/external-calendar';
 import { getDashboardLayout } from '@/actions/settings';
+import { getSlackWebhookUrl } from '@/actions/slack';
+import { getCalendarFeedUrl } from '@/actions/calendar-feed';
 import { SettingsDashboard } from './SettingsDashboard';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +19,7 @@ export default async function SettingsPage() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-  const [profileRes, goalsRes, fundamentals, completedTasksRes, calendarSources, dashboardLayout] = await Promise.all([
+  const [profileRes, goalsRes, fundamentals, completedTasksRes, calendarSources, dashboardLayout, slackWebhookUrl, calendarFeedUrl] = await Promise.all([
     Promise.resolve(supabase.from('profiles').select('*').eq('id', user.id).single()).catch(() => ({ data: null })),
     Promise.resolve(supabase
       .from('identity_goals')
@@ -34,6 +36,8 @@ export default async function SettingsPage() {
     ).catch(() => ({ data: [] })),
     getCalendarSources().catch(() => []),
     getDashboardLayout().catch(() => undefined),
+    getSlackWebhookUrl().catch(() => null),
+    getCalendarFeedUrl().catch(() => null),
   ]);
 
   // Group completed tasks by day and sum MLU
@@ -64,6 +68,8 @@ export default async function SettingsPage() {
         completionHistory={completionHistory}
         calendarSources={calendarSources}
         dashboardLayout={dashboardLayout}
+        slackWebhookUrl={slackWebhookUrl}
+        calendarFeedUrl={calendarFeedUrl}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { getProjectEnergyBreakdown, getClientEfficiency, getWeeklyCompletionTrend } from '@/actions/analytics';
 import { getClientsWithOverrides } from '@/actions/finance';
-import { getClientEnergyProfiles, getRevenueTrends, getEnergyTrends, generateAnalyticsInsights, getWeeklyDebrief, detectPatterns } from '@/actions/insights';
+import { getClientEnergyProfiles, getRevenueTrends, getEnergyTrends, generateAnalyticsInsights, getWeeklyDebrief, detectPatterns, getMonthlyTrends, getClientHealthScores } from '@/actions/insights';
 import type { DashboardLayoutPreferences } from '@/lib/types/dashboard-layout';
 import { DEFAULT_DASHBOARD_LAYOUT } from '@/lib/types/dashboard-layout';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -23,18 +23,22 @@ export default async function AnalyticsPage() {
     insights,
     weeklyDebrief,
     patterns,
+    monthlyTrends,
+    clientHealthScores,
     profileRes,
   ] = await Promise.all([
-    getProjectEnergyBreakdown().catch(() => []),
-    getClientEfficiency().catch(() => []),
-    getWeeklyCompletionTrend().catch(() => []),
-    getClientsWithOverrides().catch(() => []),
-    getClientEnergyProfiles().catch(() => []),
-    getRevenueTrends().catch(() => []),
-    getEnergyTrends().catch(() => []),
-    generateAnalyticsInsights().catch(() => []),
-    getWeeklyDebrief().catch(() => null),
-    detectPatterns().catch(() => []),
+    getProjectEnergyBreakdown().catch((e) => { console.error('[Analytics] projectEnergy failed:', e.message); return []; }),
+    getClientEfficiency().catch((e) => { console.error('[Analytics] clientEfficiency failed:', e.message); return []; }),
+    getWeeklyCompletionTrend().catch((e) => { console.error('[Analytics] weeklyTrend failed:', e.message); return []; }),
+    getClientsWithOverrides().catch((e) => { console.error('[Analytics] clients failed:', e.message); return []; }),
+    getClientEnergyProfiles().catch((e) => { console.error('[Analytics] clientEnergyProfiles failed:', e.message); return []; }),
+    getRevenueTrends().catch((e) => { console.error('[Analytics] revenueTrends failed:', e.message); return []; }),
+    getEnergyTrends().catch((e) => { console.error('[Analytics] energyTrends failed:', e.message); return []; }),
+    generateAnalyticsInsights().catch((e) => { console.error('[Analytics] insights failed:', e.message); return []; }),
+    getWeeklyDebrief().catch((e) => { console.error('[Analytics] weeklyDebrief failed:', e.message); return null; }),
+    detectPatterns().catch((e) => { console.error('[Analytics] patterns failed:', e.message); return []; }),
+    getMonthlyTrends().catch((e) => { console.error('[Analytics] monthlyTrends failed:', e.message); return []; }),
+    getClientHealthScores().catch((e) => { console.error('[Analytics] clientHealthScores failed:', e.message); return []; }),
     user ? Promise.resolve(supabase.from('profiles').select('daily_mlu_capacity').eq('id', user.id).single()).catch(() => ({ data: null })) : Promise.resolve({ data: null }),
   ]);
 
@@ -61,6 +65,8 @@ export default async function AnalyticsPage() {
         insights={insights}
         weeklyDebrief={weeklyDebrief}
         patterns={patterns}
+        monthlyTrends={monthlyTrends}
+        clientHealthScores={clientHealthScores}
         dailyCapacity={profileRes?.data?.daily_mlu_capacity ?? undefined}
         dashboardLayout={dashboardLayout}
       />

@@ -12,18 +12,24 @@ export interface DashboardLayoutPreferences {
   };
   analytics: {
     weekly_debrief: boolean;
-    insights: boolean;
-    patterns: boolean;
+    hero_section: boolean;
+    client_energy_revenue: boolean;
+    insights_patterns: boolean;
+    monthly_trends: boolean;
+    client_health_scores: boolean;
     revenue_radar: boolean;
-    summary_cards: boolean;
     revenue_profit_chart: boolean;
     energy_investment_chart: boolean;
-    energy_per_client: boolean;
-    client_energy_breakdown: boolean;
     energy_by_client: boolean;
     task_volume_chart: boolean;
-    efficiency_comparison: boolean;
     mlu_explainer: boolean;
+    // Legacy keys for backward compat (stored in user metadata)
+    insights?: boolean;
+    patterns?: boolean;
+    summary_cards?: boolean;
+    energy_per_client?: boolean;
+    client_energy_breakdown?: boolean;
+    efficiency_comparison?: boolean;
   };
 }
 
@@ -41,17 +47,16 @@ export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutPreferences = {
   },
   analytics: {
     weekly_debrief: true,
-    insights: true,
-    patterns: true,
+    hero_section: true,
+    client_energy_revenue: true,
+    insights_patterns: true,
+    monthly_trends: true,
+    client_health_scores: true,
     revenue_radar: true,
-    summary_cards: true,
     revenue_profit_chart: true,
     energy_investment_chart: true,
-    energy_per_client: true,
-    client_energy_breakdown: true,
     energy_by_client: true,
     task_volume_chart: true,
-    efficiency_comparison: true,
     mlu_explainer: true,
   },
 };
@@ -68,18 +73,18 @@ export const TODAY_SECTION_LABELS: Record<keyof DashboardLayoutPreferences['toda
   monkey_brain: 'Monkey Brain Override',
 };
 
-export const ANALYTICS_SECTION_LABELS: Record<keyof DashboardLayoutPreferences['analytics'], string> = {
+/** Labels for the new consolidated analytics sections */
+export const ANALYTICS_SECTION_LABELS: Record<string, string> = {
   weekly_debrief: 'Weekly Debrief',
-  insights: 'Insights & Recommendations',
-  patterns: 'Detected Patterns',
+  hero_section: 'Portfolio Performance',
+  client_energy_revenue: 'Client Energy vs Revenue',
+  insights_patterns: 'Insights & Patterns',
+  monthly_trends: 'Monthly Trends',
+  client_health_scores: 'Client Health Scores',
   revenue_radar: 'Revenue Radar',
-  summary_cards: 'Summary Cards',
   revenue_profit_chart: 'Revenue & Profit Over Time',
   energy_investment_chart: 'Weekly Energy Investment',
-  energy_per_client: 'Mental Energy Per Client',
-  client_energy_breakdown: 'Client Energy & Time Breakdown',
   energy_by_client: 'Energy by Client',
   task_volume_chart: 'Weekly Task Volume',
-  efficiency_comparison: 'Client Efficiency Comparison',
   mlu_explainer: 'How MLU Works',
 };
