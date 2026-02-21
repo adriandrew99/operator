@@ -57,7 +57,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold text-text-primary">Settings</h1>
+        <h1 className="text-page-title text-text-primary">Settings</h1>
         <p className="text-xs text-text-tertiary mt-0.5">Identity goals, fundamentals, and preferences</p>
       </div>
       <SettingsDashboard

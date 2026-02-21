@@ -36,7 +36,7 @@ export default async function ReviewPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold text-text-primary">Weekly Review</h1>
+        <h1 className="text-page-title text-text-primary">Weekly Review</h1>
         <p className="text-xs text-text-tertiary mt-0.5">
           Week of {formatDateLong(weekStart)}
         </p>

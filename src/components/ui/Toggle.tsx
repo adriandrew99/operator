@@ -19,25 +19,26 @@ export function Toggle({ checked, onChange, label, disabled, className }: Toggle
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        'flex items-center gap-3 w-full py-2.5 px-3 transition-colors group',
-        'hover:bg-surface-secondary',
+        'flex items-center gap-3 w-full py-2.5 px-3 transition-all group rounded-xl',
+        'hover:bg-surface-tertiary',
         disabled && 'opacity-50 pointer-events-none',
         className
       )}
     >
       <div
         className={cn(
-          'w-5 h-5 border-2 flex items-center justify-center transition-all',
+          'relative w-10 h-6 rounded-full transition-all duration-150 flex-shrink-0',
           checked
-            ? 'bg-accent border-accent'
-            : 'border-border-light bg-transparent group-hover:border-text-secondary'
+            ? 'bg-text-primary'
+            : 'bg-surface-tertiary border border-border'
         )}
       >
-        {checked && (
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6L5 9L10 3" stroke="black" strokeWidth="2" strokeLinecap="square" />
-          </svg>
-        )}
+        <div
+          className={cn(
+            'absolute top-0.5 w-5 h-5 rounded-full bg-background transition-all duration-150',
+            checked ? 'left-[18px]' : 'left-0.5'
+          )}
+        />
       </div>
       {label && (
         <span className={cn(

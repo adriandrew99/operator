@@ -63,18 +63,18 @@ export function WeeklyGoals({ goals, weekStart }: WeeklyGoalsProps) {
   const totalCount = goals.length;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-surface-secondary/30">
+    <div className="rounded-2xl border border-border bg-surface-secondary/30">
       {/* Header */}
       <button
         onClick={toggleCollapsed}
         className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase tracking-wider text-text-tertiary font-medium">
+          <span className="text-xs text-text-tertiary font-medium">
             Week Goals
           </span>
           {totalCount > 0 && (
-            <span className="text-[9px] text-text-tertiary">
+            <span className="text-xs text-text-tertiary">
               {completedCount}/{totalCount}
             </span>
           )}
@@ -91,7 +91,7 @@ export function WeeklyGoals({ goals, weekStart }: WeeklyGoalsProps) {
 
       {/* Content */}
       {!collapsed && (
-        <div className="px-4 pb-3 space-y-1.5">
+        <div className="px-4 pb-4 space-y-2">
           {slots.map((goal, index) => (
             <div key={index} className="flex items-center gap-2 group">
               {goal ? (
@@ -112,7 +112,7 @@ export function WeeklyGoals({ goals, weekStart }: WeeklyGoalsProps) {
                         if (e.key === 'Enter') saveGoal(index);
                         if (e.key === 'Escape') setEditingIndex(null);
                       }}
-                      className="flex-1 text-sm bg-transparent text-text-primary outline-none border-b border-accent/30"
+                      className="flex-1 text-sm bg-transparent text-text-primary outline-none border-b border-border-light"
                     />
                   ) : (
                     <span
@@ -127,7 +127,7 @@ export function WeeklyGoals({ goals, weekStart }: WeeklyGoalsProps) {
                   )}
                   <button
                     onClick={() => handleDelete(goal.id)}
-                    className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-danger text-[10px] transition-all cursor-pointer"
+                    className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-danger text-xs transition-all cursor-pointer"
                   >
                     ✕
                   </button>
@@ -137,7 +137,7 @@ export function WeeklyGoals({ goals, weekStart }: WeeklyGoalsProps) {
                   onClick={() => startEditing(index, '')}
                   className="flex items-center gap-2 w-full cursor-text"
                 >
-                  <div className="w-4 h-4 rounded border border-border/40 shrink-0" />
+                  <div className="w-4 h-4 rounded border border-border shrink-0" />
                   {editingIndex === index ? (
                     <input
                       ref={inputRef}
@@ -150,7 +150,7 @@ export function WeeklyGoals({ goals, weekStart }: WeeklyGoalsProps) {
                         if (e.key === 'Escape') setEditingIndex(null);
                       }}
                       placeholder="Add a goal for this week..."
-                      className="flex-1 text-sm bg-transparent text-text-primary outline-none border-b border-accent/30 placeholder:text-text-tertiary/40"
+                      className="flex-1 text-sm bg-transparent text-text-primary outline-none border-b border-border-light placeholder:text-text-tertiary/40"
                     />
                   ) : (
                     <span className="text-sm text-text-tertiary/30">

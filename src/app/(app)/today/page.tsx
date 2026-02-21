@@ -2,14 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import { getToday } from '@/lib/utils/date';
 import { formatDateLong } from '@/lib/utils/date';
 import { getCustomFundamentals, getTodayCompletions } from '@/actions/fundamentals';
-import { getClientsWithOverrides, getExpenses } from '@/actions/finance';
+import { getClientsWithOverrides } from '@/actions/finance';
 import { getTasksForWeek } from '@/actions/tasks';
 import { getRecurringStreaks } from '@/actions/recurring';
 import { isWeeklyDebriefReady } from '@/actions/insights';
 import { getExternalCalendarEvents } from '@/actions/external-calendar';
-import { UK_CORP_TAX_RATE } from '@/lib/constants';
-import type { DashboardLayoutPreferences } from '@/lib/types/dashboard-layout';
-import { DEFAULT_DASHBOARD_LAYOUT } from '@/lib/types/dashboard-layout';
+import { getTodayScore } from '@/actions/score';
 import { TodayDashboard } from './TodayDashboard';
 import { DebriefBanner } from '@/components/insights/DebriefBanner';
 
@@ -46,13 +44,13 @@ export default async function TodayPage() {
     fundamentalCompletions,
     todayTasksRes,
     clients,
-    expenses,
     weekTasks,
     completedTodayRes,
     profileRes,
     debriefReady,
     calendarEventsRes,
     recurringStreaks,
+    todayScore,
   ] = await Promise.all([
     supabase
       .from('operator_scores')
@@ -94,7 +92,6 @@ export default async function TodayPage() {
         return res;
       }),
     getClientsWithOverrides().catch(() => []),
-    getExpenses().catch(() => [] as { amount: number }[]),
     getTasksForWeek(weekStart, weekEnd).catch(() => []),
     supabase
       .from('tasks')
@@ -113,6 +110,7 @@ export default async function TodayPage() {
       .order('start_time', { ascending: true })
     ).catch(() => ({ data: [] })),
     getRecurringStreaks().catch(() => ({} as Record<string, number>)),
+    getTodayScore().catch(() => null),
   ]);
 
   // Build recurring tasks with today's completion status
@@ -191,12 +189,6 @@ export default async function TodayPage() {
 
   const calendarEvents = [...internalEvents, ...externalAsCalendar];
 
-  // Read dashboard layout from user metadata (no extra DB call)
-  const storedLayout = user.user_metadata?.dashboard_layout;
-  const dashboardLayout: DashboardLayoutPreferences = storedLayout
-    ? { today: { ...DEFAULT_DASHBOARD_LAYOUT.today, ...storedLayout.today }, analytics: { ...DEFAULT_DASHBOARD_LAYOUT.analytics, ...storedLayout.analytics } }
-    : DEFAULT_DASHBOARD_LAYOUT;
-
   // Auto-sync: create virtual today-tasks from recurring tasks due today
   // These appear in the main Today's Plan so completion syncs across both views
   const recurringAsTodayTasks = recurringTasks.map((rt) => ({
@@ -239,7 +231,7 @@ export default async function TodayPage() {
     <div className="space-y-8">
       <div className="flex items-end justify-between max-w-3xl">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Today</h1>
+          <h1 className="text-page-title text-text-primary">Today</h1>
           <p className="text-sm text-text-tertiary mt-1">
             {formatDateLong(today)}
           </p>
@@ -260,18 +252,10 @@ export default async function TodayPage() {
         weekTasks={weekTasks || []}
         today={today}
         clients={clients || []}
-        monthlyRevenue={(clients || []).filter(c => c.is_active).reduce((s, c) => s + (c.retainer_amount || 0), 0)}
-        monthlyExpenses={expenses.reduce((s, e) => s + (e.amount || 0), 0)}
-        leftInCompany={
-          (clients || []).filter(c => c.is_active).reduce((s, c) => s + (c.retainer_amount || 0), 0)
-          - expenses.reduce((s, e) => s + (e.amount || 0), 0)
-          - (clients || []).filter(c => c.is_active).reduce((s, c) => s + (c.retainer_amount || 0), 0) * UK_CORP_TAX_RATE
-        }
         dailyCapacity={profileRes?.data?.daily_mlu_capacity ?? undefined}
         calendarEvents={calendarEvents as import('@/lib/types/database').CalendarEvent[]}
-        userName={profileRes?.data?.full_name ?? undefined}
-        dashboardLayout={dashboardLayout}
         recurringStreaks={recurringStreaks as Record<string, number>}
+        todayScore={todayScore}
       />
     </div>
   );

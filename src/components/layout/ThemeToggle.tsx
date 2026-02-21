@@ -29,14 +29,10 @@ export function ThemeToggle({ size = 'default' }: { size?: 'default' | 'compact'
       onClick={cycleTheme}
       className={cn(
         'rounded-xl flex items-center justify-center transition-all duration-300 btn-press',
-        'border border-border/60 hover:border-accent/40',
-        'hover:bg-accent/10 hover:shadow-[0_0_12px_var(--glow-accent)]',
+        'border border-border hover:border-border-light',
+        'hover:bg-surface-tertiary',
         size === 'compact' ? 'w-8 h-8' : 'w-10 h-10',
-        isAuto
-          ? 'text-accent bg-surface-tertiary/60'
-          : isDark
-            ? 'text-amber-400 bg-surface-tertiary/60'
-            : 'text-indigo-500 bg-surface-tertiary/60'
+        'text-text-secondary bg-surface-tertiary hover:text-text-primary'
       )}
       title={isAuto ? 'Auto mode (7am–6pm light)' : isDark ? 'Dark mode — click for Auto' : 'Light mode — click for Dark'}
     >

@@ -13,14 +13,14 @@ interface TaskEditorProps {
 }
 
 const WEIGHT_BADGE: Record<string, string> = {
-  high: 'bg-red-500/15 text-red-400',
-  medium: 'bg-amber-500/15 text-amber-400',
-  low: 'bg-accent/15 text-accent',
+  high: 'bg-text-primary text-background',
+  medium: 'bg-surface-tertiary text-text-secondary',
+  low: 'bg-surface-tertiary text-text-tertiary',
 };
 
 const ENERGY_BADGE: Record<string, string> = {
   admin: 'bg-surface-tertiary text-text-secondary',
-  creative: 'bg-purple-500/15 text-purple-400',
+  creative: 'bg-surface-tertiary text-text-primary',
 };
 
 export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEditorProps) {
@@ -29,6 +29,7 @@ export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEdi
   const [energy, setEnergy] = useState(task.energy || 'admin');
   const [estimatedMinutes, setEstimatedMinutes] = useState(String(task.estimated_minutes || ''));
   const [clientId, setClientId] = useState(task.client_id || '');
+  const [isPersonal, setIsPersonal] = useState(task.is_personal || false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEdi
     if (weight !== task.weight) updates.weight = weight;
     if (energy !== task.energy) updates.energy = energy;
     if (clientId !== (task.client_id || '')) updates.client_id = clientId || null;
+    if (isPersonal !== (task.is_personal || false)) updates.is_personal = isPersonal;
     const mins = estimatedMinutes ? Number(estimatedMinutes) : null;
     if (mins !== task.estimated_minutes) updates.estimated_minutes = mins;
     if (Object.keys(updates).length > 0) {
@@ -57,7 +59,7 @@ export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEdi
   return (
     <div
       ref={ref}
-      className="p-3 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/30 animate-fade-in space-y-3 w-[280px]"
+      className="p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in space-y-3 w-[280px]"
       style={{ zIndex: 50 }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -66,18 +68,18 @@ export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEdi
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border/40 pb-2"
+        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border pb-2"
         autoFocus
       />
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Weight:</span>
+          <span className="text-xs text-text-tertiary mr-1">Weight:</span>
           {(['low', 'medium', 'high'] as const).map(w => (
             <button
               key={w}
               onClick={() => setWeight(w)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium uppercase transition-all cursor-pointer',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium uppercase transition-all cursor-pointer',
                 weight === w ? WEIGHT_BADGE[w] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -86,13 +88,13 @@ export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEdi
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Energy:</span>
+          <span className="text-xs text-text-tertiary mr-1">Energy:</span>
           {(['creative', 'admin'] as const).map(e => (
             <button
               key={e}
               onClick={() => setEnergy(e)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium transition-all cursor-pointer',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium transition-all cursor-pointer',
                 energy === e ? ENERGY_BADGE[e] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -104,11 +106,11 @@ export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEdi
       <div className="flex items-center gap-4 flex-wrap">
         {clients.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-text-tertiary">Client:</span>
+            <span className="text-xs text-text-tertiary">Client:</span>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="text-[10px] bg-surface-tertiary/60 border border-border/40 rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-accent/40 transition-colors"
+              className="text-xs bg-surface-tertiary rounded-lg px-2 py-1 text-text-secondary outline-none focus:ring-1 focus:ring-border-light transition-colors"
             >
               <option value="">None</option>
               {clients.map(c => (
@@ -118,25 +120,36 @@ export function TaskEditor({ task, clients, onSave, onClose, onDelete }: TaskEdi
           </div>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-text-tertiary">Time:</span>
+          <span className="text-xs text-text-tertiary">Time:</span>
           <input
             type="number"
             value={estimatedMinutes}
             onChange={(e) => setEstimatedMinutes(e.target.value)}
             placeholder="mins"
             min="0"
-            className="w-16 text-[10px] bg-surface-tertiary/60 border border-border/40 rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-accent/40 transition-colors"
+            className="w-16 text-xs bg-surface-tertiary rounded-lg px-2 py-1 text-text-secondary outline-none focus:ring-1 focus:ring-border-light transition-colors"
           />
-          <span className="text-[9px] text-text-tertiary">min</span>
+          <span className="text-xs text-text-tertiary">min</span>
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setIsPersonal(!isPersonal)}
+          className={cn(
+            'text-xs px-2 py-0.5 rounded-md font-medium transition-all cursor-pointer',
+            isPersonal ? 'bg-surface-tertiary text-text-primary' : 'text-text-tertiary/50 hover:text-text-tertiary'
+          )}
+        >
+          Personal
+        </button>
       </div>
       <div className="flex items-center justify-between gap-2">
         {onDelete ? (
-          <button onClick={onDelete} className="text-[10px] text-text-tertiary hover:text-danger transition-colors px-2 py-1 cursor-pointer">Delete</button>
+          <button onClick={onDelete} className="text-xs text-text-tertiary hover:text-danger transition-colors px-2 py-1 cursor-pointer">Delete</button>
         ) : <div />}
         <div className="flex items-center gap-2">
-          <button onClick={onClose} className="text-[10px] text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Cancel</button>
-          <button onClick={handleSave} className="text-[10px] text-accent font-medium hover:text-accent/80 transition-colors px-2 py-1 cursor-pointer">Save</button>
+          <button onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Cancel</button>
+          <button onClick={handleSave} className="text-xs text-text-primary font-medium hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Save</button>
         </div>
       </div>
     </div>

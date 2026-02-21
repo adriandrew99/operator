@@ -18,10 +18,10 @@ interface PipelineDashboardProps {
 
 const STAGE_COLORS: Record<string, string> = {
   lead: 'text-text-secondary',
-  conversation: 'text-accent-blue',
-  proposal_sent: 'text-warning',
-  closed: 'text-accent',
-  lost: 'text-danger',
+  conversation: 'text-text-secondary',
+  proposal_sent: 'text-text-secondary',
+  closed: 'text-text-primary',
+  lost: 'text-text-tertiary',
 };
 
 type LeadFormData = {
@@ -170,17 +170,17 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-text-primary">Pipeline</h1>
+        <h1 className="text-page-title text-text-primary">Pipeline</h1>
         <Button size="sm" onClick={() => setShowModal(true)}>+ Add Lead</Button>
       </div>
 
       {/* Next Action Banner */}
       {nextAction && (
-        <div className="card-surface border border-accent/30 rounded-2xl card-hover p-5 flex items-center justify-between">
-          <div className="space-y-0.5">
-            <p className="text-[10px] font-medium text-accent uppercase tracking-widest">Next Action</p>
+        <div className="card-elevated rounded-2xl p-5 flex items-center justify-between">
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-text-tertiary ">Next Action</p>
             <p className="text-sm text-text-primary">{nextAction.next_action}</p>
             <p className="text-xs text-text-secondary">{nextAction.name} {nextAction.company ? `@ ${nextAction.company}` : ''} &middot; {nextAction.next_action_date}</p>
           </div>
@@ -189,20 +189,20 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
 
       {/* Funnel Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card-surface border border-border rounded-2xl card-hover p-5 space-y-1">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Pipeline Value</p>
+        <div className="card-elevated rounded-2xl p-6 space-y-2">
+          <p className="text-xs font-medium text-text-tertiary ">Pipeline Value</p>
           <p className="text-xl font-bold text-text-primary">{formatCurrency(pipelineValue)}</p>
         </div>
-        <div className="card-surface border border-border rounded-2xl card-hover p-5 space-y-1">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Closed Value</p>
-          <p className="text-xl font-bold text-accent">{formatCurrency(closedValue)}</p>
+        <div className="card-elevated rounded-2xl p-6 space-y-2">
+          <p className="text-xs font-medium text-text-tertiary ">Closed Value</p>
+          <p className="text-xl font-bold text-text-primary">{formatCurrency(closedValue)}</p>
         </div>
-        <div className="card-surface border border-border rounded-2xl card-hover p-5 space-y-1">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Active Leads</p>
+        <div className="card-elevated rounded-2xl p-6 space-y-2">
+          <p className="text-xs font-medium text-text-tertiary ">Active Leads</p>
           <p className="text-xl font-bold text-text-primary">{leads.filter((l) => l.stage !== 'lost' && l.stage !== 'closed').length}</p>
         </div>
-        <div className="card-surface border border-border rounded-2xl card-hover p-5 space-y-1">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Total Leads</p>
+        <div className="card-elevated rounded-2xl p-6 space-y-2">
+          <p className="text-xs font-medium text-text-tertiary ">Total Leads</p>
           <p className="text-xl font-bold text-text-secondary">{leads.length}</p>
         </div>
       </div>
@@ -218,7 +218,7 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
             <div key={stage} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <h3 className={`text-sm font-semibold ${STAGE_COLORS[stage] || 'text-text-primary'}`}>{stageLabel}</h3>
+                  <h3 className={`text-section-heading ${STAGE_COLORS[stage] || 'text-text-primary'}`}>{stageLabel}</h3>
                   <span className="text-xs text-text-tertiary">({stageLeads.length})</span>
                 </div>
                 {stageValue > 0 && (
@@ -227,7 +227,7 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
               </div>
 
               {stageLeads.length === 0 ? (
-                <div className="card-surface border border-border rounded-2xl p-5 text-center">
+                <div className="card-elevated rounded-2xl p-5 text-center">
                   <p className="text-xs text-text-tertiary">No leads in this stage</p>
                 </div>
               ) : (
@@ -296,7 +296,7 @@ function LeadCard({
   const currentIndex = stages.indexOf(lead.stage);
 
   return (
-    <div className="card-surface border border-border rounded-2xl card-hover p-5 space-y-2 group">
+    <div className="card-elevated rounded-2xl p-5 space-y-2 group">
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1 cursor-pointer" onClick={onEdit}>
           <p className="text-sm font-medium text-text-primary">{lead.name}</p>
@@ -304,14 +304,14 @@ function LeadCard({
         </div>
         <div className="flex items-center gap-2 ml-3">
           {lead.estimated_value != null && lead.estimated_value > 0 && (
-            <span className="text-sm font-medium text-accent">{formatCurrency(lead.estimated_value)}</span>
+            <span className="text-sm font-medium text-text-primary">{formatCurrency(lead.estimated_value)}</span>
           )}
           <span className={cn(
-            'text-[10px] font-medium px-1.5 py-0.5 rounded-md',
+            'text-xs font-medium px-1.5 py-0.5 rounded-md',
             (lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0) >= 60
-              ? 'bg-accent/15 text-accent'
+              ? 'bg-surface-tertiary text-text-primary'
               : (lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0) >= 30
-                ? 'bg-amber-500/15 text-amber-400'
+                ? 'bg-surface-tertiary text-text-secondary'
                 : 'bg-surface-tertiary text-text-tertiary'
           )}>
             {lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0}%
@@ -320,7 +320,7 @@ function LeadCard({
       </div>
 
       {lead.source && (
-        <p className="text-[10px] text-text-tertiary">Source: {lead.source}</p>
+        <p className="text-xs text-text-tertiary">Source: {lead.source}</p>
       )}
 
       {lead.next_action && (
@@ -354,7 +354,7 @@ function LeadCard({
         <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
-            className="text-xs text-text-tertiary hover:text-accent transition-colors px-1.5 py-0.5"
+            className="text-xs text-text-tertiary hover:text-text-primary transition-colors px-1.5 py-0.5"
           >
             Edit
           </button>
@@ -498,12 +498,12 @@ function ConvertToClientModal({
   return (
     <Modal open={open} onClose={onClose} title="Convert to Client">
       <div className="space-y-4">
-        <div className="card-surface border border-accent/30 rounded-xl p-4">
-          <p className="text-xs text-accent font-medium uppercase tracking-wider mb-1">Won Deal</p>
+        <div className="card-elevated rounded-2xl p-4">
+          <p className="text-xs text-text-tertiary font-medium  mb-1">Won Deal</p>
           <p className="text-sm font-semibold text-text-primary">{lead.name}</p>
           {lead.company && <p className="text-xs text-text-secondary">{lead.company}</p>}
           {lead.estimated_value != null && lead.estimated_value > 0 && (
-            <p className="text-sm text-accent mt-1">{formatCurrency(lead.estimated_value)}/mo</p>
+            <p className="text-sm text-text-primary mt-1">{formatCurrency(lead.estimated_value)}/mo</p>
           )}
         </div>
 
@@ -517,7 +517,7 @@ function ConvertToClientModal({
             <Input label="Start Date" type="date" value={contractStart} onChange={(e) => setContractStart(e.target.value)} />
             <Input label="End Date (optional)" type="date" value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} />
           </div>
-          <p className="text-[10px] text-text-tertiary">
+          <p className="text-xs text-text-tertiary">
             If start date is in the future, this client will only appear in projections from that month onward.
           </p>
           <div className="flex items-center justify-between pt-2">

@@ -27,15 +27,15 @@ type FilterCategory = 'all' | 'strategy' | 'clients' | 'content' | 'personal' | 
 type QuickFilter = 'none' | 'high' | 'medium' | 'low';
 
 const ENERGY_COLORS: Record<string, string> = {
-  deep: 'bg-blue-500/15 text-blue-400',
+  deep: 'bg-surface-tertiary text-text-secondary',
   admin: 'bg-surface-tertiary text-text-secondary',
-  creative: 'bg-purple-500/15 text-purple-400',
+  creative: 'bg-surface-tertiary text-text-secondary',
 };
 
 const WEIGHT_COLORS: Record<string, string> = {
-  low: 'bg-accent/15 text-accent',
-  medium: 'bg-amber-500/15 text-amber-400',
-  high: 'bg-red-500/15 text-red-400',
+  low: 'bg-surface-tertiary text-text-secondary',
+  medium: 'bg-surface-tertiary text-text-secondary',
+  high: 'bg-surface-tertiary text-text-secondary',
 };
 
 /* ━━━ Hover Tooltip for Tags ━━━ */
@@ -58,25 +58,25 @@ function TagWithTooltip({ label, colorClass, tasks }: { label: string; colorClas
   return (
     <span
       ref={ref}
-      className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-medium relative cursor-default', colorClass)}
+      className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium relative cursor-default', colorClass)}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
       {label}
       {show && tasks.length > 0 && (
-        <div className="absolute z-50 left-0 top-full mt-1.5 bg-surface-secondary border border-border rounded-xl shadow-xl shadow-black/30 p-3 min-w-[200px] max-w-[280px] animate-fade-in"
+        <div className="absolute z-50 left-0 top-full mt-1.5 bg-surface-secondary border border-border rounded-2xl p-3 min-w-[200px] max-w-[280px] animate-fade-in"
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
         >
-          <p className="text-[9px] text-text-tertiary uppercase tracking-widest mb-2">{label} tasks ({tasks.length})</p>
+          <p className="text-xs text-text-tertiary  mb-2">{label} tasks ({tasks.length})</p>
           <div className="space-y-1.5 max-h-[180px] overflow-y-auto">
             {tasks.slice(0, 8).map(t => (
               <div key={t.id} className="flex items-center gap-2">
                 <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', WEIGHT_COLORS[t.weight]?.replace(/text-\S+/, '') || 'bg-text-tertiary')} />
-                <span className="text-[11px] text-text-primary truncate">{t.title}</span>
+                <span className="text-xs text-text-primary truncate">{t.title}</span>
               </div>
             ))}
-            {tasks.length > 8 && <p className="text-[10px] text-text-tertiary">+{tasks.length - 8} more</p>}
+            {tasks.length > 8 && <p className="text-xs text-text-tertiary">+{tasks.length - 8} more</p>}
           </div>
         </div>
       )}
@@ -184,9 +184,9 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* View Tabs */}
-      <div className="flex items-center gap-1 bg-surface-tertiary/50 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1 bg-surface-tertiary p-1 rounded-xl w-fit">
         {([
           { key: 'active' as const, label: `Active (${tasks.length})` },
           { key: 'completed' as const, label: `Completed (${completedTasks.length})` },
@@ -198,7 +198,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
             className={cn(
               'px-4 py-1.5 text-xs font-medium rounded-lg transition-all',
               viewTab === tab.key
-                ? 'bg-surface-secondary text-text-primary shadow-sm'
+                ? 'bg-surface-secondary text-text-primary'
                 : 'text-text-tertiary hover:text-text-secondary'
             )}
           >
@@ -225,7 +225,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                 className={cn(
                   'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
                   category === cat.value
-                    ? 'bg-accent text-black'
+                    ? 'bg-surface-tertiary text-text-primary border border-text-primary/20'
                     : 'bg-surface-secondary text-text-secondary hover:text-text-primary border border-border'
                 )}
               >
@@ -240,15 +240,15 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
               { value: 'none' as const, label: 'All Energy' },
               { value: 'high' as const, label: 'High', color: 'text-red-400' },
               { value: 'medium' as const, label: 'Medium', color: 'text-amber-400' },
-              { value: 'low' as const, label: 'Low', color: 'text-accent' },
+              { value: 'low' as const, label: 'Low', color: 'text-text-secondary' },
             ].map((f) => (
               <button
                 key={f.value}
                 onClick={() => setQuickFilter(f.value === quickFilter ? 'none' : f.value)}
                 className={cn(
-                  'px-2.5 py-1 text-[10px] uppercase tracking-wider font-medium rounded-lg transition-colors',
+                  'px-2.5 py-1 text-xs  font-medium rounded-lg transition-colors',
                   quickFilter === f.value
-                    ? 'bg-accent/10 text-accent'
+                    ? 'bg-surface-tertiary text-text-primary'
                     : 'text-text-tertiary hover:text-text-secondary'
                 )}
               >
@@ -274,10 +274,10 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
               const catInfo = TASK_CATEGORIES.find((c) => c.value === cat);
               return (
                 <div key={cat} className="space-y-2">
-                  <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+                  <p className="text-xs font-medium text-text-tertiary ">
                     {catInfo?.label || cat} ({catTasks.length})
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {catTasks.map((task) => {
                       const isCompleting = completingIds.has(task.id);
                       return (
@@ -308,7 +308,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                                 {task.title}
                               </p>
                               {task.is_urgent && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-red-500/20 text-red-400 animate-pulse-accent">
+                                <span className="text-xs px-1.5 py-0.5 rounded-md font-semibold bg-surface-tertiary text-text-secondary">
                                   URGENT
                                 </span>
                               )}
@@ -328,7 +328,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                             <div className="flex items-center gap-3 mt-1">
                               {task.deadline && (
                                 <span className={cn(
-                                  'text-[10px]',
+                                  'text-xs',
                                   isOverdue(task.deadline) ? 'text-danger' :
                                   isDueToday(task.deadline) ? 'text-warning' :
                                   'text-text-tertiary'
@@ -337,17 +337,17 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                                 </span>
                               )}
                               {task.estimated_minutes && (
-                                <span className="text-[10px] text-text-tertiary">
+                                <span className="text-xs text-text-tertiary">
                                   {task.estimated_minutes}m
                                 </span>
                               )}
                               {task.project && (
-                                <span className="text-[10px] text-accent/70">
+                                <span className="text-xs text-text-tertiary">
                                   {task.project}
                                 </span>
                               )}
                               {task.client_id && clientMap[task.client_id] && (
-                                <span className="text-[10px] text-text-tertiary">
+                                <span className="text-xs text-text-tertiary">
                                   {clientMap[task.client_id].name}
                                 </span>
                               )}
@@ -356,7 +356,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => { setEditingTask(task); setShowForm(true); }}
-                              className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                              className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-surface-tertiary"
                               title="Edit task"
                             >
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -385,8 +385,8 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                               className={cn(
                                 'transition-all p-1 rounded-lg',
                                 task.flagged_for_today
-                                  ? 'text-accent bg-accent/10'
-                                  : 'text-text-tertiary hover:text-accent hover:bg-accent/10'
+                                  ? 'text-text-primary bg-surface-tertiary'
+                                  : 'text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary'
                               )}
                               title={task.flagged_for_today ? 'Remove from today' : 'Add to today'}
                             >
@@ -430,58 +430,63 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
               <button
                 onClick={() => handleBulkArchiveCompleted(completedTasks.map(t => t.id))}
                 disabled={isPending}
-                className="text-[10px] text-text-tertiary hover:text-amber-400 transition-colors font-medium disabled:opacity-40"
+                className="text-xs text-text-tertiary hover:text-amber-400 transition-colors font-medium disabled:opacity-40"
               >
                 Archive all completed →
               </button>
             </div>
           )}
           {completedTasks.length === 0 ? (
-            <p className="text-center text-sm text-text-tertiary py-12">
-              No completed tasks yet.
-            </p>
+            <div className="empty-state py-10">
+              <div className="empty-state-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <p className="text-sm text-text-tertiary">No completed tasks yet.</p>
+            </div>
           ) : (
             completedTasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-surface-secondary/50 border border-border/50 rounded-xl p-3 flex items-start gap-3 group"
+                className="bg-surface-secondary/50 border border-border rounded-xl p-3 flex items-start gap-3 group"
               >
-                <div className="mt-0.5 w-5 h-5 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0">
+                <div className="mt-0.5 w-5 h-5 rounded-lg bg-surface-tertiary flex items-center justify-center flex-shrink-0">
                   <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6L5 9L10 3" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-secondary line-through">{task.title}</p>
                   <div className="flex items-center gap-3 mt-1">
                     {task.completed_at && (
-                      <span className="text-[10px] text-text-tertiary">
+                      <span className="text-xs text-text-tertiary">
                         {new Date(task.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     )}
                     {task.weight && (
-                      <span className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-medium', WEIGHT_COLORS[task.weight])}>
+                      <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium', WEIGHT_COLORS[task.weight])}>
                         {task.weight}
                       </span>
                     )}
                     {task.project && (
-                      <span className="text-[10px] text-accent/50">{task.project}</span>
+                      <span className="text-xs text-text-tertiary">{task.project}</span>
                     )}
                     {task.client_id && clientMap[task.client_id] && (
-                      <span className="text-[10px] text-text-tertiary">{clientMap[task.client_id].name}</span>
+                      <span className="text-xs text-text-tertiary">{clientMap[task.client_id].name}</span>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleReactivate(task.id)}
-                    className="text-[10px] text-text-tertiary hover:text-accent transition-all px-2 py-1"
+                    className="text-xs text-text-tertiary hover:text-text-primary transition-all px-2 py-1"
                   >
                     Reactivate
                   </button>
                   <button
                     onClick={() => handleArchive(task.id)}
-                    className="text-[10px] text-text-tertiary hover:text-amber-400 transition-all px-2 py-1"
+                    className="text-xs text-text-tertiary hover:text-amber-400 transition-all px-2 py-1"
                     title="Move to archive"
                   >
                     Archive
@@ -498,7 +503,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
             <div className="flex items-center justify-between">
               <button
                 onClick={selectAllArchived}
-                className="text-[10px] text-text-tertiary hover:text-text-secondary transition-colors font-medium"
+                className="text-xs text-text-tertiary hover:text-text-secondary transition-colors font-medium"
               >
                 {selectedArchived.size === archivedTasks.length ? 'Deselect all' : 'Select all'}
               </button>
@@ -506,7 +511,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                 <button
                   onClick={handleBulkDeleteArchived}
                   disabled={isPending}
-                  className="text-[10px] text-danger hover:text-red-300 transition-colors font-medium disabled:opacity-40"
+                  className="text-xs text-danger hover:text-red-300 transition-colors font-medium disabled:opacity-40"
                 >
                   Permanently delete {selectedArchived.size} task{selectedArchived.size !== 1 ? 's' : ''}
                 </button>
@@ -516,7 +521,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
           {archivedTasks.length === 0 ? (
             <div className="text-center py-12 space-y-2">
               <p className="text-sm text-text-tertiary">Archive is empty.</p>
-              <p className="text-[11px] text-text-tertiary/60">Move tasks here to remove them from scores without deleting data.</p>
+              <p className="text-xs text-text-tertiary/60">Move tasks here to remove them from scores without deleting data.</p>
             </div>
           ) : (
             archivedTasks.map((task) => (
@@ -526,7 +531,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                   'border rounded-xl p-3 flex items-start gap-3 group transition-colors',
                   selectedArchived.has(task.id)
                     ? 'bg-danger/5 border-danger/20'
-                    : 'bg-surface-secondary/30 border-border/30'
+                    : 'bg-surface-secondary/30 border-border'
                 )}
               >
                 <button
@@ -535,7 +540,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                     'mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center flex-shrink-0 transition-colors',
                     selectedArchived.has(task.id)
                       ? 'bg-danger/20 border-danger/40'
-                      : 'border-border/60 hover:border-text-tertiary'
+                      : 'border-border hover:border-text-tertiary'
                   )}
                 >
                   {selectedArchived.has(task.id) && (
@@ -548,36 +553,36 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
                   <p className="text-sm text-text-tertiary">{task.title}</p>
                   <div className="flex items-center gap-3 mt-1">
                     {task.updated_at && (
-                      <span className="text-[10px] text-text-tertiary/60">
+                      <span className="text-xs text-text-tertiary/60">
                         Archived {new Date(task.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </span>
                     )}
                     {task.weight && (
-                      <span className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-medium opacity-50', WEIGHT_COLORS[task.weight])}>
+                      <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium opacity-50', WEIGHT_COLORS[task.weight])}>
                         {task.weight}
                       </span>
                     )}
                     {task.category && (
-                      <span className="text-[10px] text-text-tertiary/50">
+                      <span className="text-xs text-text-tertiary/50">
                         {TASK_CATEGORIES.find(c => c.value === task.category)?.label || task.category}
                       </span>
                     )}
                     {task.client_id && clientMap[task.client_id] && (
-                      <span className="text-[10px] text-text-tertiary/50">{clientMap[task.client_id].name}</span>
+                      <span className="text-xs text-text-tertiary/50">{clientMap[task.client_id].name}</span>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleReactivate(task.id)}
-                    className="text-[10px] text-text-tertiary hover:text-accent transition-all px-2 py-1"
+                    className="text-xs text-text-tertiary hover:text-text-primary transition-all px-2 py-1"
                   >
                     Restore
                   </button>
                   <button
                     onClick={() => handlePermanentDelete(task.id)}
                     disabled={isPending}
-                    className="text-[10px] text-text-tertiary hover:text-danger transition-all px-2 py-1 disabled:opacity-40"
+                    className="text-xs text-text-tertiary hover:text-danger transition-all px-2 py-1 disabled:opacity-40"
                   >
                     Delete
                   </button>
@@ -676,7 +681,7 @@ function TaskFormModal({ open, onClose, task, clients }: { open: boolean; onClos
         <label className="flex items-center gap-2 py-1">
           <input type="checkbox" name="is_urgent" defaultChecked={task?.is_urgent || false} className="w-4 h-4 rounded border-border accent-red-500" />
           <span className="text-xs text-text-secondary">Mark as urgent</span>
-          <span className="text-[10px] text-red-400/60 ml-1">Auto-prioritised in daily planner</span>
+          <span className="text-xs text-red-400/60 ml-1">Auto-prioritised in daily planner</span>
         </label>
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -684,7 +689,7 @@ function TaskFormModal({ open, onClose, task, clients }: { open: boolean; onClos
             <button
               type="button"
               onClick={() => setShowNewClient(!showNewClient)}
-              className="text-[10px] text-accent hover:text-accent/80 transition-colors font-medium"
+              className="text-xs text-text-secondary hover:text-text-primary transition-colors font-medium"
             >
               {showNewClient ? 'Cancel' : '+ New Client'}
             </button>
@@ -697,14 +702,14 @@ function TaskFormModal({ open, onClose, task, clients }: { open: boolean; onClos
                 onChange={(e) => setNewClientName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddClient())}
                 placeholder="Client name..."
-                className="flex-1 text-sm bg-surface-tertiary/60 border border-border/40 rounded-xl px-2.5 py-1.5 text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/40 transition-colors"
+                className="flex-1 text-sm bg-surface-tertiary border border-border rounded-xl px-2.5 py-1.5 text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-light transition-colors"
                 autoFocus
               />
               <button
                 type="button"
                 onClick={handleAddClient}
                 disabled={loading || !newClientName.trim()}
-                className="text-xs text-accent font-medium disabled:opacity-40 px-2 py-1.5"
+                className="text-xs text-text-primary font-medium disabled:opacity-40 px-2 py-1.5"
               >
                 Add
               </button>

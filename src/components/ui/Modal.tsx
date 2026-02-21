@@ -56,20 +56,20 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+      <div className="fixed inset-0 bg-black/70" />
       <div
         className={cn(
-          'relative z-10 w-full max-w-lg card-surface border border-border',
-          'rounded-t-2xl sm:rounded-2xl animate-slide-up max-h-[90vh] sm:max-h-[85vh] overflow-y-auto shadow-2xl shadow-black/40',
+          'relative z-10 w-full max-w-lg bg-surface-secondary border border-border',
+          'rounded-t-xl sm:rounded-xl animate-slide-up max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
           className
         )}
       >
         {title && (
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-border">
-            <h2 className="text-base font-semibold text-text-primary">{title}</h2>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
+            <h2 className="text-section-heading text-text-primary">{title}</h2>
             <button
               onClick={onClose}
-              className="text-text-tertiary hover:text-text-primary transition-colors p-2 -mr-1 rounded-lg hover:bg-surface-tertiary active:bg-surface-hover"
+              className="text-text-tertiary hover:text-text-primary transition-all p-2 -mr-1 rounded-lg hover:bg-surface-tertiary"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

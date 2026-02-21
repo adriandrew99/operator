@@ -1,15 +1,17 @@
 'use client';
 
 import { ThemeToggle } from './ThemeToggle';
-import { NexusLogo } from '@/components/ui/NexusLogo';
 import { usePathname } from 'next/navigation';
 import { useCallback } from 'react';
 
 const PAGE_TITLES: Record<string, string> = {
   '/today': 'Today',
+  '/score': 'Score',
   '/tasks': 'Tasks',
+  '/planner': 'Planner',
   '/finance': 'Finance',
   '/pipeline': 'Pipeline',
+  '/outbound': 'Outbound',
   '/knowledge': 'Knowledge',
   '/analytics': 'Analytics',
   '/settings': 'Settings',
@@ -39,21 +41,42 @@ export function TopBar() {
 
   return (
     <div
-      className="sticky top-0 z-30 bg-background border-b border-border safe-area-inset-top"
+      className="sticky top-0 z-30 safe-area-inset-top relative"
+      style={{
+        background: 'var(--glass-bg)',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        borderBottom: '1px solid var(--border-color)',
+        boxShadow: '0 1px 0 var(--border-color)',
+      }}
       onMouseDown={handleDrag}
     >
-      <div className="max-w-5xl mx-auto px-3 sm:px-6 h-12 sm:h-14 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Mobile logo */}
-          <div className="md:hidden flex items-center gap-2">
-            <NexusLogo size="sm" />
-            <span className="text-sm font-bold text-text-primary">{title}</span>
+      {/* Invisible drag region */}
+      <div
+        className="absolute inset-0 z-0"
+        data-tauri-drag-region=""
+      />
+      <div className="w-full mx-auto px-5 sm:px-8 lg:px-10 h-14 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-3 pointer-events-none">
+          {/* Mobile: page title + date */}
+          <div className="md:hidden flex items-baseline gap-2">
+            <h1 className="text-section-heading text-text-primary">{title}</h1>
+            <span className="text-xs text-text-tertiary">{formatShortDate()}</span>
           </div>
-          {/* Desktop date */}
-          <span className="hidden md:block text-xs text-text-tertiary">{formatShortDate()}</span>
+
+          {/* Desktop: date on left */}
+          <div className="hidden md:flex items-center">
+            <span className="text-[13px] text-text-tertiary font-medium tracking-wide">{formatShortDate()}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
+
+        {/* Center: page title (desktop only) */}
+        <div className="hidden md:flex items-center absolute left-1/2 -translate-x-1/2 pointer-events-none">
+          <span className="text-sm text-text-secondary font-medium">{title}</span>
+        </div>
+
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <ThemeToggle size="compact" />
         </div>
       </div>
     </div>

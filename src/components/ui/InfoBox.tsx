@@ -29,15 +29,15 @@ export function InfoBox({ title, children, className }: InfoBoxProps) {
       onMouseLeave={handleLeave}
     >
       <div
-        className="w-4 h-4 rounded-full border border-border/60 flex items-center justify-center text-[9px] text-text-tertiary hover:text-accent hover:border-accent/40 transition-all cursor-help"
+        className="w-4 h-4 rounded-full border border-border flex items-center justify-center text-xs text-text-tertiary hover:text-text-secondary hover:border-border-light transition-all cursor-help"
         aria-label={`Info: ${title}`}
       >
         ?
       </div>
       {open && (
-        <div className="absolute z-50 top-6 left-0 w-64 p-3 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/20 animate-fade-in">
-          <p className="text-[10px] font-medium text-accent uppercase tracking-widest mb-1.5">{title}</p>
-          <div className="text-[11px] text-text-secondary leading-relaxed space-y-1">
+        <div className="absolute z-50 top-6 left-0 w-64 p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in">
+          <p className="text-xs font-medium text-text-tertiary mb-1.5">{title}</p>
+          <div className="text-xs text-text-secondary leading-relaxed space-y-1">
             {children}
           </div>
         </div>

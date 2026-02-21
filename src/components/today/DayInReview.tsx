@@ -67,7 +67,7 @@ export function DayInReview({
   }, [todayTasks, completedTodayTasks]);
 
   const stats = useMemo(() => {
-    const completed = completedTodayTasks;
+    const completed = completedTodayTasks.filter(t => !t.is_personal);
     const totalMLU = completed.reduce((s, t) => s + getTaskMLU({ weight: t.weight, energy: t.energy }), 0);
     const totalMinutes = completed.reduce((s, t) => s + getEstimatedMinutes(t), 0);
     const hours = Math.floor(totalMinutes / 60);
@@ -120,7 +120,7 @@ export function DayInReview({
 
   return (
     <div className={cn(
-      'relative overflow-hidden rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/8 via-surface-secondary to-surface-secondary',
+      'relative overflow-hidden rounded-xl border border-border bg-surface-secondary',
       'transition-all duration-700 ease-out',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
     )}>
@@ -136,10 +136,10 @@ export function DayInReview({
 
       <div className="p-5 sm:p-6 space-y-5">
         {/* Header */}
-        <div className="space-y-1">
+        <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-lg">✅</span>
-            <p className="text-[10px] font-medium text-accent uppercase tracking-widest">Day in Review</p>
+            <p className="text-xs font-medium text-text-secondary ">Day in Review</p>
           </div>
           <p className="text-sm text-text-secondary italic">{message}</p>
         </div>
@@ -152,19 +152,19 @@ export function DayInReview({
           <ReviewStat
             label="Capacity"
             value={`${stats.capacityPct}%`}
-            color={stats.capacityPct > 100 ? 'text-red-400' : stats.capacityPct > 80 ? 'text-amber-400' : 'text-accent'}
+            color={stats.capacityPct > 100 ? 'text-text-primary' : stats.capacityPct > 80 ? 'text-text-secondary' : 'text-text-primary'}
           />
         </div>
 
         {/* Client breakdown */}
         {stats.topClients.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-wider">Where your energy went</p>
+            <p className="text-xs font-medium text-text-tertiary ">Where your energy went</p>
             <div className="flex flex-wrap gap-2">
               {stats.topClients.map(c => (
-                <div key={c.name} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-tertiary/40 border border-border/40">
+                <div key={c.name} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-tertiary border border-border">
                   <span className="text-xs font-medium text-text-primary">{c.name}</span>
-                  <span className="text-[10px] text-text-tertiary">{c.tasks} tasks · {c.mlu} MLU</span>
+                  <span className="text-xs text-text-tertiary">{c.tasks} tasks · {c.mlu} MLU</span>
                 </div>
               ))}
             </div>
@@ -173,11 +173,11 @@ export function DayInReview({
 
         {/* Energy mix bar */}
         <div className="flex items-center gap-3">
-          <div className="flex-1 h-2 rounded-full overflow-hidden bg-surface-tertiary/60 flex">
+          <div className="flex-1 h-2 rounded-full overflow-hidden bg-surface-tertiary flex">
             <div className="h-full bg-purple-400/80 transition-all" style={{ width: `${stats.creativePct}%` }} />
             <div className="h-full bg-gray-500/60 transition-all" style={{ width: `${100 - stats.creativePct}%` }} />
           </div>
-          <span className="text-[10px] text-text-tertiary whitespace-nowrap">
+          <span className="text-xs text-text-tertiary whitespace-nowrap">
             {stats.creativePct}% creative · {100 - stats.creativePct}% admin
           </span>
         </div>
@@ -185,7 +185,7 @@ export function DayInReview({
         {/* Fundamentals */}
         {fundamentalsTotal > 0 && (
           <p className="text-xs text-text-secondary">
-            Fundamentals: <span className={cn('font-medium', fundamentalsHit >= fundamentalsTotal ? 'text-accent' : 'text-text-primary')}>
+            Fundamentals: <span className={cn('font-medium', fundamentalsHit >= fundamentalsTotal ? 'text-text-primary' : 'text-text-primary')}>
               {fundamentalsHit}/{fundamentalsTotal}
             </span>
             {fundamentalsHit >= fundamentalsTotal && ' — all done ✓'}
@@ -198,7 +198,7 @@ export function DayInReview({
             onClick={async () => {
               await requestNotificationPermission();
             }}
-            className="text-[10px] text-accent hover:text-accent/80 font-medium cursor-pointer transition-colors"
+            className="text-xs text-text-secondary hover:text-text-primary font-medium cursor-pointer transition-colors"
           >
             🔔 Enable notifications to get day summaries even when the app is in the background
           </button>
@@ -210,11 +210,11 @@ export function DayInReview({
 
 function ReviewStat({ label, value, unit, color }: { label: string; value: string; unit?: string; color?: string }) {
   return (
-    <div className="rounded-xl bg-surface-tertiary/30 border border-border/30 px-3 py-2">
-      <p className="text-[9px] text-text-tertiary uppercase tracking-wider">{label}</p>
+    <div className="rounded-xl bg-surface-tertiary border border-border px-3 py-2">
+      <p className="text-xs text-text-tertiary ">{label}</p>
       <p className={cn('text-base font-bold font-mono mt-0.5', color || 'text-text-primary')}>
         {value}
-        {unit && <span className="text-[10px] text-text-tertiary font-normal ml-1">{unit}</span>}
+        {unit && <span className="text-xs text-text-tertiary font-normal ml-1">{unit}</span>}
       </p>
     </div>
   );

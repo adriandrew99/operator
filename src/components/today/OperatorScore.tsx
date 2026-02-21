@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils/cn';
 import { useEffect, useState } from 'react';
-import { calculateOperatorScore, type ScoreBreakdown } from '@/lib/utils/score';
+import { calculateOperatorScoreV1 as calculateOperatorScore, type ScoreBreakdown } from '@/lib/utils/score';
 import { saveOperatorScore } from '@/actions/today';
 
 interface OperatorScoreProps {
@@ -64,13 +64,12 @@ export function OperatorScore({
               cy="50"
               r="44"
               fill="none"
-              stroke="var(--accent)"
+              stroke="var(--text-primary)"
               strokeWidth="5"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              className="transition-all duration-700 ease-out"
-              style={{ filter: 'drop-shadow(0 0 6px var(--glow-accent))' }}
+              className="transition-all duration-700 ease-out opacity-60"
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -97,15 +96,15 @@ function ScoreLine({ label, emoji, value, max }: { label: string; emoji: string;
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-xs">{emoji}</span>
-          <span className="text-[11px] text-text-secondary font-medium">{label}</span>
+          <span className="text-xs text-text-secondary font-medium">{label}</span>
         </div>
-        <span className="text-[11px] text-text-tertiary font-mono">{value}/{max}</span>
+        <span className="text-xs text-text-tertiary font-mono">{value}/{max}</span>
       </div>
       <div className="w-full h-1.5 bg-surface-tertiary overflow-hidden rounded-full">
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500',
-            pct >= 70 ? 'bg-accent' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400'
+            pct >= 70 ? 'bg-text-primary/60' : pct >= 40 ? 'bg-text-primary/40' : 'bg-text-primary/20'
           )}
           style={{ width: `${pct}%` }}
         />

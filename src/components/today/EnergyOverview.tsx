@@ -16,7 +16,8 @@ export function EnergyOverview({
   dailyCapacity,
 }: EnergyOverviewProps) {
   const capacity = dailyCapacity ?? DAILY_CAPACITY;
-  const allTasks = [...todayTasks, ...completedTodayTasks];
+  const allTasks = [...todayTasks, ...completedTodayTasks].filter(t => !t.is_personal);
+  const completedNonPersonal = completedTodayTasks.filter(t => !t.is_personal);
 
   // Energy split: creative vs admin MLU
   let creativeMLU = 0;
@@ -38,19 +39,24 @@ export function EnergyOverview({
   const tiers = ['high', 'medium', 'low'] as const;
   const distribution = tiers.map(weight => {
     const all = allTasks.filter(t => (t.weight || 'medium') === weight);
-    const done = all.filter(t => completedTodayTasks.some(ct => ct.id === t.id));
+    const done = all.filter(t => completedNonPersonal.some(ct => ct.id === t.id));
     return { weight, total: all.length, done: done.length };
   }).filter(d => d.total > 0);
 
   // Remaining MLU
-  const completedMLU = completedTodayTasks.reduce((sum, t) => sum + getTaskMLU(t), 0);
+  const completedMLU = completedNonPersonal.reduce((sum, t) => sum + getTaskMLU(t), 0);
   const remainingMLU = Math.max(0, totalMLU - completedMLU);
 
   if (allTasks.length === 0) {
     return (
-      <p className="text-xs text-text-tertiary py-2">
-        No tasks planned yet. Energy overview will appear when tasks are added.
-      </p>
+      <div className="empty-state py-4">
+        <div className="empty-state-icon" style={{ width: 32, height: 32 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <p className="text-xs text-text-tertiary">No tasks planned yet. Energy overview appears when tasks are added.</p>
+      </div>
     );
   }
 
@@ -67,7 +73,7 @@ export function EnergyOverview({
         <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden flex">
           {creativePct > 0 && (
             <div
-              className="h-full bg-accent transition-all duration-500"
+              className="h-full bg-text-primary/60 transition-all duration-500"
               style={{ width: `${creativePct}%` }}
             />
           )}
@@ -78,9 +84,9 @@ export function EnergyOverview({
             />
           )}
         </div>
-        <div className="flex items-center gap-4 text-[11px]">
+        <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-sm bg-accent" />
+            <span className="w-2 h-2 rounded-sm bg-text-primary/60" />
             <span className="text-text-secondary">Creative {creativeMLU.toFixed(1)}</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -97,15 +103,15 @@ export function EnergyOverview({
           {distribution.map(({ weight, total, done }) => {
             const pct = total > 0 ? (done / total) * 100 : 0;
             return (
-              <div key={weight} className="space-y-1">
+              <div key={weight} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className={cn(
-                    'text-[11px] capitalize',
+                    'text-xs capitalize',
                     weight === 'high' ? 'text-text-primary font-medium' : 'text-text-secondary'
                   )}>
                     {weight}
                   </span>
-                  <span className="text-[11px] font-mono text-text-tertiary">
+                  <span className="text-xs font-mono text-text-tertiary">
                     {done}/{total}
                   </span>
                 </div>
@@ -113,7 +119,7 @@ export function EnergyOverview({
                   <div
                     className={cn(
                       'h-full rounded-full transition-all duration-500',
-                      weight === 'high' ? 'bg-amber-400' : weight === 'medium' ? 'bg-accent' : 'bg-text-tertiary/50'
+                      weight === 'high' ? 'bg-text-primary/70' : weight === 'medium' ? 'bg-text-primary/50' : 'bg-text-tertiary/50'
                     )}
                     style={{ width: `${pct}%` }}
                   />
@@ -129,7 +135,7 @@ export function EnergyOverview({
         <span className="text-xs text-text-secondary">Remaining</span>
         <span className={cn(
           'text-sm font-mono font-medium',
-          remainingMLU === 0 ? 'text-accent' : 'text-text-primary'
+          remainingMLU === 0 ? 'text-text-primary' : 'text-text-primary'
         )}>
           {remainingMLU.toFixed(1)} <span className="text-text-tertiary text-xs font-normal">/ {capacity} MLU</span>
         </span>

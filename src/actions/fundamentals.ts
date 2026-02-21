@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getToday } from '@/lib/utils/date';
 import { DEFAULT_FUNDAMENTALS } from '@/lib/constants';
+import { recalculateAutoScore } from '@/actions/score';
 
 export async function getCustomFundamentals() {
   const supabase = await createClient();
@@ -124,4 +125,8 @@ export async function toggleFundamentalCompletion(fundamentalId: string, complet
   }
 
   revalidatePath('/today');
+  revalidatePath('/score');
+
+  // Recalculate operator score with updated fundamental metrics
+  recalculateAutoScore().catch(() => {});
 }

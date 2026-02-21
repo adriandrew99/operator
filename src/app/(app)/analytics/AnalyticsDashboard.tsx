@@ -11,10 +11,13 @@ import { DAILY_CAPACITY } from '@/lib/utils/mental-load';
 import { toCSV, downloadCSV, downloadJSON, fileDate } from '@/lib/utils/export';
 import { RevenueRadar } from '@/components/insights/RevenueRadar';
 import { WeeklyDebrief } from '@/components/insights/WeeklyDebrief';
+import { ScopeCreepRadar } from '@/components/insights/ScopeCreepRadar';
 import { LayoutCustomiser } from '@/components/layout/LayoutCustomiser';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { InfoTip, LabelWithTip } from '@/components/ui/InfoTip';
+import { TabBar } from '@/components/ui/TabBar';
 import type { Client } from '@/lib/types/database';
-import type { ClientEnergyProfile, RevenueInsight, RevenueTrend, EnergyTrend, WeeklyDebrief as WeeklyDebriefData, DetectedPattern, MonthlyTrend, ClientHealthScore } from '@/actions/insights';
+import type { ClientEnergyProfile, RevenueInsight, RevenueTrend, EnergyTrend, WeeklyDebrief as WeeklyDebriefData, DetectedPattern, MonthlyTrend, ClientHealthScore, ScopeCreepAnalysis } from '@/actions/insights';
 import type { DashboardLayoutPreferences } from '@/lib/types/dashboard-layout';
 import { DEFAULT_DASHBOARD_LAYOUT } from '@/lib/types/dashboard-layout';
 
@@ -52,6 +55,7 @@ interface AnalyticsDashboardProps {
   patterns: DetectedPattern[];
   monthlyTrends: MonthlyTrend[];
   clientHealthScores: ClientHealthScore[];
+  scopeCreepAnalysis?: ScopeCreepAnalysis | null;
   dailyCapacity?: number;
   dashboardLayout?: DashboardLayoutPreferences;
 }
@@ -60,13 +64,13 @@ interface AnalyticsDashboardProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="card-surface border border-border rounded-xl px-3 py-2 shadow-lg">
-      <p className="text-[10px] text-text-tertiary mb-1">{label}</p>
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{label}</p>
       {payload.map((entry: any, i: number) => (
-        <p key={i} className="text-xs text-text-primary">
-          <span style={{ color: entry.color }}>{entry.name}:</span>{' '}
-          {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
-        </p>
+        <div key={i} className="chart-tooltip-value" style={{ color: entry.color }}>
+          <span>{entry.name}</span>
+          <span>{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}</span>
+        </div>
       ))}
     </div>
   );
@@ -74,10 +78,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // ━━━ Severity styles ━━━
 const SEVERITY_STYLES: Record<string, { bg: string; border: string; icon: string; text: string }> = {
-  positive: { bg: 'bg-accent/8', border: 'border-accent/20', icon: '↑', text: 'text-accent' },
-  info:     { bg: 'bg-accent/8', border: 'border-accent/20', icon: '→', text: 'text-accent' },
-  warning:  { bg: 'bg-amber-500/8', border: 'border-amber-500/20', icon: '⚠', text: 'text-amber-400' },
-  danger:   { bg: 'bg-red-500/8', border: 'border-red-500/20', icon: '!', text: 'text-red-400' },
+  positive: { bg: 'bg-surface-tertiary', border: 'border-border', icon: '↑', text: 'text-text-primary' },
+  info:     { bg: 'bg-surface-tertiary', border: 'border-border', icon: '→', text: 'text-text-secondary' },
+  warning:  { bg: 'bg-surface-tertiary', border: 'border-border', icon: '⚠', text: 'text-text-secondary' },
+  danger:   { bg: 'bg-surface-tertiary', border: 'border-border', icon: '!', text: 'text-text-secondary' },
 };
 
 // ━━━ Collapsible Section Wrapper ━━━
@@ -94,14 +98,14 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="card-surface border border-border rounded-2xl overflow-hidden">
+    <div className="card-elevated rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 sm:px-6 py-4 cursor-pointer hover:bg-surface-tertiary/20 transition-colors"
+        className="w-full flex items-center justify-between px-4 sm:px-6 py-4 cursor-pointer hover:bg-surface-hover transition-colors"
       >
         <div className="flex items-center gap-2">
           {icon && <span className="text-sm">{icon}</span>}
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">{title}</p>
+          <p className="text-xs font-medium text-text-tertiary ">{title}</p>
         </div>
         <svg
           width="14"
@@ -143,6 +147,7 @@ export function AnalyticsDashboard({
   patterns,
   monthlyTrends,
   clientHealthScores,
+  scopeCreepAnalysis,
   dailyCapacity,
   dashboardLayout,
 }: AnalyticsDashboardProps) {
@@ -150,6 +155,7 @@ export function AnalyticsDashboard({
   const layout = liveLayout.analytics;
   const capacity = dailyCapacity ?? DAILY_CAPACITY;
   const [clientSort, setClientSort] = useState<'efficiency' | 'revenue' | 'energy'>('efficiency');
+  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'trends' | 'data'>('overview');
 
   // ── Computed data ──
   const weeklyTrendFormatted = useMemo(() => {
@@ -231,10 +237,22 @@ export function AnalyticsDashboard({
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return (
-    <div className="space-y-5">
+    <div className="max-w-7xl mx-auto space-y-6">
 
-      {/* ═══ Layout Customiser + Export ═══ */}
-      <div className="flex items-center justify-end gap-2 -mb-2">
+      {/* ═══ Tabs + Layout Customiser + Export ═══ */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <TabBar
+          tabs={[
+            { key: 'overview' as const, label: 'Overview' },
+            { key: 'clients' as const, label: 'Clients' },
+            { key: 'trends' as const, label: 'Trends' },
+            { key: 'data' as const, label: 'Data' },
+          ]}
+          active={activeTab}
+          onChange={setActiveTab}
+          className="flex-1 min-w-0"
+        />
+        <div className="flex items-center gap-2 flex-shrink-0">
         <ExportButton options={[
           {
             label: 'Export Client Data (CSV)',
@@ -291,51 +309,60 @@ export function AnalyticsDashboard({
           },
         ]} />
         <LayoutCustomiser page="analytics" layout={liveLayout} onLayoutChange={setLiveLayout} />
+        </div>
       </div>
+
+      {/* ═══ OVERVIEW TAB ═══ */}
+      {activeTab === 'overview' && <>
 
       {/* ═══ 1. Weekly Debrief ═══ */}
       {layout.weekly_debrief && weeklyDebrief && (
-        <div className="card-surface border border-accent/20 rounded-2xl p-4 sm:p-6">
+        <div className="card-elevated rounded-2xl p-5">
           <WeeklyDebrief debrief={weeklyDebrief} collapsible />
         </div>
       )}
 
       {/* ═══ 2. Hero Section — Portfolio Performance ═══ */}
       {showHero && (
-        <div className="card-surface border border-accent/20 rounded-2xl p-5 sm:p-6 space-y-4 bg-gradient-to-br from-accent/5 via-transparent to-transparent">
+        <div className="card-elevated rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-medium text-accent uppercase tracking-widest">Portfolio Performance</p>
-            <span className="text-[9px] text-text-tertiary">{activeClientCount} active client{activeClientCount !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-medium text-text-tertiary ">Portfolio Performance</p>
+              <InfoTip text="30-day rolling summary of your client work — how much energy you spend vs what you earn." position="bottom" />
+            </div>
+            <span className="text-xs text-text-tertiary">{activeClientCount} active client{activeClientCount !== 1 ? 's' : ''}</span>
           </div>
 
           {/* Primary metric */}
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl sm:text-4xl font-bold text-accent tracking-tight">
+            <span className="display-number-large text-text-primary">
               £{avgRevenuePerMLU.toFixed(2)}
             </span>
             <span className="text-sm text-text-tertiary">/MLU avg</span>
+            <InfoTip text="Revenue per Mental Load Unit — how much you earn for each unit of cognitive effort. Higher = more efficient." />
           </div>
 
           {/* Secondary metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            <HeroStat label="Monthly Revenue" value={`£${totalMonthlyRevenue.toLocaleString()}`} />
-            <HeroStat label="MLU Spent" value={totalMLUSpent.toLocaleString()} unit="MLU" />
-            <HeroStat label="Tasks (12 wks)" value={String(totalTasksCompleted)} />
+            <HeroStat label="Monthly Revenue" value={`£${totalMonthlyRevenue.toLocaleString()}`} tip="Total retainer income from all active clients this month." />
+            <HeroStat label="MLU Spent" value={totalMLUSpent.toLocaleString()} unit="MLU" tip="Total Mental Load Units used across all client tasks in the last 30 days. Each task has an MLU cost based on its weight and energy type." />
+            <HeroStat label="Tasks (12 wks)" value={String(totalTasksCompleted)} tip="Total tasks completed in the last 12 weeks across all clients." />
             <HeroStat
               label="Capacity Used"
               value={`${capacityUsedPct}%`}
-              color={capacityUsedPct > 80 ? 'text-red-400' : capacityUsedPct > 60 ? 'text-amber-400' : 'text-accent'}
+              color={capacityUsedPct > 80 ? 'text-red-400' : capacityUsedPct > 60 ? 'text-amber-400' : 'text-text-primary'}
+              tip={`How much of your monthly capacity (${capacity} MLU/day × 22 days = ${capacity * 22} MLU) you've used. Green < 60%, amber 60-80%, red > 80%.`}
             />
           </div>
 
           {/* Capacity bar */}
-          <div className="space-y-1">
-            <div className="w-full h-1.5 rounded-full bg-surface-tertiary/60 overflow-hidden">
+          <div className="space-y-2">
+            <div className="w-full h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700 ease-out"
                 style={{
                   width: `${Math.min(100, capacityUsedPct)}%`,
-                  background: capacityUsedPct > 80 ? '#f87171' : capacityUsedPct > 60 ? '#fbbf24' : 'linear-gradient(90deg, var(--accent), #4ade80)',
+                  background: capacityUsedPct > 80 ? '#f87171' : capacityUsedPct > 60 ? '#fbbf24' : 'rgba(255,255,255,0.3)',
                 }}
               />
             </div>
@@ -343,14 +370,27 @@ export function AnalyticsDashboard({
         </div>
       )}
 
-      {/* ═══ 3. Client Energy vs Revenue ═══ */}
+      {/* ═══ 3. Insights & Patterns (merged) ═══ */}
+      {showInsightsPatterns && combinedInsights.length > 0 && (
+        <InsightsPatternsPanel items={combinedInsights} />
+      )}
+
+      </>}
+
+      {/* ═══ CLIENTS TAB ═══ */}
+      {activeTab === 'clients' && <>
+
+      {/* ═══ Client Energy vs Revenue ═══ */}
       {showClientEnergy && clientEnergyProfiles.length > 0 && (
-        <div className="card-surface border border-border rounded-2xl p-4 sm:p-6 space-y-4">
+        <div className="card-elevated rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Client Energy vs Revenue</p>
-              <p className="text-[10px] text-text-tertiary mt-0.5">
-                Portfolio avg: <span className="text-accent font-mono font-medium">£{avgRevenuePerMLU.toFixed(2)}/MLU</span>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-medium text-text-tertiary ">Client Energy vs Revenue</p>
+                <InfoTip text="Compares how much effort (MLU) each client takes vs what they pay. Helps spot clients that drain energy for low return." position="bottom" />
+              </div>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                Portfolio avg: <span className="text-text-primary font-mono font-medium">£{avgRevenuePerMLU.toFixed(2)}/MLU</span>
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -359,10 +399,10 @@ export function AnalyticsDashboard({
                   key={s}
                   onClick={() => setClientSort(s)}
                   className={cn(
-                    'text-[9px] px-2 py-1 rounded-lg font-medium transition-colors cursor-pointer',
+                    'text-xs px-2 py-1 rounded-lg font-medium transition-colors cursor-pointer',
                     clientSort === s
-                      ? 'bg-accent/15 text-accent'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary/50'
+                      ? 'bg-surface-tertiary text-text-primary'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary'
                   )}
                 >
                   {s === 'efficiency' ? '£/MLU' : s === 'revenue' ? 'Revenue' : 'Energy'}
@@ -392,8 +432,8 @@ export function AnalyticsDashboard({
             const totalCapPct = monthlyCapacity > 0 ? Math.round((totalMLU / monthlyCapacity) * 100) : 0;
 
             return (
-              <div className="rounded-xl border border-accent/20 bg-accent/5 px-3 sm:px-4 py-3">
-                <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 text-[11px]">
+              <div className="border-t border-border px-3 sm:px-4 pt-3">
+                <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 text-xs">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <span className="text-text-secondary"><strong className="text-text-primary">{totalMLU}</strong> MLU</span>
                     <span className="text-text-tertiary">·</span>
@@ -401,13 +441,13 @@ export function AnalyticsDashboard({
                     <span className="text-text-tertiary">·</span>
                     <span className={cn(
                       'font-medium',
-                      totalCapPct > 80 ? 'text-red-400' : totalCapPct > 60 ? 'text-amber-400' : 'text-accent'
+                      totalCapPct > 80 ? 'text-red-400' : totalCapPct > 60 ? 'text-amber-400' : 'text-text-primary'
                     )}>{totalCapPct}%</span>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3">
                     <span className="text-text-secondary">£{totalRevenue.toLocaleString()}/mo</span>
                     <span className="text-text-tertiary">·</span>
-                    <span className="text-accent font-medium font-mono">£{totalMLU > 0 ? (totalRevenue / totalMLU).toFixed(2) : '0'}/MLU</span>
+                    <span className="text-text-primary font-medium font-mono">£{totalMLU > 0 ? (totalRevenue / totalMLU).toFixed(2) : '0'}/MLU</span>
                   </div>
                 </div>
               </div>
@@ -416,24 +456,172 @@ export function AnalyticsDashboard({
         </div>
       )}
 
-      {/* ═══ 4. Insights & Patterns (merged) ═══ */}
-      {showInsightsPatterns && combinedInsights.length > 0 && (
-        <InsightsPatternsPanel items={combinedInsights} />
-      )}
-
-      {/* ═══ 4b. Monthly Trends Comparison ═══ */}
-      {layout.monthly_trends && monthlyTrends.length > 0 && (
-        <MonthlyTrendsSection trends={monthlyTrends} />
-      )}
-
-      {/* ═══ 4c. Client Health Scores ═══ */}
+      {/* ═══ Client Health Scores ═══ */}
       {layout.client_health_scores && clientHealthScores.length > 0 && (
         <ClientHealthScoresSection scores={clientHealthScores} />
       )}
 
-      {/* ═══ 5. Revenue Radar (collapsible, default open) ═══ */}
+      {/* ═══ Scope Creep Radar ═══ */}
+      {layout.scope_creep_radar && scopeCreepAnalysis && (
+        <div className="card-elevated rounded-2xl p-6">
+          <h3 className="text-section-heading text-text-primary mb-4">Scope Creep Radar</h3>
+          <ScopeCreepRadar analysis={scopeCreepAnalysis} />
+        </div>
+      )}
+
+      </>}
+
+      {/* ═══ TRENDS TAB ═══ */}
+      {activeTab === 'trends' && <>
+
+      {/* ═══ Monthly Trends Comparison ═══ */}
+      {layout.monthly_trends && monthlyTrends.length > 0 && (
+        <MonthlyTrendsSection trends={monthlyTrends} />
+      )}
+
+      {/* ═══ Revenue & Profit Over Time ═══ */}
+      {layout.revenue_profit_chart && revenueTrends.length > 0 && (
+        <div className="card-elevated rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">📈</span>
+            <h3 className="text-section-heading text-text-primary">Revenue & Profit Over Time</h3>
+          </div>
+          <p className="text-xs text-text-tertiary">
+            Monthly snapshots showing revenue, expenses, and profit from your financial records.
+          </p>
+          <ResponsiveContainer width="100%" height={320}>
+            <AreaChart data={revenueTrends} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradProfit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#34d399" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="var(--border-color)" strokeOpacity={0.5} vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={({ active, payload, label }: any) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="chart-tooltip">
+                    <p className="text-xs text-text-tertiary mb-1">{label}</p>
+                    {payload.map((entry: any, i: number) => (
+                      <p key={i} className="text-xs text-text-primary">
+                        <span style={{ color: entry.color }}>{entry.name}:</span> £{entry.value.toLocaleString()}
+                      </p>
+                    ))}
+                  </div>
+                );
+              }} />
+              <Area type="monotone" dataKey="revenue" name="Revenue" stroke="var(--accent)" strokeWidth={2} fill="url(#gradRevenue)" animationBegin={200} animationDuration={800} animationEasing="ease-out" />
+              <Area type="monotone" dataKey="profit" name="Profit" stroke="#34d399" strokeWidth={2} fill="url(#gradProfit)" animationBegin={400} animationDuration={800} animationEasing="ease-out" />
+              <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4 4" dot={false} animationBegin={600} animationDuration={800} animationEasing="ease-out" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ═══ Weekly Energy Investment ═══ */}
+      {layout.energy_investment_chart && energyTrends.length > 0 && (
+        <div className="card-elevated rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">⚡</span>
+            <h3 className="text-section-heading text-text-primary">Weekly Energy Investment</h3>
+          </div>
+          <p className="text-xs text-text-tertiary">
+            Weekly mental energy split by type. Creative (purple) demands more focus, admin (gray) is lightweight.
+          </p>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={energyTrends} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
+              <CartesianGrid stroke="var(--border-color)" strokeOpacity={0.5} vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+              <Tooltip content={({ active, payload, label }: any) => {
+                if (!active || !payload?.length) return null;
+                const total = payload.reduce((s: number, p: any) => s + (p.value || 0), 0);
+                return (
+                  <div className="chart-tooltip">
+                    <p className="text-xs text-text-tertiary mb-1">{label}</p>
+                    {payload.map((entry: any, i: number) => (
+                      <p key={i} className="text-xs text-text-primary">
+                        <span style={{ color: entry.color }}>{entry.name}:</span> {entry.value.toFixed(1)} MLU
+                      </p>
+                    ))}
+                    <p className="text-xs text-text-primary font-medium border-t border-border mt-1 pt-1">
+                      Total: {total.toFixed(1)} MLU
+                    </p>
+                  </div>
+                );
+              }} />
+              <Bar dataKey="creativeMLU" name="Creative" stackId="a" fill="#a78bfa" radius={[0, 0, 0, 0]} animationBegin={200} animationDuration={800} animationEasing="ease-out" />
+              <Bar dataKey="adminMLU" name="Admin" stackId="a" fill="#6b7280" radius={[4, 4, 0, 0]} animationBegin={400} animationDuration={800} animationEasing="ease-out" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ═══ Task Volume ═══ */}
+      {layout.task_volume_chart && (
+        <div className="card-elevated rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">📊</span>
+            <h3 className="text-section-heading text-text-primary">Weekly Task Volume</h3>
+          </div>
+          {weeklyTrendFormatted.length === 0 ? (
+            <p className="text-xs text-text-tertiary py-8 text-center">Complete tasks to see trends</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={weeklyTrendFormatted} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border-color)" strokeOpacity={0.5} vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="count" name="Tasks" stroke="var(--accent)" strokeWidth={2} dot={{ fill: 'var(--accent)', r: 3 }} activeDot={{ r: 5 }} animationBegin={200} animationDuration={800} animationEasing="ease-out" />
+                <Line type="monotone" dataKey="energy" name="Energy" stroke="var(--accent-blue)" strokeWidth={2} strokeDasharray="4 4" dot={false} animationBegin={400} animationDuration={800} animationEasing="ease-out" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      )}
+
+      </>}
+
+      {/* ═══ DATA TAB ═══ */}
+      {activeTab === 'data' && <>
+
+      {/* ═══ Energy by Client ═══ */}
+      {layout.energy_by_client && (
+        <div className="card-elevated rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🔋</span>
+            <h3 className="text-section-heading text-text-primary">Energy by Client</h3>
+          </div>
+          {projectEnergy.length === 0 ? (
+            <p className="text-xs text-text-tertiary py-8 text-center">Complete tasks to see energy breakdown</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={projectEnergy} layout="vertical" margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
+                <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--surface-hover)', opacity: 0.3 }} />
+                <Bar dataKey="energy" name="Energy" fill="var(--accent)" radius={[0, 6, 6, 0]} barSize={20} animationBegin={200} animationDuration={800} animationEasing="ease-out" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      )}
+
+      {/* ═══ Revenue Radar ═══ */}
       {layout.revenue_radar && clients.length > 0 && (
-        <CollapsibleSection title="Revenue Radar" defaultOpen={true} icon="📡">
+        <div className="card-elevated rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm">📡</span>
+            <h3 className="text-section-heading text-text-primary">Revenue Radar</h3>
+          </div>
           <RevenueRadar
             clients={clients.map(c => ({
               id: c.id,
@@ -444,138 +632,17 @@ export function AnalyticsDashboard({
               is_active: c.is_active ?? false,
             }))}
           />
-        </CollapsibleSection>
+        </div>
       )}
 
-      {/* ═══ 6. Revenue & Profit Over Time (collapsible, default closed) ═══ */}
-      {layout.revenue_profit_chart && revenueTrends.length > 0 && (
-        <CollapsibleSection title="Revenue & Profit Over Time" icon="📈">
-          <div className="space-y-4">
-            <p className="text-[10px] text-text-tertiary">
-              Monthly snapshots showing revenue, expenses, and profit from your financial records.
-            </p>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={revenueTrends} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#34d399" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
-                <Tooltip content={({ active, payload, label }: any) => {
-                  if (!active || !payload?.length) return null;
-                  return (
-                    <div className="card-surface border border-border rounded-xl px-3 py-2 shadow-lg">
-                      <p className="text-[10px] text-text-tertiary mb-1">{label}</p>
-                      {payload.map((entry: any, i: number) => (
-                        <p key={i} className="text-xs text-text-primary">
-                          <span style={{ color: entry.color }}>{entry.name}:</span> £{entry.value.toLocaleString()}
-                        </p>
-                      ))}
-                    </div>
-                  );
-                }} />
-                <Area type="monotone" dataKey="revenue" name="Revenue" stroke="var(--accent)" strokeWidth={2} fill="url(#gradRevenue)" />
-                <Area type="monotone" dataKey="profit" name="Profit" stroke="#34d399" strokeWidth={2} fill="url(#gradProfit)" />
-                <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* ═══ 7. Weekly Energy Investment (collapsible, default closed) ═══ */}
-      {layout.energy_investment_chart && energyTrends.length > 0 && (
-        <CollapsibleSection title="Weekly Energy Investment" icon="⚡">
-          <div className="space-y-4">
-            <p className="text-[10px] text-text-tertiary">
-              Weekly mental energy split by type. Creative (purple) demands more focus, admin (gray) is lightweight.
-            </p>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={energyTrends} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                <Tooltip content={({ active, payload, label }: any) => {
-                  if (!active || !payload?.length) return null;
-                  const total = payload.reduce((s: number, p: any) => s + (p.value || 0), 0);
-                  return (
-                    <div className="card-surface border border-border rounded-xl px-3 py-2 shadow-lg">
-                      <p className="text-[10px] text-text-tertiary mb-1">{label}</p>
-                      {payload.map((entry: any, i: number) => (
-                        <p key={i} className="text-xs text-text-primary">
-                          <span style={{ color: entry.color }}>{entry.name}:</span> {entry.value.toFixed(1)} MLU
-                        </p>
-                      ))}
-                      <p className="text-xs text-text-primary font-medium border-t border-border/50 mt-1 pt-1">
-                        Total: {total.toFixed(1)} MLU
-                      </p>
-                    </div>
-                  );
-                }} />
-                <Bar dataKey="creativeMLU" name="Creative" stackId="a" fill="#a78bfa" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="adminMLU" name="Admin" stackId="a" fill="#6b7280" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* ═══ 8. Charts Row (collapsible, default closed) ═══ */}
-      {(layout.energy_by_client || layout.task_volume_chart) && (
-        <CollapsibleSection title="Charts" icon="📊">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {layout.energy_by_client && (
-              <div className="space-y-4">
-                <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Energy by Client</p>
-                {projectEnergy.length === 0 ? (
-                  <p className="text-xs text-text-tertiary py-8 text-center">Complete tasks to see energy breakdown</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={projectEnergy} layout="vertical" margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
-                      <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--surface-hover)', opacity: 0.3 }} />
-                      <Bar dataKey="energy" name="Energy" fill="var(--accent)" radius={[0, 6, 6, 0]} barSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            )}
-            {layout.task_volume_chart && (
-              <div className="space-y-4">
-                <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Weekly Task Volume</p>
-                {weeklyTrendFormatted.length === 0 ? (
-                  <p className="text-xs text-text-tertiary py-8 text-center">Complete tasks to see trends</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={weeklyTrendFormatted} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Line type="monotone" dataKey="count" name="Tasks" stroke="var(--accent)" strokeWidth={2} dot={{ fill: 'var(--accent)', r: 3 }} activeDot={{ r: 5 }} />
-                      <Line type="monotone" dataKey="energy" name="Energy" stroke="var(--accent-blue)" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* ═══ 9. How MLU Works (collapsible, default closed) ═══ */}
+      {/* ═══ How MLU Works ═══ */}
       {layout.mlu_explainer && (
-        <CollapsibleSection title="How Mental Load Units (MLU) Work" icon="🧠">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] text-text-secondary leading-relaxed">
+        <div className="card-elevated rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🧠</span>
+            <h3 className="text-section-heading text-text-primary">How Mental Load Units (MLU) Work</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-text-secondary leading-relaxed">
             <div className="space-y-2">
               <p className="text-text-primary font-medium text-xs">What is MLU?</p>
               <p>
@@ -584,15 +651,15 @@ export function AnalyticsDashboard({
                 <strong className="text-text-primary"> energy type</strong> (admin, creative).
               </p>
               <p>
-                A low-weight admin task costs 0.5 MLU. A high-weight creative task costs 5 MLU. Your daily capacity is <strong className="text-accent">{capacity} MLU</strong>{dailyCapacity ? '' : ' (default)'}.
+                A low-weight admin task costs 0.5 MLU. A high-weight creative task costs 5 MLU. Your daily capacity is <strong className="text-text-primary">{capacity} MLU</strong>{dailyCapacity ? '' : ' (default)'}.
               </p>
-              <p className="text-[10px] text-text-tertiary">
+              <p className="text-xs text-text-tertiary">
                 {dailyCapacity ? 'Custom capacity set in Settings.' : 'Customise this in Settings → MLU Capacity.'}
               </p>
             </div>
             <div className="space-y-2">
               <p className="text-text-primary font-medium text-xs">MLU Scale Reference</p>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {[
                   ['Low + Admin', '0.5'],
                   ['Low + Creative', '1.5'],
@@ -607,26 +674,31 @@ export function AnalyticsDashboard({
                   </div>
                 ))}
               </div>
-              <p className="text-text-tertiary text-[10px] mt-1">
+              <p className="text-text-tertiary text-xs mt-1">
                 Daily capacity: <strong className="text-text-primary">{capacity} MLU</strong> · Warning: {Math.round(capacity * 0.8)}+ · Overload: {capacity}+
               </p>
             </div>
           </div>
-        </CollapsibleSection>
+        </div>
       )}
+
+      </>}
 
     </div>
   );
 }
 
 // ━━━ Hero Stat ━━━
-function HeroStat({ label, value, unit, color }: { label: string; value: string; unit?: string; color?: string }) {
+function HeroStat({ label, value, unit, color, tip }: { label: string; value: string; unit?: string; color?: string; tip?: string }) {
   return (
-    <div className="rounded-xl bg-surface-secondary/50 border border-border/30 px-2.5 sm:px-3 py-2 sm:py-2.5">
-      <p className="text-[9px] sm:text-[10px] text-text-tertiary uppercase tracking-wider truncate">{label}</p>
+    <div className="bg-surface-tertiary rounded-2xl px-2.5 sm:px-3 py-2.5 sm:py-3">
+      <p className="text-xs sm:text-xs text-text-tertiary  truncate flex items-center gap-1">
+        {label}
+        {tip && <InfoTip text={tip} position="bottom" />}
+      </p>
       <p className={cn('text-sm sm:text-base font-bold font-mono mt-0.5', color || 'text-text-primary')}>
         {value}
-        {unit && <span className="text-[10px] text-text-tertiary font-normal ml-1">{unit}</span>}
+        {unit && <span className="text-xs text-text-tertiary font-normal ml-1">{unit}</span>}
       </p>
     </div>
   );
@@ -651,32 +723,35 @@ function ClientEnergyRow({
 
   const rating = profile.revenuePerMLU >= thresholds.efficient ? 'Efficient' :
     profile.revenuePerMLU >= thresholds.average ? 'Average' : 'Draining';
-  const ratingColor = rating === 'Efficient' ? 'bg-accent/15 text-accent' :
-    rating === 'Average' ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400';
-  const barColor = rating === 'Efficient' ? 'bg-accent' :
-    rating === 'Average' ? 'bg-amber-400' : 'bg-red-400';
+  const ratingColor = rating === 'Efficient' ? 'bg-surface-tertiary text-text-primary' :
+    rating === 'Average' ? 'bg-surface-tertiary text-text-secondary' : 'bg-surface-tertiary text-text-tertiary';
+  const barColor = rating === 'Efficient' ? 'bg-text-primary/40' :
+    rating === 'Average' ? 'bg-text-secondary/40' : 'bg-text-tertiary/40';
 
   return (
-    <div className="rounded-xl border border-border/60 hover:border-border-light px-3 sm:px-4 py-3 transition-colors space-y-2">
+    <div className="rounded-2xl border border-border hover:border-border-light px-3 sm:px-4 py-3 transition-colors space-y-2">
       {/* Top row: rank, name, £/MLU, badge */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <span className="text-[10px] text-text-tertiary font-mono w-4 text-right flex-shrink-0">{rank}</span>
+        <span className="text-xs text-text-tertiary font-mono w-4 text-right flex-shrink-0">{rank}</span>
         <span className="text-sm font-medium text-text-primary flex-1 min-w-0 truncate">{profile.name}</span>
-        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium flex-shrink-0 hidden sm:inline', ratingColor)}>{rating}</span>
+        <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium flex-shrink-0 hidden sm:inline group relative', ratingColor)}>
+          {rating}
+        </span>
         <span className={cn(
           'text-base sm:text-lg font-bold font-mono flex-shrink-0',
-          rating === 'Efficient' ? 'text-accent' : rating === 'Average' ? 'text-amber-400' : 'text-red-400'
+          rating === 'Efficient' ? 'text-text-primary' : rating === 'Average' ? 'text-text-secondary' : 'text-text-tertiary'
         )}>
           £{profile.revenuePerMLU > 0 ? profile.revenuePerMLU.toFixed(2) : '—'}
         </span>
+        <InfoTip text={`£ earned per MLU of effort. ${rating === 'Efficient' ? 'Above avg — good value.' : rating === 'Average' ? 'Near portfolio average.' : 'Below avg — costs more effort than it earns relative to others.'}`} />
       </div>
 
       {/* Bottom row: stats + mini bars */}
-      <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-[10px]">
+      <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-xs">
         {profile.riskFlag && profile.riskFlag !== 'none' && (
-          <span className="text-[9px] px-1.5 py-0.5 bg-red-500/15 text-red-400 rounded-md">{profile.riskFlag}</span>
+          <span className="text-xs px-1.5 py-0.5 bg-red-500/15 text-red-400 rounded-md">{profile.riskFlag}</span>
         )}
-        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium sm:hidden', ratingColor)}>{rating}</span>
+        <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium sm:hidden', ratingColor)}>{rating}</span>
         <span className="text-text-secondary">£{profile.monthlyRevenue.toLocaleString()}/mo</span>
         <span className="text-text-secondary">{profile.totalMLU > 0 ? `${profile.totalMLU} MLU` : '— MLU'}</span>
         <span className="text-text-tertiary hidden sm:inline">{profile.taskCount} tasks</span>
@@ -688,7 +763,7 @@ function ClientEnergyRow({
               <div className="h-full bg-purple-400" style={{ width: `${creativePct}%` }} />
               <div className="h-full bg-gray-500" style={{ width: `${100 - creativePct}%` }} />
             </div>
-            <span className="text-text-tertiary">{creativePct}%C</span>
+            <span className="text-text-tertiary">{creativePct}% creative</span>
           </div>
         )}
 
@@ -697,12 +772,12 @@ function ClientEnergyRow({
           'ml-auto font-medium',
           capacityPct > 30 ? 'text-red-400' : capacityPct > 20 ? 'text-amber-400' : 'text-text-tertiary'
         )}>
-          {capacityPct}% cap
+          {capacityPct}% of capacity
         </span>
       </div>
 
       {/* Thin capacity bar */}
-      <div className="w-full h-1 rounded-full bg-surface-tertiary/60 overflow-hidden">
+      <div className="w-full h-1 rounded-full bg-surface-tertiary overflow-hidden">
         <div
           className={cn('h-full rounded-full transition-all duration-500', barColor)}
           style={{ width: `${Math.min(100, capacityPct)}%`, opacity: 0.6 }}
@@ -723,21 +798,21 @@ function InsightsPatternsPanel({
   const hasMore = items.length > 3;
 
   return (
-    <div className="card-surface border border-border rounded-2xl p-4 sm:p-5 space-y-3">
+    <div className="card-elevated rounded-2xl p-5 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm">💡</span>
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+          <p className="text-xs font-medium text-text-tertiary ">
             Insights & Patterns
           </p>
-          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-400 font-medium">
+          <span className="text-xs px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-400 font-medium">
             {items.length}
           </span>
         </div>
         {hasMore && (
           <button
             onClick={() => setShowAll(!showAll)}
-            className="text-[10px] text-accent hover:text-accent/80 font-medium cursor-pointer transition-colors"
+            className="text-xs text-text-secondary hover:text-text-primary font-medium cursor-pointer transition-colors"
           >
             {showAll ? 'Show less' : `Show all ${items.length}`}
           </button>
@@ -751,8 +826,8 @@ function InsightsPatternsPanel({
             <div
               key={i}
               className={cn(
-                'rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 space-y-1 transition-all',
-                style.bg, style.border
+                'rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-2 transition-all',
+                style.bg
               )}
             >
               <div className="flex items-start justify-between gap-2">
@@ -768,15 +843,11 @@ function InsightsPatternsPanel({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-text-secondary leading-relaxed ml-5">{item.detail}</p>
+              <p className="text-xs text-text-secondary leading-relaxed ml-5">{item.detail}</p>
               {item.category && (
                 <span className={cn(
-                  'inline-block text-[9px] px-1.5 py-0.5 rounded-md font-medium ml-5',
-                  item.category === 'productivity' ? 'bg-blue-500/10 text-blue-400' :
-                  item.category === 'energy' ? 'bg-amber-500/10 text-amber-400' :
-                  item.category === 'correlation' ? 'bg-purple-500/10 text-purple-400' :
-                  item.category === 'streak' ? 'bg-orange-500/10 text-orange-400' :
-                  'bg-accent/10 text-accent'
+                  'inline-block text-xs px-1.5 py-0.5 rounded-md font-medium ml-5',
+                  'bg-surface-tertiary text-text-tertiary'
                 )}>
                   {item.category}
                 </span>
@@ -795,87 +866,89 @@ function MonthlyTrendsSection({ trends }: { trends: MonthlyTrend[] }) {
   const recentTrends = trends.slice(-3);
 
   return (
-    <CollapsibleSection title="Monthly Trends" defaultOpen={false} icon={"📊"}>
-      <div className="space-y-3">
-        <p className="text-[10px] text-text-tertiary">
-          Month-over-month comparison of key metrics. Deltas show change from the previous month.
+    <div className="card-elevated rounded-2xl p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm">📊</span>
+        <h3 className="text-section-heading text-text-primary">Monthly Trends</h3>
+      </div>
+      <p className="text-xs text-text-tertiary">
+        Month-over-month comparison of key metrics. Deltas show change from the previous month.
+      </p>
+
+      {recentTrends.length === 0 ? (
+        <p className="text-xs text-text-tertiary py-8 text-center">
+          Not enough data yet. Trends appear after 2+ months of snapshots.
         </p>
-
-        {recentTrends.length === 0 ? (
-          <p className="text-xs text-text-tertiary py-8 text-center">
-            Not enough data yet. Trends appear after 2+ months of snapshots.
-          </p>
-        ) : (
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <div className="min-w-[480px] px-4 sm:px-0">
-              {/* Header row */}
-              <div className="grid grid-cols-[1fr_repeat(3,_minmax(0,_1fr))] gap-1 mb-2">
-                <div />
-                {recentTrends.map((t) => (
-                  <div key={t.month} className="text-center">
-                    <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">{t.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Metric rows */}
-              {([
-                { key: 'revenue' as const, label: 'Revenue', format: (v: number) => `£${v.toLocaleString()}`, deltaKey: 'revenue' as const },
-                { key: 'profit' as const, label: 'Profit', format: (v: number) => `£${v.toLocaleString()}`, deltaKey: 'profit' as const },
-                { key: 'taskCount' as const, label: 'Tasks', format: (v: number) => String(v), deltaKey: 'taskCount' as const },
-                { key: 'totalMLU' as const, label: 'Total MLU', format: (v: number) => String(v), deltaKey: 'totalMLU' as const },
-                { key: 'creativePct' as const, label: 'Creative %', format: (v: number) => `${v}%`, deltaKey: 'creativePct' as const },
-              ] as const).map((metric) => (
-                <div
-                  key={metric.key}
-                  className="grid grid-cols-[1fr_repeat(3,_minmax(0,_1fr))] gap-1 py-2 border-t border-border/30"
-                >
-                  <p className="text-[10px] font-medium text-text-secondary uppercase tracking-wider self-center">{metric.label}</p>
-                  {recentTrends.map((t) => {
-                    const value = t[metric.key];
-                    const delta = t.deltas[metric.deltaKey];
-                    return (
-                      <div key={t.month} className="text-center space-y-0.5">
-                        <p className="text-xs font-medium text-text-primary font-mono">{metric.format(value)}</p>
-                        {delta !== null && (
-                          <DeltaBadge value={delta} />
-                        )}
-                      </div>
-                    );
-                  })}
+      ) : (
+        <div className="overflow-x-auto">
+          <div className="min-w-[360px]">
+            {/* Header row */}
+            <div className="grid grid-cols-[1fr_repeat(3,_minmax(0,_1fr))] gap-1 mb-2">
+              <div />
+              {recentTrends.map((t) => (
+                <div key={t.month} className="text-center">
+                  <p className="text-xs font-medium text-text-tertiary ">{t.label}</p>
                 </div>
               ))}
+            </div>
 
-              {/* Client count row */}
-              <div className="grid grid-cols-[1fr_repeat(3,_minmax(0,_1fr))] gap-1 py-2 border-t border-border/30">
-                <p className="text-[10px] font-medium text-text-secondary uppercase tracking-wider self-center">Clients</p>
-                {recentTrends.map((t) => (
-                  <div key={t.month} className="text-center space-y-0.5">
-                    <p className="text-xs font-medium text-text-primary font-mono">{t.clientCount}</p>
-                    {t.deltas.clientCount !== null && (
-                      <DeltaBadge value={t.deltas.clientCount} />
-                    )}
-                  </div>
-                ))}
+            {/* Metric rows */}
+            {([
+              { key: 'revenue' as const, label: 'Revenue', format: (v: number) => `£${v.toLocaleString()}`, deltaKey: 'revenue' as const },
+              { key: 'profit' as const, label: 'Profit', format: (v: number) => `£${v.toLocaleString()}`, deltaKey: 'profit' as const },
+              { key: 'taskCount' as const, label: 'Tasks', format: (v: number) => String(v), deltaKey: 'taskCount' as const },
+              { key: 'totalMLU' as const, label: 'Total MLU', format: (v: number) => String(v), deltaKey: 'totalMLU' as const },
+              { key: 'creativePct' as const, label: 'Creative %', format: (v: number) => `${v}%`, deltaKey: 'creativePct' as const },
+            ] as const).map((metric) => (
+              <div
+                key={metric.key}
+                className="grid grid-cols-[1fr_repeat(3,_minmax(0,_1fr))] gap-1 py-2 border-t border-border"
+              >
+                <p className="text-xs font-medium text-text-secondary  self-center">{metric.label}</p>
+                {recentTrends.map((t) => {
+                  const value = t[metric.key];
+                  const delta = t.deltas[metric.deltaKey];
+                  return (
+                    <div key={t.month} className="text-center space-y-1.5">
+                      <p className="text-xs font-medium text-text-primary font-mono">{metric.format(value)}</p>
+                      {delta !== null && (
+                        <DeltaBadge value={delta} />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+            ))}
+
+            {/* Client count row */}
+            <div className="grid grid-cols-[1fr_repeat(3,_minmax(0,_1fr))] gap-1 py-2 border-t border-border">
+              <p className="text-xs font-medium text-text-secondary  self-center">Clients</p>
+              {recentTrends.map((t) => (
+                <div key={t.month} className="text-center space-y-1.5">
+                  <p className="text-xs font-medium text-text-primary font-mono">{t.clientCount}</p>
+                  {t.deltas.clientCount !== null && (
+                    <DeltaBadge value={t.deltas.clientCount} />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        )}
-      </div>
-    </CollapsibleSection>
+        </div>
+      )}
+    </div>
   );
 }
 
 // ━━━ Delta Badge ━━━
 function DeltaBadge({ value }: { value: number }) {
   if (value === 0) {
-    return <span className="text-[9px] text-text-tertiary font-mono">--</span>;
+    return <span className="text-xs text-text-tertiary font-mono">--</span>;
   }
   const isPositive = value > 0;
   return (
     <span className={cn(
-      'inline-flex items-center gap-0.5 text-[9px] font-medium font-mono rounded px-1 py-0.5',
-      isPositive ? 'text-accent bg-accent/10' : 'text-red-400 bg-red-500/10'
+      'inline-flex items-center gap-0.5 text-xs font-medium font-mono rounded px-1 py-0.5',
+      isPositive ? 'text-text-primary bg-surface-tertiary' : 'text-text-secondary bg-surface-tertiary'
     )}>
       {isPositive ? '\u2191' : '\u2193'}{Math.abs(value)}%
     </span>
@@ -885,54 +958,52 @@ function DeltaBadge({ value }: { value: number }) {
 // ━━━ Client Health Scores Section ━━━
 function ClientHealthScoresSection({ scores }: { scores: ClientHealthScore[] }) {
   return (
-    <CollapsibleSection title="Client Health Scores" defaultOpen={true} icon={"\uD83D\uDC8A"}>
-      <div className="space-y-3">
-        <p className="text-[10px] text-text-tertiary">
-          Health score (0-100) based on task velocity, efficiency, risk status, renewal probability, and energy balance. Sorted by score to highlight clients needing attention.
-        </p>
-
-        {scores.length === 0 ? (
-          <p className="text-xs text-text-tertiary py-8 text-center">
-            No active clients to evaluate.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {scores.map((score) => (
-              <ClientHealthCard key={score.clientId} score={score} />
-            ))}
-          </div>
-        )}
+    <div className="card-elevated rounded-2xl p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm">💊</span>
+        <h3 className="text-section-heading text-text-primary">Client Health Scores</h3>
       </div>
-    </CollapsibleSection>
+      <p className="text-xs text-text-tertiary">
+        Health score (0-100) based on task velocity, efficiency, risk status, renewal probability, and energy balance. Sorted by score to highlight clients needing attention.
+      </p>
+
+      {scores.length === 0 ? (
+        <p className="text-xs text-text-tertiary py-8 text-center">
+          No active clients to evaluate.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {scores.map((score) => (
+            <ClientHealthCard key={score.clientId} score={score} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 // ━━━ Client Health Card ━━━
 function ClientHealthCard({ score }: { score: ClientHealthScore }) {
   const scoreColor = score.healthScore >= 70
-    ? 'text-accent'
+    ? 'text-text-primary'
     : score.healthScore >= 40
       ? 'text-amber-400'
       : 'text-red-400';
 
   const scoreBgColor = score.healthScore >= 70
-    ? 'bg-accent'
+    ? 'bg-text-primary/40'
     : score.healthScore >= 40
       ? 'bg-amber-400'
       : 'bg-red-400';
 
-  const scoreBorderColor = score.healthScore >= 70
-    ? 'border-accent/20'
-    : score.healthScore >= 40
-      ? 'border-amber-500/20'
-      : 'border-red-500/20';
+  const scoreBorderColor = 'border-border';
 
   const trendIcon = score.trend === 'improving' ? '\u2191' : score.trend === 'declining' ? '\u2193' : '\u2192';
   const trendColor = score.trend === 'improving'
-    ? 'text-accent bg-accent/10'
+    ? 'text-text-primary bg-surface-tertiary'
     : score.trend === 'declining'
-      ? 'text-red-400 bg-red-500/10'
-      : 'text-text-tertiary bg-surface-tertiary/50';
+      ? 'text-text-tertiary bg-surface-tertiary'
+      : 'text-text-tertiary bg-surface-tertiary';
 
   const FACTOR_LABELS: Record<keyof ClientHealthScore['factors'], { label: string; max: number }> = {
     velocity: { label: 'Velocity', max: 30 },
@@ -943,7 +1014,7 @@ function ClientHealthCard({ score }: { score: ClientHealthScore }) {
   };
 
   return (
-    <div className={cn('rounded-xl border px-3 sm:px-4 py-3 space-y-2.5 transition-colors', scoreBorderColor)}>
+    <div className={cn('rounded-lg bg-surface-tertiary px-3 sm:px-4 py-3 space-y-2.5 transition-colors')}>
       {/* Header: name, score, trend */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -952,13 +1023,13 @@ function ClientHealthCard({ score }: { score: ClientHealthScore }) {
           </span>
           <span className="text-sm font-medium text-text-primary truncate">{score.name}</span>
         </div>
-        <span className={cn('text-[9px] font-medium px-1.5 py-0.5 rounded-md', trendColor)}>
+        <span className={cn('text-xs font-medium px-1.5 py-0.5 rounded-md', trendColor)}>
           {trendIcon} {score.trend}
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="w-full h-1.5 rounded-full bg-surface-tertiary/60 overflow-hidden">
+      <div className="w-full h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
         <div
           className={cn('h-full rounded-full transition-all duration-500', scoreBgColor)}
           style={{ width: `${score.healthScore}%`, opacity: 0.7 }}
@@ -971,14 +1042,14 @@ function ClientHealthCard({ score }: { score: ClientHealthScore }) {
           const { label, max } = FACTOR_LABELS[key];
           const pct = max > 0 ? Math.round((value / max) * 100) : 0;
           const badgeColor = pct >= 70
-            ? 'bg-accent/10 text-accent'
+            ? 'bg-surface-tertiary text-text-secondary'
             : pct >= 40
-              ? 'bg-amber-500/10 text-amber-400'
-              : 'bg-red-500/10 text-red-400';
+              ? 'bg-surface-tertiary text-text-tertiary'
+              : 'bg-surface-tertiary text-text-tertiary';
           return (
             <span
               key={key}
-              className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', badgeColor)}
+              className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium', badgeColor)}
               title={`${label}: ${value}/${max}`}
             >
               {label} {value}/{max}

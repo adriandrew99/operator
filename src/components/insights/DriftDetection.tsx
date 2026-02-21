@@ -30,20 +30,20 @@ function getDriftLevel(score: number): { level: DriftLevel; label: string } {
 
 function getDriftColor(level: DriftLevel): string {
   switch (level) {
-    case 'locked-in': return 'text-accent';
-    case 'slight': return 'text-accent';
-    case 'drifting': return 'text-amber-400';
-    case 'red-alert': return 'text-red-400';
-    case 'emergency': return 'text-red-500';
+    case 'locked-in': return 'text-text-primary';
+    case 'slight': return 'text-text-primary';
+    case 'drifting': return 'text-text-secondary';
+    case 'red-alert': return 'text-text-tertiary';
+    case 'emergency': return 'text-text-tertiary';
   }
 }
 
 function getMeterGradient(score: number): string {
-  if (score <= 20) return 'from-accent to-accent';
-  if (score <= 40) return 'from-accent to-amber-400';
-  if (score <= 60) return 'from-accent via-amber-400 to-amber-500';
-  if (score <= 80) return 'from-accent via-amber-400 to-red-400';
-  return 'from-accent via-amber-400 to-red-500';
+  if (score <= 20) return 'from-text-primary to-text-primary';
+  if (score <= 40) return 'from-text-primary to-text-secondary';
+  if (score <= 60) return 'from-text-primary via-text-secondary to-text-tertiary';
+  if (score <= 80) return 'from-text-primary via-text-secondary to-text-tertiary';
+  return 'from-text-secondary via-text-tertiary to-text-tertiary';
 }
 
 export function DriftDetection({
@@ -151,17 +151,17 @@ export function DriftDetection({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-[10px] font-medium text-accent uppercase tracking-widest">
+        <p className="text-xs font-medium text-text-tertiary">
           Drift Detection
         </p>
         <span
           className={cn(
-            'text-[9px] px-2 py-0.5 rounded-md font-medium',
-            analysis.level === 'locked-in' && 'bg-accent/15 text-accent',
-            analysis.level === 'slight' && 'bg-accent/10 text-accent',
-            analysis.level === 'drifting' && 'bg-amber-500/15 text-amber-400',
-            analysis.level === 'red-alert' && 'bg-red-500/15 text-red-400',
-            analysis.level === 'emergency' && 'bg-red-500/20 text-red-500'
+            'text-xs px-2 py-0.5 rounded-md font-medium',
+            analysis.level === 'locked-in' && 'bg-surface-tertiary text-text-primary',
+            analysis.level === 'slight' && 'bg-surface-tertiary text-text-primary',
+            analysis.level === 'drifting' && 'bg-surface-tertiary text-text-secondary',
+            analysis.level === 'red-alert' && 'bg-surface-tertiary text-text-tertiary',
+            analysis.level === 'emergency' && 'bg-surface-tertiary text-text-tertiary'
           )}
         >
           {analysis.label}
@@ -169,7 +169,7 @@ export function DriftDetection({
       </div>
 
       {/* Drift Meter */}
-      <div className="rounded-xl bg-surface-tertiary/40 border border-border/50 p-4 space-y-3">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs text-text-secondary">Drift Score</span>
           <span
@@ -191,7 +191,7 @@ export function DriftDetection({
         </div>
 
         {/* Scale labels */}
-        <div className="flex items-center justify-between text-[9px] text-text-tertiary">
+        <div className="flex items-center justify-between text-xs text-text-tertiary">
           <span>Locked In</span>
           <span>Drifting</span>
           <span>Emergency</span>
@@ -204,15 +204,15 @@ export function DriftDetection({
           {analysis.factors.map((factor) => (
             <div
               key={factor.name}
-              className="flex items-center gap-2 text-[11px]"
+              className="flex items-center gap-2 text-xs"
             >
               <div className="w-16 h-1 bg-surface-tertiary overflow-hidden rounded-full flex-shrink-0">
                 <div
                   className={cn(
                     'h-full rounded-full',
-                    factor.contribution >= 20 ? 'bg-red-400' :
-                    factor.contribution >= 10 ? 'bg-amber-400' :
-                    'bg-accent'
+                    factor.contribution >= 20 ? 'bg-text-tertiary' :
+                    factor.contribution >= 10 ? 'bg-text-secondary' :
+                    'bg-text-primary'
                   )}
                   style={{ width: `${(factor.contribution / 30) * 100}%` }}
                 />
@@ -230,27 +230,13 @@ export function DriftDetection({
           {topSuggestions.map((suggestion) => (
             <div
               key={suggestion.name}
-              className={cn(
-                'flex items-start gap-3 px-4 py-3 rounded-xl text-xs',
-                analysis.level === 'locked-in' || analysis.level === 'slight'
-                  ? 'bg-surface-tertiary/50 border border-border/50'
-                  : analysis.level === 'drifting'
-                  ? 'bg-amber-500/5 border border-amber-500/15'
-                  : 'bg-red-500/5 border border-red-500/15'
-              )}
+              className="flex items-start gap-3 py-3 border-t border-border text-xs"
             >
               <span className="text-base flex-shrink-0 mt-0.5">
                 {suggestion.contribution >= 20 ? '!' : '\u2192'}
               </span>
               <p
-                className={cn(
-                  'leading-relaxed',
-                  analysis.level === 'locked-in' || analysis.level === 'slight'
-                    ? 'text-text-secondary'
-                    : analysis.level === 'drifting'
-                    ? 'text-amber-400'
-                    : 'text-red-400'
-                )}
+                className="leading-relaxed text-text-secondary"
               >
                 {suggestion.suggestion}
               </p>

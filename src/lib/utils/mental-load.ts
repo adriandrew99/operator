@@ -64,19 +64,19 @@ export function getLoadLevel(mlu: number, capacity: number = DAILY_CAPACITY): Lo
 
 export function getLoadColor(level: LoadLevel): string {
   switch (level) {
-    case 'light': return 'text-accent';
-    case 'moderate': return 'text-accent';
-    case 'heavy': return 'text-amber-400';
-    case 'overloaded': return 'text-red-400';
+    case 'light': return 'text-text-primary';
+    case 'moderate': return 'text-text-primary';
+    case 'heavy': return 'text-text-secondary';
+    case 'overloaded': return 'text-text-tertiary';
   }
 }
 
 export function getLoadBgColor(level: LoadLevel): string {
   switch (level) {
-    case 'light': return 'bg-accent/10 border-accent/20';
-    case 'moderate': return 'bg-accent/10 border-accent/20';
-    case 'heavy': return 'bg-amber-500/10 border-amber-500/20';
-    case 'overloaded': return 'bg-red-500/10 border-red-500/20';
+    case 'light': return 'bg-surface-tertiary/50 border-border';
+    case 'moderate': return 'bg-surface-tertiary/50 border-border';
+    case 'heavy': return 'bg-surface-tertiary/50 border-border';
+    case 'overloaded': return 'bg-surface-tertiary/50 border-border';
   }
 }
 

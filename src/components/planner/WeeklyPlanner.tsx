@@ -29,28 +29,28 @@ const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 6);
 
 const WEIGHT_COLORS: Record<string, string> = {
-  high: 'border-l-red-400 bg-red-500/8',
-  medium: 'border-l-amber-400 bg-amber-500/8',
-  low: 'border-l-accent bg-accent/8',
+  high: 'border-l-text-primary bg-surface-tertiary',
+  medium: 'border-l-text-secondary bg-surface-tertiary',
+  low: 'border-l-text-tertiary ',
 };
 
 const WEIGHT_DOT: Record<string, string> = {
-  high: 'bg-red-400',
-  medium: 'bg-amber-400',
-  low: 'bg-accent',
+  high: 'bg-text-primary',
+  medium: 'bg-text-secondary',
+  low: 'bg-text-tertiary',
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  fixed: 'bg-blue-500/15 border-l-blue-400 text-blue-300',
-  deep_work: 'bg-purple-500/15 border-l-purple-400 text-purple-300',
+  fixed: 'bg-surface-tertiary border-l-text-primary text-text-secondary',
+  deep_work: 'bg-surface-tertiary border-l-text-secondary text-text-secondary',
   admin: 'bg-surface-tertiary border-l-text-tertiary text-text-secondary',
-  break: 'bg-accent/10 border-l-accent text-accent',
+  break: 'bg-surface-tertiary border-l-text-tertiary text-text-tertiary',
 };
 
 const COMPLETED_COLORS: Record<string, string> = {
-  high: 'border-l-red-400/30 bg-red-500/4',
-  medium: 'border-l-amber-400/30 bg-amber-500/4',
-  low: 'border-l-accent/30 bg-accent/4',
+  high: 'border-l-text-primary/30 ',
+  medium: 'border-l-text-secondary/30 ',
+  low: 'border-l-text-tertiary/30 ',
 };
 
 function formatHour(h: number): string {
@@ -382,7 +382,7 @@ export function WeeklyPlanner({
       {/* Header with week nav */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-text-primary hidden sm:block">Planner</h1>
+          <h1 className="heading-serif text-lg text-text-primary hidden sm:block">Planner</h1>
           <p className="text-xs text-text-tertiary mt-0.5 hidden sm:block">
             {scheduledTasks.length} scheduled · {unscheduledTasks.length} unscheduled
             {completedScheduledTasks.length > 0 && ` · ${completedScheduledTasks.length} done`}
@@ -390,21 +390,21 @@ export function WeeklyPlanner({
               const weekMLU = Math.round(calculateDailyLoad(scheduledTasks));
               const weekCapacity = capacity * 5;
               const pct = Math.round((weekMLU / weekCapacity) * 100);
-              return <span className={cn('ml-1', pct > 100 ? 'text-red-400 font-semibold' : pct > 80 ? 'text-amber-400' : '')}> · {weekMLU}/{weekCapacity} MLU ({pct}%)</span>;
+              return <span className={cn('ml-1', pct > 100 ? 'text-text-primary font-semibold' : pct > 80 ? 'text-text-secondary' : '')}> · {weekMLU}/{weekCapacity} MLU ({pct}%)</span>;
             })()}
           </p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Week navigation */}
-          <div className="flex items-center gap-0.5 sm:gap-1 bg-surface-tertiary/40 rounded-xl border border-border/50 px-0.5 sm:px-1 py-0.5">
+          <div className="flex items-center gap-0.5 sm:gap-1 bg-surface-tertiary rounded-xl border border-border px-0.5 sm:px-1 py-0.5">
             <button onClick={() => navigateWeek(-1)} className="p-1.5 sm:p-1.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer" title="Previous week">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
             </button>
             <button
               onClick={goToCurrentWeek}
               className={cn(
-                'px-2 sm:px-3 py-1 text-[11px] sm:text-xs font-medium rounded-lg transition-colors min-w-0 sm:min-w-[160px] text-center cursor-pointer',
-                isCurrentWeek ? 'text-accent' : 'text-text-secondary hover:text-text-primary'
+                'px-2 sm:px-3 py-1 text-xs sm:text-xs font-medium rounded-lg transition-colors min-w-0 sm:min-w-[160px] text-center cursor-pointer',
+                isCurrentWeek ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
               )}
             >
               {weekLabel}
@@ -417,10 +417,10 @@ export function WeeklyPlanner({
             <button
               onClick={() => setHideCompleted(prev => !prev)}
               className={cn(
-                'px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all border cursor-pointer hidden sm:block',
+                'px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all border cursor-pointer hidden sm:block',
                 hideCompleted
-                  ? 'bg-accent/10 text-accent border-accent/30'
-                  : 'bg-surface-tertiary/40 text-text-tertiary border-border/50 hover:text-text-secondary'
+                  ? 'bg-surface-tertiary text-text-primary border-border-light'
+                  : 'bg-surface-tertiary text-text-tertiary border-border hover:text-text-secondary'
               )}
             >
               {hideCompleted ? 'Show Completed' : 'Hide Completed'}
@@ -448,23 +448,23 @@ export function WeeklyPlanner({
               className={cn(
                 'flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border transition-all min-w-[48px] flex-shrink-0',
                 isSelected
-                  ? 'bg-accent/15 border-accent/40 text-accent'
+                  ? 'bg-surface-tertiary border-border-light text-text-primary'
                   : isToday
-                    ? 'bg-surface-tertiary/60 border-accent/20 text-text-primary'
-                    : 'bg-surface-secondary/50 border-border/30 text-text-secondary active:bg-surface-tertiary'
+                    ? 'bg-surface-tertiary border-border-light text-text-primary'
+                    : 'bg-surface-secondary/50 border-border text-text-secondary active:bg-surface-tertiary'
               )}
             >
-              <span className="text-[10px] font-semibold uppercase">{DAY_NAMES[i]}</span>
-              <span className={cn('text-sm font-bold', isSelected && 'text-accent')}>{dayNum}</span>
+              <span className="text-xs font-semibold uppercase">{DAY_NAMES[i]}</span>
+              <span className={cn('text-sm font-bold', isSelected && 'text-text-primary')}>{dayNum}</span>
               {dayLoad && dayLoad.mlu > 0 && (
                 <div className="flex items-center gap-1">
                   <div className={cn(
                     'w-1.5 h-1.5 rounded-full',
-                    dayLoad.level === 'overloaded' ? 'bg-red-400' :
-                    dayLoad.level === 'heavy' ? 'bg-amber-400' :
-                    dayLoad.level === 'moderate' ? 'bg-accent' : 'bg-accent'
+                    dayLoad.level === 'overloaded' ? 'bg-text-primary' :
+                    dayLoad.level === 'heavy' ? 'bg-text-primary' :
+                    dayLoad.level === 'moderate' ? 'bg-text-secondary' : 'bg-text-tertiary'
                   )} />
-                  <span className="text-[9px] text-text-tertiary">{dayTaskCount}</span>
+                  <span className="text-xs text-text-tertiary">{dayTaskCount}</span>
                 </div>
               )}
             </button>
@@ -477,8 +477,8 @@ export function WeeklyPlanner({
         <div className={cn(
           'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium animate-fade-in transition-all',
           autoScheduleResult.count > 0
-            ? 'bg-accent/10 text-accent border border-accent/20'
-            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            ? 'bg-surface-tertiary text-text-primary border border-border-light'
+            : 'bg-surface-tertiary text-text-secondary border border-border-light'
         )}>
           {autoScheduleResult.count > 0 ? '✓' : '→'} {autoScheduleResult.message}
           <button onClick={() => setAutoScheduleResult(null)} className="ml-auto text-current/50 hover:text-current cursor-pointer">✕</button>
@@ -489,10 +489,10 @@ export function WeeklyPlanner({
       {unscheduledTasks.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+            <p className="text-xs font-medium text-text-tertiary ">
               Unscheduled — drag onto calendar
             </p>
-            <span className="text-[10px] text-text-tertiary font-mono">
+            <span className="text-xs text-text-tertiary font-mono">
               {Math.round(calculateDailyLoad(unscheduledTasks))} MLU · {unscheduledTasks.length} tasks
             </span>
           </div>
@@ -517,24 +517,24 @@ export function WeeklyPlanner({
                 }}
                 onDragEnd={() => { setDragTaskId(null); setDragOver(null); }}
                 className={cn(
-                  'px-2.5 py-1.5 rounded-lg text-[11px] font-medium border-l-2 border cursor-grab active:cursor-grabbing transition-all border-border/40',
-                  'hover:shadow-md hover:-translate-y-0.5',
+                  'px-2.5 py-1.5 rounded-lg text-xs font-medium border-l-2 border cursor-grab active:cursor-grabbing transition-all border-border',
+                  'hover:-translate-y-0.5',
                   WEIGHT_COLORS[task.weight] || WEIGHT_COLORS.medium,
-                  task.is_urgent && 'ring-1 ring-red-500/40',
+                  task.is_urgent && 'ring-1 ring-border-light',
                   dragTaskId === task.id && 'opacity-40'
                 )}
               >
                 <div className="flex items-center gap-1.5 group/chip">
                   <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', WEIGHT_DOT[task.weight] || WEIGHT_DOT.medium)} />
-                  {task.is_urgent && <span className="text-[8px] text-red-400 font-bold">!</span>}
+                  {task.is_urgent && <span className="text-xs text-text-primary font-bold">!</span>}
                   <span className="text-text-primary truncate max-w-[140px]">{task.title}</span>
                   {clientName && (
-                    <span className="text-[8px] text-text-tertiary/60 truncate max-w-[60px]">{clientName}</span>
+                    <span className="text-xs text-text-tertiary/60 truncate max-w-[60px]">{clientName}</span>
                   )}
                   {task.estimated_minutes ? (
-                    <span className="text-text-tertiary text-[9px] flex-shrink-0">{task.estimated_minutes}m</span>
+                    <span className="text-text-tertiary text-xs flex-shrink-0">{task.estimated_minutes}m</span>
                   ) : (
-                    <span className="text-text-tertiary/50 text-[9px] flex-shrink-0">1h</span>
+                    <span className="text-text-tertiary/50 text-xs flex-shrink-0">1h</span>
                   )}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
@@ -567,20 +567,20 @@ export function WeeklyPlanner({
                 <div
                   key={date}
                   className={cn(
-                    'text-center py-2 border-b border-border/40',
-                    isToday && 'bg-accent/8',
+                    'text-center py-2 border-b border-border',
+                    isToday && '',
                     isPast && 'opacity-60'
                   )}
                 >
                   <p className={cn(
-                    'text-[10px] font-medium uppercase tracking-wider',
-                    isToday ? 'text-accent' : 'text-text-tertiary'
+                    'text-xs font-medium ',
+                    isToday ? 'text-text-primary' : 'text-text-tertiary'
                   )}>
                     {DAY_NAMES[i]}
                   </p>
                   <p className={cn(
                     'text-sm font-bold',
-                    isToday ? 'text-accent' : 'text-text-primary'
+                    isToday ? 'text-text-primary' : 'text-text-primary'
                   )}>
                     {dayNum}
                   </p>
@@ -592,19 +592,19 @@ export function WeeklyPlanner({
                           className={cn(
                             'h-full rounded-full transition-all',
                             dayLoad.mlu === 0 && 'bg-transparent',
-                            dayLoad.level === 'light' && 'bg-accent',
-                            dayLoad.level === 'moderate' && 'bg-accent',
-                            dayLoad.level === 'heavy' && 'bg-amber-400',
-                            dayLoad.level === 'overloaded' && 'bg-red-400',
+                            dayLoad.level === 'light' && 'bg-text-tertiary',
+                            dayLoad.level === 'moderate' && 'bg-text-secondary',
+                            dayLoad.level === 'heavy' && 'bg-text-primary',
+                            dayLoad.level === 'overloaded' && 'bg-text-primary',
                           )}
                           style={{ width: `${Math.min(100, (dayLoad.mlu / capacity) * 100)}%` }}
                         />
                       </div>
                       <span className={cn(
-                        'text-[8px] font-mono',
+                        'text-xs font-mono',
                         dayLoad.mlu === 0 ? 'text-text-tertiary/30' :
-                        dayLoad.level === 'overloaded' ? 'text-red-400 font-bold' :
-                        dayLoad.level === 'heavy' ? 'text-amber-400' : 'text-text-tertiary/60'
+                        dayLoad.level === 'overloaded' ? 'text-text-primary font-bold' :
+                        dayLoad.level === 'heavy' ? 'text-text-secondary' : 'text-text-tertiary/60'
                       )}>
                         {Math.round(dayLoad.mlu)}/{capacity}
                       </span>
@@ -619,8 +619,8 @@ export function WeeklyPlanner({
           {HOURS.map((hour) => (
             <div key={hour} className="grid grid-cols-[44px_1fr] md:grid-cols-[56px_repeat(7,1fr)] gap-0">
               {/* Time label */}
-              <div className="pr-1.5 md:pr-2 text-right border-r border-border/20 flex items-start justify-end pt-1.5" style={{ height: ROW_HEIGHT }}>
-                <span className="text-[10px] text-text-tertiary font-medium leading-none">{formatHour(hour)}</span>
+              <div className="pr-1.5 md:pr-2 text-right border-r border-border flex items-start justify-end pt-1.5" style={{ height: ROW_HEIGHT }}>
+                <span className="text-xs text-text-tertiary font-medium leading-none">{formatHour(hour)}</span>
               </div>
 
               {/* Day cells — on mobile show only the selected day */}
@@ -636,8 +636,8 @@ export function WeeklyPlanner({
                   <div
                     key={`${date}-${hour}`}
                     className={cn(
-                      'border-b border-r border-border/15 relative overflow-visible',
-                      isToday && 'bg-accent/[0.02]',
+                      'border-b border-r border-border relative overflow-visible',
+                      isToday && '',
                       !isMobileVisible && 'hidden md:block',
                     )}
                     style={{ height: ROW_HEIGHT }}
@@ -653,8 +653,8 @@ export function WeeklyPlanner({
                           className={cn(
                             'absolute left-0 right-0 transition-colors',
                             q < 3 && 'border-b border-border/[0.06]',
-                            isDropTarget && !isSlotOccupied && 'bg-accent/15',
-                            isDropTarget && isSlotOccupied && 'bg-red-500/10',
+                            isDropTarget && !isSlotOccupied && 'bg-surface-tertiary',
+                            isDropTarget && isSlotOccupied && 'bg-surface-tertiary',
                           )}
                           style={{ top: q * QUARTER_HEIGHT, height: QUARTER_HEIGHT }}
                           onDragOver={(e) => {
@@ -681,14 +681,14 @@ export function WeeklyPlanner({
                         <div
                           key={event.id}
                           className={cn(
-                            'absolute left-0.5 right-0.5 text-[10px] px-1.5 py-1 rounded-md border-l-2 flex items-start justify-between group/event overflow-hidden',
+                            'absolute left-0.5 right-0.5 text-xs px-1.5 py-1 rounded-md border-l-2 flex items-start justify-between group/event overflow-hidden',
                             EVENT_COLORS[event.event_type] || EVENT_COLORS.fixed
                           )}
                           style={{ height: `${heightPx - 2}px`, top: 1, zIndex: 2 }}
                         >
                           <div className="flex flex-col min-w-0 gap-0.5">
                             <span className="truncate font-medium leading-tight">{event.title}</span>
-                            <span className="text-[8px] opacity-60">
+                            <span className="text-xs opacity-60">
                               {event.start_time.slice(0, 5)}–{event.end_time.slice(0, 5)}
                             </span>
                           </div>
@@ -732,14 +732,14 @@ export function WeeklyPlanner({
                               if (!isCompleted) setEditingTaskId(isEditing ? null : task.id);
                             }}
                             className={cn(
-                              'text-[10px] px-1.5 py-0.5 rounded-md border-l-2 flex flex-col justify-between group/task overflow-hidden',
-                              !isEditing && !isCompleted && 'hover:ring-1 hover:ring-accent/30 cursor-grab active:cursor-grabbing',
+                              'text-xs px-1.5 py-0.5 rounded-md border-l-2 flex flex-col justify-between group/task overflow-hidden',
+                              !isEditing && !isCompleted && 'hover:ring-1 hover:ring-border-light cursor-grab active:cursor-grabbing',
                               isCompleted
                                 ? COMPLETED_COLORS[task.weight] || COMPLETED_COLORS.medium
                                 : (WEIGHT_COLORS[task.weight] || WEIGHT_COLORS.medium),
                               isCompleted && 'opacity-50',
                               dragTaskId === task.id && 'opacity-40',
-                              isResizing && 'ring-1 ring-accent/50',
+                              isResizing && 'ring-1 ring-border-light',
                             )}
                             style={{ height: `${heightPx - 2}px` }}
                           >
@@ -750,23 +750,23 @@ export function WeeklyPlanner({
                                   {!isCompleted && (
                                     <button
                                       onClick={(ev) => { ev.stopPropagation(); handleCompleteTask(task.id); }}
-                                      className="w-3 h-3 border border-border-light rounded-sm flex-shrink-0 hover:border-accent hover:bg-accent/10 transition-all cursor-pointer"
+                                      className="w-3 h-3 border border-border-light rounded-sm flex-shrink-0 hover:border-border-light hover:bg-surface-tertiary transition-all cursor-pointer"
                                       title="Complete task"
                                     />
                                   )}
                                   {isCompleted && (
                                     <button
                                       onClick={(ev) => { ev.stopPropagation(); handleUncompleteTask(task.id); }}
-                                      className="w-3 h-3 border border-accent/40 bg-accent/20 rounded-sm flex-shrink-0 flex items-center justify-center hover:border-accent hover:bg-accent/30 transition-all cursor-pointer"
+                                      className="w-3 h-3 border border-border-light bg-surface-tertiary rounded-sm flex-shrink-0 flex items-center justify-center hover:border-border-light hover:bg-surface-tertiary transition-all cursor-pointer"
                                       title="Mark as active"
                                     >
                                       <svg width="7" height="7" viewBox="0 0 12 12" fill="none">
-                                        <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="square" className="text-accent/60" />
+                                        <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="square" className="text-text-tertiary" />
                                       </svg>
                                     </button>
                                   )}
                                   <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', WEIGHT_DOT[task.weight] || WEIGHT_DOT.medium, isCompleted && 'opacity-40')} />
-                                  {task.is_urgent && !isCompleted && <span className="text-red-400 font-bold text-[9px]">!</span>}
+                                  {task.is_urgent && !isCompleted && <span className="text-text-primary font-bold text-xs">!</span>}
                                   <span className={cn(
                                     'truncate font-medium leading-tight',
                                     isCompleted ? 'text-text-tertiary line-through' : 'text-text-primary',
@@ -776,7 +776,7 @@ export function WeeklyPlanner({
                                 </div>
                                 {displayMinutes && heightPx >= 28 && (
                                   <span className={cn(
-                                    'text-[8px] pl-4',
+                                    'text-xs pl-4',
                                     isCompleted ? 'text-text-tertiary/50' : 'text-text-tertiary',
                                   )}>
                                     {displayMinutes}m
@@ -801,13 +801,13 @@ export function WeeklyPlanner({
                                 className={cn(
                                   'absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize group/resize',
                                   'flex items-center justify-center',
-                                  isResizing ? 'bg-accent/20' : 'hover:bg-accent/10',
+                                  isResizing ? 'bg-surface-tertiary' : 'hover:bg-surface-tertiary',
                                 )}
                                 title="Drag to resize"
                               >
                                 <div className={cn(
                                   'w-6 h-0.5 rounded-full transition-opacity',
-                                  isResizing ? 'bg-accent/60' : 'bg-text-tertiary/0 group-hover/resize:bg-text-tertiary/40',
+                                  isResizing ? 'bg-text-tertiary/60' : 'bg-text-tertiary/0 group-hover/resize:bg-text-tertiary/40',
                                 )} />
                               </div>
                             )}
@@ -864,7 +864,7 @@ export function WeeklyPlanner({
             defaultValue="fixed"
           />
           <label className="flex items-center gap-2 py-1 cursor-pointer">
-            <input type="checkbox" name="is_recurring" className="w-4 h-4 rounded border-border accent-accent" />
+            <input type="checkbox" name="is_recurring" className="w-4 h-4 rounded border-border accent-text-primary" />
             <span className="text-xs text-text-secondary">Repeat weekly (Mon–Fri)</span>
           </label>
           <div className="flex gap-2 justify-end">
@@ -927,20 +927,20 @@ function PlannerTaskEditor({
   }
 
   const WEIGHT_BADGE_INLINE: Record<string, string> = {
-    high: 'bg-red-500/15 text-red-400',
-    medium: 'bg-amber-500/15 text-amber-400',
-    low: 'bg-accent/15 text-accent',
+    high: 'bg-text-primary text-background',
+    medium: 'bg-surface-tertiary text-text-secondary',
+    low: 'bg-surface-tertiary text-text-tertiary',
   };
 
   const ENERGY_BADGE_INLINE: Record<string, string> = {
     admin: 'bg-surface-tertiary text-text-secondary',
-    creative: 'bg-purple-500/15 text-purple-400',
+    creative: 'bg-surface-tertiary text-text-primary',
   };
 
   return (
     <div
       ref={ref}
-      className="absolute left-0 right-0 top-full mt-1 p-3 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/30 animate-fade-in space-y-3"
+      className="absolute left-0 right-0 top-full mt-1 p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in space-y-3"
       style={{ zIndex: 50, minWidth: 240 }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -949,18 +949,18 @@ function PlannerTaskEditor({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border/40 pb-2"
+        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border pb-2"
         autoFocus
       />
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Weight:</span>
+          <span className="text-xs text-text-tertiary mr-1">Weight:</span>
           {(['low', 'medium', 'high'] as const).map(w => (
             <button
               key={w}
               onClick={() => setWeight(w)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium uppercase transition-all',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium uppercase transition-all',
                 weight === w ? WEIGHT_BADGE_INLINE[w] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -969,13 +969,13 @@ function PlannerTaskEditor({
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Energy:</span>
+          <span className="text-xs text-text-tertiary mr-1">Energy:</span>
           {(['creative', 'admin'] as const).map(e => (
             <button
               key={e}
               onClick={() => setEnergy(e)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium transition-all',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium transition-all',
                 energy === e ? ENERGY_BADGE_INLINE[e] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -987,11 +987,11 @@ function PlannerTaskEditor({
       <div className="flex items-center gap-4 flex-wrap">
         {clients.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-text-tertiary">Client:</span>
+            <span className="text-xs text-text-tertiary">Client:</span>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="text-[10px] bg-surface-tertiary/60 border border-border/40 rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-accent/40 transition-colors"
+              className="text-xs bg-surface-tertiary border border-border rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-border-light transition-colors"
             >
               <option value="">None</option>
               {clients.map(c => (
@@ -1001,25 +1001,25 @@ function PlannerTaskEditor({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-text-tertiary">Time:</span>
+          <span className="text-xs text-text-tertiary">Time:</span>
           <input
             type="number"
             value={estimatedMinutes}
             onChange={(e) => setEstimatedMinutes(e.target.value)}
             placeholder="mins"
             min="0"
-            className="w-16 text-[10px] bg-surface-tertiary/60 border border-border/40 rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-accent/40 transition-colors"
+            className="w-16 text-xs bg-surface-tertiary border border-border rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-border-light transition-colors"
           />
-          <span className="text-[9px] text-text-tertiary">min</span>
+          <span className="text-xs text-text-tertiary">min</span>
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
         {onDelete ? (
-          <button onClick={onDelete} className="text-[10px] text-text-tertiary hover:text-danger transition-colors px-2 py-1 cursor-pointer">Delete</button>
+          <button onClick={onDelete} className="text-xs text-text-tertiary hover:text-danger transition-colors px-2 py-1 cursor-pointer">Delete</button>
         ) : <div />}
         <div className="flex items-center gap-2">
-          <button onClick={onClose} className="text-[10px] text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Cancel</button>
-          <button onClick={handleSave} className="text-[10px] text-accent font-medium hover:text-accent/80 transition-colors px-2 py-1 cursor-pointer">Save</button>
+          <button onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Cancel</button>
+          <button onClick={handleSave} className="text-xs text-text-primary font-medium hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Save</button>
         </div>
       </div>
     </div>

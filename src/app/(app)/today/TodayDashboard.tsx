@@ -9,17 +9,14 @@ import { HabitInsights } from '@/components/today/HabitInsights';
 import { WeekView } from '@/components/today/WeekView';
 import { RevenueRadar } from '@/components/insights/RevenueRadar';
 import { EnergyRouter } from '@/components/insights/EnergyRouter';
-import { LayoutCustomiser } from '@/components/layout/LayoutCustomiser';
+import { FocusBlock } from '@/components/today/FocusBlock';
 import { InfoBox } from '@/components/ui/InfoBox';
 import { CelebrationBurst } from '@/components/ui/CelebrationBurst';
-import { DayOverview } from '@/components/today/DayOverview';
 import { DayInReview } from '@/components/today/DayInReview';
+import { BentoGrid, BentoItem } from '@/components/ui/BentoGrid';
 import { useUndoStack } from '@/hooks/useUndoStack';
-import { cn } from '@/lib/utils/cn';
-import type { CustomFundamental, Task, Client, CalendarEvent } from '@/lib/types/database';
+import type { CustomFundamental, Task, Client, CalendarEvent, OperatorScore } from '@/lib/types/database';
 import type { RecurringTaskWithStatus } from '@/lib/types/recurring';
-import type { DashboardLayoutPreferences } from '@/lib/types/dashboard-layout';
-import { DEFAULT_DASHBOARD_LAYOUT } from '@/lib/types/dashboard-layout';
 
 interface TodayDashboardProps {
   customFundamentals: CustomFundamental[];
@@ -38,8 +35,8 @@ interface TodayDashboardProps {
   dailyCapacity?: number;
   calendarEvents?: CalendarEvent[];
   userName?: string;
-  dashboardLayout?: DashboardLayoutPreferences;
   recurringStreaks?: Record<string, number>;
+  todayScore?: OperatorScore | null;
 }
 
 export function TodayDashboard({
@@ -53,19 +50,14 @@ export function TodayDashboard({
   weekTasks,
   today,
   clients,
-  monthlyRevenue = 0,
-  monthlyExpenses = 0,
-  leftInCompany = 0,
   dailyCapacity,
   calendarEvents = [],
-  userName,
-  dashboardLayout,
   recurringStreaks,
+  todayScore,
 }: TodayDashboardProps) {
-  const [liveLayout, setLiveLayout] = useState<DashboardLayoutPreferences>(dashboardLayout ?? DEFAULT_DASHBOARD_LAYOUT);
-  const layout = liveLayout.today;
   const [sharedCompletedIds, setSharedCompletedIds] = useState<Set<string>>(new Set());
   const [externalUncompletedIds, setExternalUncompletedIds] = useState<Set<string>>(new Set());
+  const [showMore, setShowMore] = useState(false);
 
   const handleUndo = useCallback((entry: import('@/hooks/useUndoStack').UndoEntry) => {
     if (entry.type === 'complete') {
@@ -99,126 +91,152 @@ export function TodayDashboard({
   const allTasksDone = totalPlanTasks > 0 && allCompletedIds.size >= totalPlanTasks;
   const allFundamentalsDone = fundamentalsTotal > 0 && fundamentalsHitCount >= fundamentalsTotal;
 
+  const completedCount = allCompletedIds.size;
+
   return (
-    <div className="space-y-8 stagger-in">
+    <div className="max-w-7xl mx-auto space-y-8">
+      <BentoGrid columns={2}>
 
-      {/* ━━━ LAYOUT CUSTOMISER ━━━ */}
-      <div className="flex justify-end -mb-4">
-        <LayoutCustomiser page="today" layout={liveLayout} onLayoutChange={setLiveLayout} />
-      </div>
-
-      {/* ━━━ DAY OVERVIEW (open typography — no card wrapper) ━━━ */}
-      {layout.day_overview && <DayOverview
-        todayTasks={todayTasks}
-        completedTodayTasks={completedTodayTasks}
-        weekTasks={weekTasks}
-        recurringTasks={recurringTasks}
-        clients={clients}
-        calendarEvents={calendarEvents}
-        today={today}
-        fundamentalsHit={fundamentalsHitCount}
-        fundamentalsTotal={fundamentalsTotal}
-        streakDays={streakDays}
-        dailyCapacity={dailyCapacity}
-        userName={userName}
-        monthlyRevenue={monthlyRevenue}
-        monthlyExpenses={monthlyExpenses}
-        leftInCompany={leftInCompany}
-      />}
-
-      {/* ━━━ TODAY'S PLAN ━━━ */}
-      <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">Today&apos;s Plan</h2>
-          <InfoBox title="Today's Plan">
-            <p>Tasks flagged for today or with today&apos;s deadline. Add tasks inline with weight + client assignment.</p>
-          </InfoBox>
-        </div>
-        <TodayTasks tasks={todayTasks} clients={clients} completedTodayTasks={completedTodayTasks} weekTasks={weekTasks} todayStr={today} onTaskCompleted={onTaskCompleted} onTaskUncompleted={onTaskUncompleted} dailyCapacity={dailyCapacity} pushUndo={pushUndo} externalUncompletedIds={externalUncompletedIds} />
-      </section>
-
-      {/* ━━━ WEEK OVERVIEW ━━━ */}
-      {layout.week_overview && (
-        <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
-          <WeekView weekTasks={weekTasks} todayStr={today} recurringTasks={recurringTasks} clients={clients} externalCompletedIds={sharedCompletedIds} pushUndo={pushUndo} dailyCapacity={dailyCapacity} />
-        </section>
-      )}
-
-      {/* ━━━ FUNDAMENTALS ━━━ */}
-      {layout.fundamentals && (
-        <section id="fundamentals-section" className="bg-surface-secondary rounded-xl p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-text-primary">Fundamentals</h2>
-            <span className="text-xs text-text-tertiary font-mono">{fundamentalsHitCount}/{fundamentalsTotal}</span>
-          </div>
-          <FundamentalsTracker
-            fundamentals={customFundamentals}
-            completions={fundamentalCompletions}
+        {/* ━━━ 1. FOCUS BLOCK (full width hero) ━━━ */}
+        <BentoItem span="full" delay={0}>
+          <FocusBlock
+            todayTasks={todayTasks}
+            completedTodayTasks={completedTodayTasks}
+            todayScore={todayScore ?? null}
+            streakDays={streakDays}
+            fundamentalsHit={fundamentalsHitCount}
+            fundamentalsTotal={fundamentalsTotal}
+            dailyCapacity={dailyCapacity}
+            calendarEvents={calendarEvents}
+            clients={clients}
+            completedCount={completedCount}
+            totalCount={totalPlanTasks}
           />
-        </section>
-      )}
+        </BentoItem>
 
-      {/* ━━━ RECURRING + ENERGY ROUTER ━━━ */}
-      {(layout.recurring_tasks || layout.energy_router) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {layout.recurring_tasks && (
-            <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-text-primary mb-4">Recurring Tasks</h2>
-              <DailyTasks tasks={recurringTasks} allTasks={allRecurringTasks || recurringTasks} clients={clients} streaks={recurringStreaks} />
-            </section>
-          )}
+        {/* ━━━ 2. TODAY'S PLAN (full width — the main event) ━━━ */}
+        <BentoItem span="full" delay={60}>
+          <section className="card-elevated rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-section-heading text-text-primary">Today&apos;s Plan</h2>
+              <InfoBox title="Today's Plan">
+                <p>Tasks flagged for today or with today&apos;s deadline. Add tasks inline with weight + client assignment.</p>
+              </InfoBox>
+            </div>
+            <TodayTasks tasks={todayTasks} clients={clients} completedTodayTasks={completedTodayTasks} weekTasks={weekTasks} todayStr={today} onTaskCompleted={onTaskCompleted} onTaskUncompleted={onTaskUncompleted} dailyCapacity={dailyCapacity} pushUndo={pushUndo} externalUncompletedIds={externalUncompletedIds} />
+          </section>
+        </BentoItem>
 
-          {layout.energy_router && (
-            <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-text-primary mb-4">Energy Router</h2>
-              <EnergyRouter
-                todayTasks={todayTasks}
-                fundamentalsCompleted={fundamentalsHitCount}
-                fundamentalsTotal={fundamentalsTotal}
-              />
-            </section>
-          )}
-        </div>
-      )}
+        {/* ━━━ 3. FUNDAMENTALS + RECURRING (side-by-side) ━━━ */}
+        <BentoItem delay={120}>
+          <section id="fundamentals-section" className="card-elevated rounded-2xl p-6 h-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-section-heading text-text-primary">Fundamentals</h2>
+              <span className="text-xs text-text-tertiary font-mono">{fundamentalsHitCount}/{fundamentalsTotal}</span>
+            </div>
+            <FundamentalsTracker
+              fundamentals={customFundamentals}
+              completions={fundamentalCompletions}
+            />
+          </section>
+        </BentoItem>
 
-      {/* ━━━ REVENUE RADAR ━━━ */}
-      {layout.revenue_radar && clients.length > 0 && (
-        <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Revenue Radar</h2>
-          <RevenueRadar clients={clients} />
-        </section>
-      )}
+        <BentoItem delay={180}>
+          <section className="card-elevated rounded-2xl p-6 h-full">
+            <h2 className="text-section-heading text-text-primary mb-4">Recurring Tasks</h2>
+            <DailyTasks tasks={recurringTasks} allTasks={allRecurringTasks || recurringTasks} clients={clients} streaks={recurringStreaks} />
+          </section>
+        </BentoItem>
 
-      {/* ━━━ AI INSIGHTS ━━━ */}
-      {layout.ai_insights && <section className="bg-surface-secondary rounded-xl p-5 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">AI Insights</h2>
-          <InfoBox title="AI Habit Insights">
-            <p>Pattern analysis across your tasks and fundamentals. Surfaces trends and suggestions.</p>
-          </InfoBox>
-        </div>
-        <HabitInsights
-          fundamentals={customFundamentals}
-          completions={fundamentalCompletions}
-          recurringTasks={recurringTasks}
-          todayTasks={todayTasks}
-          streakDays={streakDays}
-        />
-      </section>}
+        {/* ━━━ 4. WEEK VIEW (full width) ━━━ */}
+        <BentoItem span="full" delay={240}>
+          <section className="card-elevated rounded-2xl p-6">
+            <WeekView weekTasks={weekTasks} todayStr={today} recurringTasks={recurringTasks} clients={clients} externalCompletedIds={sharedCompletedIds} pushUndo={pushUndo} dailyCapacity={dailyCapacity} />
+          </section>
+        </BentoItem>
 
-      {/* ━━━ MONKEY BRAIN OVERRIDE ━━━ */}
-      {layout.monkey_brain && <MonkeyBrainOverride />}
+        {/* ━━━ 5. COLLAPSIBLE "MORE" SECTION ━━━ */}
+        <BentoItem span="full" delay={300}>
+          <button
+            onClick={() => setShowMore(prev => !prev)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+          >
+            <span>{showMore ? 'Show less' : 'More'}</span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`transition-transform duration-200 ${showMore ? 'rotate-180' : ''}`}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </BentoItem>
 
-      {/* ━━━ DAY IN REVIEW ━━━ */}
-      <DayInReview
-        todayTasks={todayTasks}
-        completedTodayTasks={completedTodayTasks}
-        clients={clients}
-        fundamentalsHit={fundamentalsHitCount}
-        fundamentalsTotal={fundamentalsTotal}
-        allTasksDone={allTasksDone}
-        dailyCapacity={dailyCapacity}
-      />
+        {showMore && (
+          <>
+            {clients.length > 0 && (
+              <BentoItem span="full" delay={0}>
+                <section className="card-elevated rounded-2xl p-6">
+                  <h2 className="text-section-heading text-text-primary mb-4">Revenue Radar</h2>
+                  <RevenueRadar clients={clients} />
+                </section>
+              </BentoItem>
+            )}
+
+            <BentoItem span="full" delay={60}>
+              <section className="card-elevated rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <h2 className="text-section-heading text-text-primary">AI Insights</h2>
+                  <InfoBox title="AI Habit Insights">
+                    <p>Pattern analysis across your tasks and fundamentals. Surfaces trends and suggestions.</p>
+                  </InfoBox>
+                </div>
+                <HabitInsights
+                  fundamentals={customFundamentals}
+                  completions={fundamentalCompletions}
+                  recurringTasks={recurringTasks}
+                  todayTasks={todayTasks}
+                  streakDays={streakDays}
+                />
+              </section>
+            </BentoItem>
+
+            <BentoItem delay={120}>
+              <section className="card-elevated rounded-2xl p-6 h-full">
+                <h2 className="text-section-heading text-text-primary mb-4">Energy Router</h2>
+                <EnergyRouter
+                  todayTasks={todayTasks}
+                  fundamentalsCompleted={fundamentalsHitCount}
+                  fundamentalsTotal={fundamentalsTotal}
+                />
+              </section>
+            </BentoItem>
+
+            <BentoItem delay={180}>
+              <MonkeyBrainOverride />
+            </BentoItem>
+          </>
+        )}
+
+        {/* ━━━ 6. DAY IN REVIEW (conditional — shows when all tasks done) ━━━ */}
+        <BentoItem span="full" delay={showMore ? 240 : 360}>
+          <DayInReview
+            todayTasks={todayTasks}
+            completedTodayTasks={completedTodayTasks}
+            clients={clients}
+            fundamentalsHit={fundamentalsHitCount}
+            fundamentalsTotal={fundamentalsTotal}
+            allTasksDone={allTasksDone}
+            dailyCapacity={dailyCapacity}
+          />
+        </BentoItem>
+      </BentoGrid>
 
       {/* ━━━ CELEBRATIONS ━━━ */}
       <CelebrationBurst trigger={allTasksDone} message="All tasks done!" />
@@ -226,17 +244,17 @@ export function TodayDashboard({
 
       {/* ━━━ UNDO TOAST ━━━ */}
       {undoToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
-          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/30">
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="card-glass flex items-center gap-3 px-4 py-2.5 rounded-xl">
             <span className="text-xs text-text-secondary">{undoToast}</span>
           </div>
         </div>
       )}
       {canUndo && !undoToast && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           <button
             onClick={undo}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/30 text-xs text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
+            className="card-glass flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-text-tertiary hover:text-text-primary transition-all duration-200 cursor-pointer"
             title="Undo last action (Cmd+Z)"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

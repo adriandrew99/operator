@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { recalculateAutoScore } from '@/actions/score';
 
 export async function getTasks(status: string = 'active') {
   const supabase = await createClient();
@@ -50,23 +51,7 @@ export async function createTask(taskData: {
       ...taskData,
     });
 
-  if (error) {
-    // Retry without migration-dependent columns
-    const safeData = { ...taskData };
-    delete safeData.flagged_for_today;
-    delete safeData.is_urgent;
-    delete safeData.is_personal;
-    delete safeData.scheduled_date;
-    delete safeData.scheduled_time_block;
-    const { error: retryError } = await supabase
-      .from('tasks')
-      .insert({
-        user_id: user.id,
-        ...safeData,
-      });
-
-    if (retryError) throw retryError;
-  }
+  if (error) throw error;
   revalidatePath('/today');
   revalidatePath('/tasks');
   revalidatePath('/planner');
@@ -83,22 +68,7 @@ export async function updateTask(id: string, updates: Record<string, unknown>) {
     .eq('id', id)
     .eq('user_id', user.id);
 
-  if (error) {
-    // Retry without migration-dependent columns in case they don't exist yet
-    const safeUpdates = { ...updates };
-    delete safeUpdates.flagged_for_today;
-    delete safeUpdates.is_urgent;
-    delete safeUpdates.is_personal;
-    delete safeUpdates.scheduled_date;
-    delete safeUpdates.scheduled_time_block;
-    const { error: retryError } = await supabase
-      .from('tasks')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (retryError) throw retryError;
-  }
+  if (error) throw error;
 
   revalidatePath('/today');
   revalidatePath('/tasks');
@@ -124,6 +94,10 @@ export async function completeTask(id: string) {
   revalidatePath('/today');
   revalidatePath('/tasks');
   revalidatePath('/planner');
+  revalidatePath('/score');
+
+  // Recalculate operator score with updated task metrics
+  recalculateAutoScore().catch(() => {});
 }
 
 export async function deleteTask(id: string) {
@@ -195,6 +169,10 @@ export async function reactivateTask(id: string) {
   revalidatePath('/today');
   revalidatePath('/tasks');
   revalidatePath('/planner');
+  revalidatePath('/score');
+
+  // Recalculate operator score with updated task metrics
+  recalculateAutoScore().catch(() => {});
 }
 
 export async function getTasksForWeek(startDate: string, endDate: string) {

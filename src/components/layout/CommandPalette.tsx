@@ -37,10 +37,12 @@ export function CommandPalette() {
   const commands: Command[] = useMemo(() => [
     // Navigation
     { id: 'nav-today', label: 'Go to Today', category: 'navigation', icon: '🏠', shortcut: undefined, action: () => router.push('/today') },
+    { id: 'nav-score', label: 'Go to Score', category: 'navigation', icon: '⚡', action: () => router.push('/score') },
     { id: 'nav-tasks', label: 'Go to Tasks', category: 'navigation', icon: '📋', action: () => router.push('/tasks') },
     { id: 'nav-planner', label: 'Go to Planner', category: 'navigation', icon: '📅', action: () => router.push('/planner') },
     { id: 'nav-finance', label: 'Go to Finance', category: 'navigation', icon: '💰', action: () => router.push('/finance') },
     { id: 'nav-pipeline', label: 'Go to Pipeline', category: 'navigation', icon: '🔄', action: () => router.push('/pipeline') },
+    { id: 'nav-outbound', label: 'Go to Outbound', category: 'navigation', icon: '✈️', action: () => router.push('/outbound') },
     { id: 'nav-knowledge', label: 'Go to Knowledge', category: 'navigation', icon: '📖', action: () => router.push('/knowledge') },
     { id: 'nav-analytics', label: 'Go to Analytics', category: 'navigation', icon: '📊', action: () => router.push('/analytics') },
     { id: 'nav-settings', label: 'Go to Settings', category: 'navigation', icon: '⚙️', action: () => router.push('/settings') },
@@ -143,18 +145,18 @@ export function CommandPalette() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 z-50 bg-black/70 animate-fade-in"
         onClick={() => setOpen(false)}
       />
 
       {/* Palette */}
       <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] px-4">
         <div
-          className="w-full max-w-lg bg-surface-secondary border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-scale-in"
+          className="w-full max-w-lg bg-surface-secondary border border-border rounded-xl overflow-hidden animate-scale-in"
           onKeyDown={handleInternalKeyDown}
         >
           {/* Search input */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-text-tertiary shrink-0">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
@@ -167,7 +169,7 @@ export function CommandPalette() {
               placeholder="Type a command or search..."
               className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
             />
-            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] text-text-tertiary bg-surface-tertiary border border-border/50 font-mono">
+            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-lg text-xs text-text-tertiary bg-surface-tertiary border border-border font-mono">
               esc
             </kbd>
           </div>
@@ -175,11 +177,18 @@ export function CommandPalette() {
           {/* Results */}
           <div ref={listRef} className="max-h-[320px] overflow-y-auto py-2">
             {filtered.length === 0 ? (
-              <p className="text-xs text-text-tertiary text-center py-6">No results found</p>
+              <div className="empty-state py-8">
+                <div className="empty-state-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                  </svg>
+                </div>
+                <p className="text-xs text-text-tertiary">No results found</p>
+              </div>
             ) : (
               Object.entries(grouped).map(([category, cmds]) => (
                 <div key={category}>
-                  <p className="text-[9px] font-medium text-text-tertiary uppercase tracking-widest px-4 py-1.5 mt-1">
+                  <p className="section-label px-5 py-1.5 mt-1">
                     {CATEGORY_LABELS[category] || category}
                   </p>
                   {cmds.map(cmd => {
@@ -189,16 +198,17 @@ export function CommandPalette() {
                         key={cmd.id}
                         onClick={() => { cmd.action(); setOpen(false); }}
                         className={cn(
-                          'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer',
+                          'w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all duration-150 cursor-pointer rounded-lg mx-1',
                           idx === selectedIndex
-                            ? 'bg-accent/10 text-accent'
-                            : 'text-text-secondary hover:bg-surface-tertiary/50'
+                            ? 'bg-surface-tertiary text-text-primary'
+                            : 'text-text-secondary hover:bg-surface-tertiary'
                         )}
+                        style={{ width: 'calc(100% - 0.5rem)' }}
                       >
                         <span className="text-sm w-5 text-center">{cmd.icon}</span>
                         <span className="text-sm flex-1">{cmd.label}</span>
                         {cmd.shortcut && (
-                          <kbd className="text-[10px] text-text-tertiary font-mono">{cmd.shortcut}</kbd>
+                          <kbd className="text-xs text-text-tertiary font-mono">{cmd.shortcut}</kbd>
                         )}
                       </button>
                     );
@@ -209,7 +219,7 @@ export function CommandPalette() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-2 border-t border-border text-[10px] text-text-tertiary">
+          <div className="flex items-center justify-between px-5 py-2.5 border-t border-border text-xs text-text-tertiary">
             <div className="flex items-center gap-3">
               <span>↑↓ navigate</span>
               <span>↵ select</span>

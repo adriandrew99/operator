@@ -32,16 +32,16 @@ interface PeriodSectionProps {
 }
 
 const PERIOD_META: Record<TimePeriod, { label: string; energyHint: string; energyDot: string }> = {
-  morning: { label: 'Morning', energyHint: 'Creative & deep work', energyDot: 'bg-purple-400' },
-  afternoon: { label: 'Afternoon', energyHint: 'Structured work', energyDot: 'bg-amber-400' },
+  morning: { label: 'Morning', energyHint: 'Creative & deep work', energyDot: 'bg-text-primary' },
+  afternoon: { label: 'Afternoon', energyHint: 'Structured work', energyDot: 'bg-text-secondary' },
   evening: { label: 'Evening', energyHint: 'Admin & light tasks', energyDot: 'bg-text-tertiary' },
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  fixed: 'border-l-blue-400 bg-blue-500/8 text-blue-300',
-  deep_work: 'border-l-purple-400 bg-purple-500/8 text-purple-300',
+  fixed: 'border-l-text-primary bg-surface-tertiary text-text-secondary',
+  deep_work: 'border-l-text-secondary bg-surface-tertiary text-text-secondary',
   admin: 'border-l-text-tertiary bg-surface-tertiary text-text-secondary',
-  break: 'border-l-accent bg-accent/5 text-accent',
+  break: 'border-l-text-tertiary bg-surface-tertiary text-text-tertiary',
 };
 
 export function PeriodSection({
@@ -82,7 +82,7 @@ export function PeriodSection({
     <div
       className={cn(
         'min-h-[52px] rounded-lg border border-transparent transition-colors px-1.5 py-1',
-        isDropTarget && 'border-accent/40 bg-accent/5'
+        isDropTarget && 'border-border-light bg-surface-tertiary'
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -98,10 +98,10 @@ export function PeriodSection({
       {/* Period label */}
       <div className="flex items-center gap-1.5 mb-1">
         <span className={cn('w-1.5 h-1.5 rounded-full', meta.energyDot)} />
-        <span className="text-[9px] uppercase tracking-wider text-text-tertiary font-medium">
+        <span className="text-xs text-text-tertiary font-medium">
           {meta.label}
         </span>
-        <span className="text-[8px] text-text-tertiary/50 hidden sm:inline">{meta.energyHint}</span>
+        <span className="text-xs text-text-tertiary/50 hidden sm:inline">{meta.energyHint}</span>
       </div>
 
       {/* Calendar events */}
@@ -109,7 +109,7 @@ export function PeriodSection({
         <div
           key={event.id}
           className={cn(
-            'border-l-2 rounded px-2 py-0.5 text-[9px] mb-1',
+            'border-l-2 rounded px-2 py-0.5 text-xs mb-1',
             EVENT_COLORS[event.event_type] || EVENT_COLORS.fixed
           )}
         >
@@ -119,7 +119,7 @@ export function PeriodSection({
       ))}
 
       {/* Task cards */}
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {visibleTasks.map(task => (
           <div key={task.id} className="relative">
             <TaskCard
@@ -151,7 +151,7 @@ export function PeriodSection({
 
       {/* Empty state */}
       {visibleTasks.length === 0 && periodEvents.length === 0 && suggestions.length === 0 && (
-        <div className="text-[9px] text-text-tertiary/30 text-center py-2">
+        <div className="text-xs text-text-tertiary/30 text-center py-2">
           Drop tasks here
         </div>
       )}

@@ -72,34 +72,29 @@ function getEnergyState(
 
 function getEnergyColor(state: EnergyState): string {
   switch (state) {
-    case 'peak': return 'text-accent';
-    case 'high': return 'text-accent-blue';
-    case 'medium': return 'text-amber-400';
+    case 'peak': return 'text-text-primary';
+    case 'high': return 'text-text-secondary';
+    case 'medium': return 'text-text-secondary';
     case 'low': return 'text-text-tertiary';
   }
 }
 
-function getEnergyBgColor(state: EnergyState): string {
-  switch (state) {
-    case 'peak': return 'bg-accent/15';
-    case 'high': return 'bg-accent-blue/15';
-    case 'medium': return 'bg-amber-500/15';
-    case 'low': return 'bg-surface-tertiary/60';
-  }
+function getEnergyBgColor(_state: EnergyState): string {
+  return 'bg-surface-tertiary';
 }
 
 function getEnergyBarColor(state: EnergyState): string {
   switch (state) {
-    case 'peak': return 'bg-accent';
-    case 'high': return 'bg-accent-blue';
-    case 'medium': return 'bg-amber-400';
+    case 'peak': return 'bg-text-primary/40';
+    case 'high': return 'bg-text-secondary/40';
+    case 'medium': return 'bg-text-secondary/40';
     case 'low': return 'bg-text-tertiary';
   }
 }
 
 const WEIGHT_BADGE: Record<string, string> = {
-  high: 'bg-red-500/15 text-red-400',
-  medium: 'bg-amber-500/15 text-amber-400',
+  high: 'bg-surface-tertiary text-text-secondary',
+  medium: 'bg-surface-tertiary text-text-secondary',
   low: 'bg-surface-tertiary text-text-tertiary',
 };
 
@@ -180,18 +175,12 @@ export function EnergyRouter({
     <>
       <div className="space-y-5 cursor-pointer" onClick={() => setShowDetail(true)}>
         {/* Energy Level Visual */}
-        <div className="rounded-xl bg-surface-tertiary/40 border border-border/50 p-5 space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className={cn('text-sm font-semibold', getEnergyColor(analysis.state))}>
               {analysis.label}
             </span>
-            <span
-              className={cn(
-                'text-[10px] px-2.5 py-1 rounded-lg font-medium',
-                getEnergyBgColor(analysis.state),
-                getEnergyColor(analysis.state)
-              )}
-            >
+            <span className="text-xs text-text-tertiary">
               {analysis.timeSlot}
             </span>
           </div>
@@ -210,7 +199,7 @@ export function EnergyRouter({
                     )}
                     style={{ height: `${heights[i]}px` }}
                   />
-                  <span className={cn('text-[9px]', level.active ? getEnergyColor(level.key) : 'text-text-tertiary')}>
+                  <span className={cn('text-xs', level.active ? getEnergyColor(level.key) : 'text-text-tertiary')}>
                     {level.label}
                   </span>
                 </div>
@@ -221,29 +210,29 @@ export function EnergyRouter({
 
         {/* Task Recommendation */}
         {analysis.recommendation.task ? (
-          <div className="rounded-xl bg-accent/5 border border-accent/15 p-4 space-y-2.5">
-            <p className="text-[10px] font-medium text-accent uppercase tracking-wider">
-              Do This Next
+          <div className="border-t border-border pt-4 space-y-2">
+            <p className="text-xs font-medium text-text-secondary">
+              Do this next
             </p>
             <p className="text-sm font-medium text-text-primary leading-snug">
               {analysis.recommendation.task.title}
             </p>
             <div className="flex items-center gap-2.5">
-              <span className={cn('text-[10px] px-2 py-0.5 rounded-md font-medium', WEIGHT_BADGE[analysis.recommendation.task.weight] || WEIGHT_BADGE.medium)}>
+              <span className={cn('text-xs px-2 py-0.5 rounded-md font-medium', WEIGHT_BADGE[analysis.recommendation.task.weight] || WEIGHT_BADGE.medium)}>
                 {analysis.recommendation.task.weight}
               </span>
               {analysis.recommendation.task.estimated_minutes && (
-                <span className="text-[10px] text-text-tertiary font-mono">
+                <span className="text-xs text-text-tertiary font-mono">
                   ~{analysis.recommendation.task.estimated_minutes}m
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-text-secondary leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               {analysis.recommendation.reasoning}
             </p>
           </div>
         ) : (
-          <div className="rounded-xl bg-surface-tertiary/50 border border-border/50 p-4">
+          <div className="border-t border-border pt-4">
             <p className="text-xs text-text-tertiary text-center">
               No uncompleted tasks to route.
             </p>
@@ -251,15 +240,15 @@ export function EnergyRouter({
         )}
 
         {/* Queue summary */}
-        <div className="flex items-center gap-4 text-[11px] text-text-tertiary pt-1">
+        <div className="flex items-center gap-4 text-xs text-text-tertiary pt-1">
           <span className="flex items-center gap-1.5">
-            <span className="font-mono text-red-400">{analysis.uncompletedByEnergy.high.length}H</span>
+            <span className="font-mono text-text-secondary">{analysis.uncompletedByEnergy.high.length}H</span>
             <span className="text-border">/</span>
-            <span className="font-mono text-amber-400">{analysis.uncompletedByEnergy.medium.length}M</span>
+            <span className="font-mono text-text-secondary">{analysis.uncompletedByEnergy.medium.length}M</span>
             <span className="text-border">/</span>
             <span className="font-mono text-text-tertiary">{analysis.uncompletedByEnergy.low.length}L</span>
           </span>
-          <span className="ml-auto text-[9px] text-text-tertiary/50">Tap for details</span>
+          <span className="ml-auto text-xs text-text-tertiary">Tap for details</span>
         </div>
       </div>
 
@@ -268,10 +257,10 @@ export function EnergyRouter({
         <div className="space-y-5">
           {/* Current state */}
           <div>
-            <p className="text-[10px] text-text-tertiary uppercase tracking-widest mb-2">Current State</p>
+            <p className="text-xs text-text-tertiary mb-2">Current State</p>
             <div className="flex items-center gap-3">
               <span className={cn('text-lg font-bold', getEnergyColor(analysis.state))}>{analysis.label}</span>
-              <span className={cn('text-[10px] px-2 py-0.5 rounded-md', getEnergyBgColor(analysis.state), getEnergyColor(analysis.state))}>
+              <span className={cn('text-xs px-2 py-0.5 rounded-md', getEnergyBgColor(analysis.state), getEnergyColor(analysis.state))}>
                 {analysis.timeSlot}
               </span>
             </div>
@@ -280,10 +269,10 @@ export function EnergyRouter({
 
           {/* How it works */}
           <div>
-            <p className="text-[10px] text-text-tertiary uppercase tracking-widest mb-2">How It Works</p>
-            <div className="space-y-2 text-[11px] text-text-secondary leading-relaxed">
+            <p className="text-xs text-text-tertiary mb-2">How It Works</p>
+            <div className="space-y-2 text-xs text-text-secondary leading-relaxed">
               <p>The Energy Router maps your task queue against your estimated cognitive capacity based on:</p>
-              <ul className="list-disc list-inside space-y-1 text-text-tertiary">
+              <ul className="list-disc list-inside space-y-2 text-text-tertiary">
                 <li>Time of day (mornings = peak, afternoons = declining)</li>
                 <li>Fundamentals progress ({fundamentalsCompleted}/{fundamentalsTotal})</li>
               </ul>
@@ -293,23 +282,23 @@ export function EnergyRouter({
 
           {/* Task queue breakdown */}
           {([
-            { key: 'high' as const, label: 'High Energy', color: 'text-red-400', tasks: analysis.uncompletedByEnergy.high },
-            { key: 'medium' as const, label: 'Medium Energy', color: 'text-amber-400', tasks: analysis.uncompletedByEnergy.medium },
-            { key: 'low' as const, label: 'Low Energy', color: 'text-text-tertiary', tasks: analysis.uncompletedByEnergy.low },
+            { key: 'high' as const, label: 'High Energy', tasks: analysis.uncompletedByEnergy.high },
+            { key: 'medium' as const, label: 'Medium Energy', tasks: analysis.uncompletedByEnergy.medium },
+            { key: 'low' as const, label: 'Low Energy', tasks: analysis.uncompletedByEnergy.low },
           ]).map(group => (
             <div key={group.key}>
-              <p className={cn('text-[10px] font-medium uppercase tracking-widest mb-2', group.color)}>
+              <p className="text-xs font-medium text-text-secondary mb-2">
                 {group.label} ({group.tasks.length})
               </p>
               {group.tasks.length === 0 ? (
-                <p className="text-[11px] text-text-tertiary/60 pl-2">No tasks in this category</p>
+                <p className="text-xs text-text-tertiary pl-2">No tasks in this category</p>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {group.tasks.map(t => (
-                    <div key={t.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-surface-tertiary/30">
+                    <div key={t.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-surface-tertiary">
                       <div className={cn('w-2 h-2 rounded-full', WEIGHT_BADGE[t.weight]?.split(' ')[0] || 'bg-surface-tertiary')} />
                       <span className="text-xs text-text-primary flex-1 truncate">{t.title}</span>
-                      {t.estimated_minutes && <span className="text-[10px] text-text-tertiary font-mono">{t.estimated_minutes}m</span>}
+                      {t.estimated_minutes && <span className="text-xs text-text-tertiary font-mono">{t.estimated_minutes}m</span>}
                     </div>
                   ))}
                 </div>

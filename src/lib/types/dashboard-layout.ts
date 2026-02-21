@@ -9,6 +9,7 @@ export interface DashboardLayoutPreferences {
     revenue_radar: boolean;
     ai_insights: boolean;
     monkey_brain: boolean;
+    operator_score: boolean;
   };
   analytics: {
     weekly_debrief: boolean;
@@ -17,6 +18,7 @@ export interface DashboardLayoutPreferences {
     insights_patterns: boolean;
     monthly_trends: boolean;
     client_health_scores: boolean;
+    scope_creep_radar: boolean;
     revenue_radar: boolean;
     revenue_profit_chart: boolean;
     energy_investment_chart: boolean;
@@ -44,6 +46,7 @@ export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutPreferences = {
     revenue_radar: true,
     ai_insights: true,
     monkey_brain: true,
+    operator_score: true,
   },
   analytics: {
     weekly_debrief: true,
@@ -52,6 +55,7 @@ export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutPreferences = {
     insights_patterns: true,
     monthly_trends: true,
     client_health_scores: true,
+    scope_creep_radar: true,
     revenue_radar: true,
     revenue_profit_chart: true,
     energy_investment_chart: true,
@@ -71,6 +75,7 @@ export const TODAY_SECTION_LABELS: Record<keyof DashboardLayoutPreferences['toda
   revenue_radar: 'Revenue Radar',
   ai_insights: 'AI Insights',
   monkey_brain: 'Monkey Brain Override',
+  operator_score: 'Operator Score',
 };
 
 /** Labels for the new consolidated analytics sections */
@@ -81,6 +86,7 @@ export const ANALYTICS_SECTION_LABELS: Record<string, string> = {
   insights_patterns: 'Insights & Patterns',
   monthly_trends: 'Monthly Trends',
   client_health_scores: 'Client Health Scores',
+  scope_creep_radar: 'Scope Creep Radar',
   revenue_radar: 'Revenue Radar',
   revenue_profit_chart: 'Revenue & Profit Over Time',
   energy_investment_chart: 'Weekly Energy Investment',

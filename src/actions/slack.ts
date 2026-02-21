@@ -72,8 +72,8 @@ export async function testSlackWebhook(url: string): Promise<{ ok: boolean; mess
 
 /* ━━━ Send Daily Summary ━━━ */
 
-interface TaskRow { id: string; title: string; weight: string; energy: string; status: string; flagged_for_today: boolean; scheduled_date: string | null; deadline: string | null }
-interface CompletedRow { id: string; weight: string; energy: string }
+interface TaskRow { id: string; title: string; weight: string; energy: string; status: string; flagged_for_today: boolean; scheduled_date: string | null; deadline: string | null; is_personal?: boolean }
+interface CompletedRow { id: string; weight: string; energy: string; is_personal?: boolean }
 interface FundamentalRow { id: string; label: string; icon: string }
 interface CompletionRow { fundamental_id: string; completed: boolean }
 interface RecurringRow { id: string; title: string }
@@ -146,9 +146,9 @@ export async function sendSlackDailySummary() {
     ((recurringCompletionsRes.data || []) as RecurringCompRow[]).map(c => c.recurring_task_id)
   );
 
-  // Calculate MLU
-  const totalMLU = todayTasks.reduce((sum: number, t: TaskRow) => sum + getTaskMLU({ weight: t.weight as 'low' | 'medium' | 'high', energy: t.energy as 'admin' | 'creative' }), 0);
-  const completedMLU = completedTasks.reduce((sum: number, t: CompletedRow) => sum + getTaskMLU({ weight: t.weight as 'low' | 'medium' | 'high', energy: t.energy as 'admin' | 'creative' }), 0);
+  // Calculate MLU (exclude personal tasks)
+  const totalMLU = todayTasks.filter((t: TaskRow) => !t.is_personal).reduce((sum: number, t: TaskRow) => sum + getTaskMLU({ weight: t.weight as 'low' | 'medium' | 'high', energy: t.energy as 'admin' | 'creative' }), 0);
+  const completedMLU = completedTasks.filter((t: CompletedRow) => !t.is_personal).reduce((sum: number, t: CompletedRow) => sum + getTaskMLU({ weight: t.weight as 'low' | 'medium' | 'high', energy: t.energy as 'admin' | 'creative' }), 0);
 
   // Fundamentals status
   const completedFundamentalIds = new Set(

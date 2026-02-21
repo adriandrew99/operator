@@ -12,12 +12,13 @@ interface EarningsByClientProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="card-surface border border-border rounded-xl px-3 py-2 shadow-lg">
-      <p className="text-xs font-medium text-text-primary mb-0.5">{label}</p>
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{label}</p>
       {payload.map((entry: any, i: number) => (
-        <p key={i} className="text-[10px] text-text-secondary">
-          £{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}/mo
-        </p>
+        <div key={i} className="chart-tooltip-value">
+          <span>Revenue</span>
+          <span>£{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}/mo</span>
+        </div>
       ))}
     </div>
   );
@@ -43,9 +44,15 @@ export function EarningsByClient({ clients }: EarningsByClientProps) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(200, data.length * 44)}>
       <BarChart data={data} layout="vertical" margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
+        <defs>
+          <linearGradient id="clientBarGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.8} />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.4} />
+          </linearGradient>
+        </defs>
         <XAxis
           type="number"
-          tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+          tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => `£${v.toLocaleString()}`}
@@ -54,12 +61,12 @@ export function EarningsByClient({ clients }: EarningsByClientProps) {
           type="category"
           dataKey="name"
           width={100}
-          tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}
+          tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
           axisLine={false}
           tickLine={false}
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--surface-hover)', opacity: 0.3 }} />
-        <Bar dataKey="revenue" name="Revenue" fill="var(--accent)" radius={[0, 6, 6, 0]} barSize={20} />
+        <Bar dataKey="revenue" name="Revenue" fill="url(#clientBarGrad)" radius={[0, 6, 6, 0]} barSize={20} />
       </BarChart>
     </ResponsiveContainer>
   );

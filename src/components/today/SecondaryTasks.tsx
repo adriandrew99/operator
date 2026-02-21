@@ -71,13 +71,13 @@ export function SecondaryTasks({ tasks }: SecondaryTasksProps) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+      <p className="text-xs font-medium text-text-tertiary">
         Secondary Tasks
       </p>
 
-      <div className="space-y-1">
+      <div className="space-y-2">
         {items.map((item, i) => (
-          <div key={i} className="flex items-center gap-3 py-1.5 group">
+          <div key={i} className="flex items-center gap-3 py-2 group">
             {item.text ? (
               <>
                 <button
@@ -85,7 +85,7 @@ export function SecondaryTasks({ tasks }: SecondaryTasksProps) {
                   className={cn(
                     'w-4 h-4 border flex-shrink-0 flex items-center justify-center transition-all',
                     item.completed
-                      ? 'bg-accent border-accent'
+                      ? 'bg-text-primary border-text-primary'
                       : 'border-border-light hover:border-text-secondary'
                   )}
                 >
@@ -105,7 +105,7 @@ export function SecondaryTasks({ tasks }: SecondaryTasksProps) {
                       if (e.key === 'Enter') handleSave(i, (e.target as HTMLInputElement).value);
                       if (e.key === 'Escape') setEditingIndex(null);
                     }}
-                    className="flex-1 bg-transparent text-sm text-text-primary border-b border-accent pb-0.5 focus:outline-none"
+                    className="flex-1 bg-transparent text-sm text-text-primary border-b border-border pb-0.5 focus:outline-none"
                   />
                 ) : (
                   <button
@@ -139,7 +139,7 @@ export function SecondaryTasks({ tasks }: SecondaryTasksProps) {
                     if (e.key === 'Escape') setEditingIndex(null);
                   }}
                   placeholder="Add a task..."
-                  className="flex-1 bg-transparent text-sm text-text-primary border-b border-accent pb-0.5 focus:outline-none placeholder:text-text-tertiary"
+                  className="flex-1 bg-transparent text-sm text-text-primary border-b border-border pb-0.5 focus:outline-none placeholder:text-text-tertiary"
                 />
               </>
             ) : (

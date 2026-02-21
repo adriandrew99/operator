@@ -20,6 +20,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { toCSV, downloadCSV, fileDate } from '@/lib/utils/export';
 import { ExportButton } from '@/components/ui/ExportButton';
+import { InfoTip } from '@/components/ui/InfoTip';
 
 const BankImportModal = dynamic(() => import('@/components/finance/BankImportModal').then(m => ({ default: m.BankImportModal })), { ssr: false });
 const IncomeChart = dynamic(() => import('@/components/finance/IncomeChart').then(m => ({ default: m.IncomeChart })), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center text-xs text-text-tertiary">Loading chart...</div> });
@@ -171,8 +172,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   const personalExpensesList = expenses.filter(e => e.expense_type === 'personal');
   const liveBusinessExpenses = businessExpensesList.reduce((sum, e) => sum + e.amount, 0);
   const livePersonalExpenses = personalExpensesList.reduce((sum, e) => sum + e.amount, 0);
-  const totalBusinessCosts = liveBusinessExpenses + staffCost + monthlySalary; // includes staff/contractor costs + director salary
-  const liveExpenses = totalBusinessCosts; // alias for backward compat (charts, forecast)
+  const totalBusinessCosts = liveBusinessExpenses + staffCost + monthlySalary;
+  const liveExpenses = totalBusinessCosts;
 
   // For past months, prefer snapshot data (which captures historical reality) over live client calculations
   const monthlyRevenue = (!isCurrent && snapshot?.total_revenue) ? Number(snapshot.total_revenue) : liveRevenue;
@@ -323,10 +324,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
     const clientRevenue = scenarioClients.reduce((sum, c) => sum + getClientMonthlyAmount(c), 0);
     const hypotheticalRevenue = whatIfHypotheticals.reduce((sum, h) => sum + h.amount, 0);
     const scenarioRevenue = clientRevenue + hypotheticalRevenue;
-    // Expenses: scaled
-    const scaledBusinessExpenses = liveBusinessExpenses * (whatIfExpenseScale / 100);
+    // Expenses: scale ALL costs uniformly
     const scenarioStaffCost = whatIfStaffCostOverride !== null ? whatIfStaffCostOverride : staffCost;
-    const scenarioExpenses = scaledBusinessExpenses + scenarioStaffCost + monthlySalary;
+    const baseTotal = liveBusinessExpenses + scenarioStaffCost + monthlySalary;
+    const scenarioExpenses = baseTotal * (whatIfExpenseScale / 100);
     // Tax + profit
     const scenarioTaxableProfit = Math.max(0, scenarioRevenue - scenarioExpenses);
     const scenarioTaxReserve = scenarioTaxableProfit * UK_CORP_TAX_RATE;
@@ -439,15 +440,15 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6 relative z-0">
+    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 relative z-0">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">Finance</h1>
+          <h1 className="text-page-title text-text-primary">Finance</h1>
           <p className="text-xs sm:text-sm text-text-tertiary mt-0.5 sm:mt-1">Revenue, expenses & projections</p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Month Navigator */}
-          <div className="relative flex items-center gap-0.5 sm:gap-1 bg-surface-tertiary/40 rounded-xl border border-border/50 px-0.5 sm:px-1 py-0.5">
+          <div className="relative flex items-center gap-0.5 sm:gap-1 rounded-xl border border-border px-0.5 sm:px-1 py-0.5" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
             <button
               onClick={() => navigateMonth(shiftMonth(currentMonth, -1))}
               className="p-1.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
@@ -460,9 +461,9 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             <button
               onClick={() => setShowMonthPicker(prev => !prev)}
               className={cn(
-                'px-1.5 sm:px-3 py-1 text-[11px] sm:text-xs font-medium rounded-lg transition-colors min-w-[90px] sm:min-w-[120px] text-center cursor-pointer',
+                'px-1.5 sm:px-3 py-1 text-xs sm:text-xs font-medium rounded-lg transition-colors min-w-[90px] sm:min-w-[120px] text-center cursor-pointer',
                 isCurrent
-                  ? 'text-accent'
+                  ? 'text-text-primary'
                   : 'text-text-secondary hover:text-text-primary'
               )}
             >
@@ -486,7 +487,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* Month Picker Dropdown */}
             {showMonthPicker && (
-              <div className="absolute top-full right-0 mt-2 z-50 w-56 p-3 rounded-xl bg-surface-primary border border-border shadow-lg">
+              <div className="absolute top-full right-0 mt-2 z-50 w-56 p-3 rounded-2xl border border-border-light" style={{ background: 'rgba(10, 10, 10, 0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
                 {(() => {
                   const now = new Date();
                   const currentYear = now.getFullYear();
@@ -509,7 +510,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                     <div className="max-h-60 overflow-y-auto space-y-3">
                       {Object.entries(byYear).map(([year, yearMonths]) => (
                         <div key={year}>
-                          <p className="text-[10px] text-text-tertiary font-semibold uppercase tracking-widest mb-1.5">{year}</p>
+                          <p className="text-xs text-text-tertiary font-semibold  mb-1.5">{year}</p>
                           <div className="grid grid-cols-3 gap-1">
                             {yearMonths.map(m => (
                               <button
@@ -519,11 +520,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                                   setShowMonthPicker(false);
                                 }}
                                 className={cn(
-                                  'text-[11px] py-1.5 px-2 rounded-lg transition-colors text-center cursor-pointer',
+                                  'text-xs py-1.5 px-2 rounded-lg transition-colors text-center cursor-pointer',
                                   m.value === currentMonth
-                                    ? 'bg-accent text-black font-semibold'
+                                    ? 'bg-text-primary text-background font-semibold'
                                     : m.isCur
-                                      ? 'bg-accent/10 text-accent hover:bg-accent/20'
+                                      ? 'bg-surface-tertiary text-text-primary hover:bg-surface-tertiary'
                                       : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
                                 )}
                               >
@@ -544,8 +545,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             className={cn(
               'hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer',
               whatIfMode
-                ? 'bg-purple-500/15 text-purple-400 border-purple-500/40 shadow-lg shadow-purple-500/10'
-                : 'bg-surface-tertiary/40 text-text-secondary border-border/50 hover:text-text-primary hover:bg-surface-tertiary'
+                ? 'bg-surface-tertiary text-text-primary border-border-light  '
+                : 'bg-surface-tertiary text-text-secondary border-border hover:text-text-primary hover:bg-surface-tertiary'
             )}
           >
             <span className="flex items-center gap-1.5">
@@ -620,11 +621,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
       {/* Future month banner */}
       {isFuture && futureProjection && (
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-purple-400 shrink-0">
+        <div className="flex items-center gap-3 p-3 rounded-2xl bg-purple-500/10 border border-border">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-text-primary shrink-0">
             <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
           </svg>
-          <p className="text-xs text-purple-400">
+          <p className="text-xs text-text-primary">
             <span className="font-semibold">Projected month.</span> Revenue based on active clients + probability-weighted pipeline leads.
           </p>
         </div>
@@ -632,7 +633,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
       {/* Past month info banner */}
       {!isCurrent && !isFuture && !snapshot && (
-        <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+        <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
           <p className="text-xs text-amber-400">
             No financial record for {getMonthLabel(currentMonth)}. Revenue shown is based on current active clients.
           </p>
@@ -647,20 +648,20 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
       {/* ━━━ What-If Scenario Panel ━━━ */}
       {whatIfMode && whatIfCalc && (
-        <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/20 space-y-5 animate-fade-in">
+        <div className="p-5 rounded-2xl bg-surface-tertiary border border-border space-y-5 animate-fade-in">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-              <h3 className="text-sm font-bold text-purple-400">What-If Scenario</h3>
+              <h3 className="text-section-heading text-text-primary">What-If Scenario</h3>
             </div>
-            <button onClick={resetWhatIf} className="text-[10px] text-text-tertiary hover:text-text-primary transition-colors cursor-pointer">Reset All</button>
+            <button onClick={resetWhatIf} className="text-xs text-text-tertiary hover:text-text-primary transition-colors cursor-pointer">Reset All</button>
           </div>
 
           {/* Scenario Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Client Toggles */}
             <div className="space-y-2.5">
-              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Toggle Clients</p>
+              <p className="text-xs font-semibold text-text-tertiary ">Toggle Clients</p>
               <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                 {activeClients.map(c => {
                   const isExcluded = whatIfExcludedClients.has(c.id);
@@ -679,35 +680,35 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                         'flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs transition-all cursor-pointer',
                         isExcluded
                           ? 'bg-red-500/10 border border-red-500/20 text-red-400 line-through'
-                          : 'bg-surface-tertiary/30 border border-border/30 text-text-primary hover:bg-surface-tertiary/60'
+                          : 'bg-surface-secondary text-text-primary hover:bg-surface-hover'
                       )}
                     >
                       <span>{c.name}</span>
-                      <span className="font-mono text-[11px]">{isExcluded ? '-' : ''}{formatCurrency(getClientMonthlyAmount(c))}</span>
+                      <span className="font-mono text-xs">{isExcluded ? '-' : ''}{formatCurrency(getClientMonthlyAmount(c))}</span>
                     </button>
                   );
                 })}
               </div>
 
               {/* Add hypothetical client */}
-              <div className="pt-2 border-t border-border/30">
-                <p className="text-[10px] text-text-tertiary mb-1.5">Add hypothetical client</p>
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs text-text-tertiary mb-1.5">Add hypothetical client</p>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     placeholder="Client name"
                     value={whatIfNewClientName}
                     onChange={e => setWhatIfNewClientName(e.target.value)}
-                    className="flex-1 text-xs bg-surface-secondary border border-border/50 rounded-lg px-2.5 py-1.5 text-text-primary placeholder:text-text-tertiary/50 outline-none focus:ring-1 focus:ring-purple-500/30"
+                    className="flex-1 text-xs bg-surface-secondary border border-border rounded-lg px-2.5 py-1.5 text-text-primary placeholder:text-text-tertiary/50 outline-none focus:ring-1 focus:ring-border-light"
                   />
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-text-tertiary">£</span>
+                    <span className="text-xs text-text-tertiary">£</span>
                     <input
                       type="number"
                       placeholder="0"
                       value={whatIfNewClientAmount}
                       onChange={e => setWhatIfNewClientAmount(e.target.value)}
-                      className="w-20 text-xs bg-surface-secondary border border-border/50 rounded-lg px-2 py-1.5 text-text-primary outline-none focus:ring-1 focus:ring-purple-500/30 font-mono"
+                      className="w-20 text-xs bg-surface-secondary border border-border rounded-lg px-2 py-1.5 text-text-primary outline-none focus:ring-1 focus:ring-border-light font-mono"
                     />
                   </div>
                   <button
@@ -718,17 +719,17 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                         setWhatIfNewClientAmount('');
                       }
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-purple-500/15 text-purple-400 text-xs font-medium hover:bg-purple-500/25 transition-colors cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-lg bg-surface-tertiary text-text-primary text-xs font-medium hover:bg-purple-500/25 transition-colors cursor-pointer"
                   >+</button>
                 </div>
                 {whatIfHypotheticals.length > 0 && (
-                  <div className="space-y-1 mt-2">
+                  <div className="space-y-2 mt-2">
                     {whatIfHypotheticals.map((h, i) => (
                       <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/15">
-                        <span className="text-xs text-purple-400">{h.name}</span>
+                        <span className="text-xs text-text-primary">{h.name}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-mono text-purple-400">+{formatCurrency(h.amount)}</span>
-                          <button onClick={() => setWhatIfHypotheticals(prev => prev.filter((_, j) => j !== i))} className="text-purple-400/50 hover:text-purple-400 cursor-pointer text-xs">✕</button>
+                          <span className="text-xs font-mono text-text-primary">+{formatCurrency(h.amount)}</span>
+                          <button onClick={() => setWhatIfHypotheticals(prev => prev.filter((_, j) => j !== i))} className="text-text-primary/50 hover:text-text-primary cursor-pointer text-xs">✕</button>
                         </div>
                       </div>
                     ))}
@@ -741,8 +742,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Expense Scaling</p>
-                  <span className={cn('text-xs font-mono font-semibold', whatIfExpenseScale !== 100 ? 'text-purple-400' : 'text-text-tertiary')}>{whatIfExpenseScale}%</span>
+                  <p className="text-xs font-semibold text-text-tertiary ">Expenses</p>
+                  <span className={cn('text-xs font-mono font-semibold', whatIfExpenseScale !== 100 ? 'text-text-primary' : 'text-text-tertiary')}>
+                    {formatCurrency(totalBusinessCosts * (whatIfExpenseScale / 100))}{whatIfExpenseScale !== 100 ? ` (${whatIfExpenseScale}%)` : ''}
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -754,17 +757,17 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                   className="w-full h-1.5 bg-surface-tertiary rounded-full appearance-none cursor-pointer accent-purple-400"
                 />
                 <div className="flex justify-between mt-1">
-                  <span className="text-[9px] text-text-tertiary">-50%</span>
-                  <span className="text-[9px] text-text-tertiary">Current</span>
-                  <span className="text-[9px] text-text-tertiary">+100%</span>
+                  <span className="text-xs text-text-tertiary">-50%</span>
+                  <span className="text-xs text-text-tertiary">Current</span>
+                  <span className="text-xs text-text-tertiary">+100%</span>
                 </div>
               </div>
 
               {staffCost > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Staff Cost</p>
-                    <span className={cn('text-xs font-mono', whatIfStaffCostOverride !== null ? 'text-purple-400 font-semibold' : 'text-text-tertiary')}>
+                    <p className="text-xs font-semibold text-text-tertiary ">Staff Cost</p>
+                    <span className={cn('text-xs font-mono', whatIfStaffCostOverride !== null ? 'text-text-primary font-semibold' : 'text-text-tertiary')}>
                       {formatCurrency(whatIfStaffCostOverride !== null ? whatIfStaffCostOverride : staffCost)}
                     </span>
                   </div>
@@ -783,32 +786,33 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           </div>
 
           {/* Comparison Results */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3 border-t border-purple-500/20">
-            <div className="text-center p-3 rounded-xl bg-surface-primary/60 border border-border/30">
-              <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Revenue</p>
+          <p className="text-xs text-text-primary/60 pt-2">Scenario results — compare against your actual numbers above.</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-1 border-t border-border">
+            <div className="text-center p-3">
+              <p className="text-xs text-text-tertiary  mb-1">Revenue</p>
               <p className="text-lg font-bold text-text-primary">{formatCurrency(whatIfCalc.revenue)}</p>
-              <p className={cn('text-[11px] font-semibold mt-0.5', whatIfCalc.revenueDelta > 0 ? 'text-emerald-400' : whatIfCalc.revenueDelta < 0 ? 'text-red-400' : 'text-text-tertiary')}>
+              <p className={cn('text-xs font-semibold mt-0.5', whatIfCalc.revenueDelta > 0 ? 'text-emerald-400' : whatIfCalc.revenueDelta < 0 ? 'text-red-400' : 'text-text-tertiary')}>
                 {whatIfCalc.revenueDelta > 0 ? '+' : ''}{whatIfCalc.revenueDelta !== 0 ? formatCurrency(whatIfCalc.revenueDelta) : 'No change'}
               </p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-surface-primary/60 border border-border/30">
-              <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Expenses</p>
+            <div className="text-center p-3">
+              <p className="text-xs text-text-tertiary  mb-1">Expenses</p>
               <p className="text-lg font-bold text-text-secondary">{formatCurrency(whatIfCalc.expenses)}</p>
-              <p className={cn('text-[11px] font-semibold mt-0.5', whatIfCalc.expensesDelta < 0 ? 'text-emerald-400' : whatIfCalc.expensesDelta > 0 ? 'text-red-400' : 'text-text-tertiary')}>
+              <p className={cn('text-xs font-semibold mt-0.5', whatIfCalc.expensesDelta < 0 ? 'text-emerald-400' : whatIfCalc.expensesDelta > 0 ? 'text-red-400' : 'text-text-tertiary')}>
                 {whatIfCalc.expensesDelta > 0 ? '+' : ''}{whatIfCalc.expensesDelta !== 0 ? formatCurrency(whatIfCalc.expensesDelta) : 'No change'}
               </p>
             </div>
-            <div className={cn('text-center p-3 rounded-xl border', whatIfCalc.profitDelta > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : whatIfCalc.profitDelta < 0 ? 'bg-red-500/5 border-red-500/20' : 'bg-surface-primary/60 border-border/30')}>
-              <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Left in Company</p>
+            <div className={cn('text-center p-3 rounded-lg', whatIfCalc.profitDelta > 0 ? 'bg-emerald-500/5' : whatIfCalc.profitDelta < 0 ? 'bg-red-500/5' : '')}>
+              <p className="text-xs text-text-tertiary  mb-1">Left in Company</p>
               <p className={cn('text-lg font-bold', whatIfCalc.profitDelta > 0 ? 'text-emerald-400' : whatIfCalc.profitDelta < 0 ? 'text-red-400' : 'text-text-primary')}>{formatCurrency(whatIfCalc.leftInCompany)}</p>
-              <p className={cn('text-[11px] font-semibold mt-0.5', whatIfCalc.profitDelta > 0 ? 'text-emerald-400' : whatIfCalc.profitDelta < 0 ? 'text-red-400' : 'text-text-tertiary')}>
+              <p className={cn('text-xs font-semibold mt-0.5', whatIfCalc.profitDelta > 0 ? 'text-emerald-400' : whatIfCalc.profitDelta < 0 ? 'text-red-400' : 'text-text-tertiary')}>
                 {whatIfCalc.profitDelta > 0 ? '+' : ''}{whatIfCalc.profitDelta !== 0 ? formatCurrency(whatIfCalc.profitDelta) : 'No change'}
               </p>
             </div>
           </div>
 
           {/* Tax detail row */}
-          <div className="flex items-center justify-center gap-6 text-[10px] text-text-tertiary">
+          <div className="flex items-center justify-center gap-6 text-xs text-text-tertiary">
             <span>Tax: {formatCurrency(whatIfCalc.taxReserve)} ({formatPercentage(UK_CORP_TAX_RATE)})</span>
             <span>Clients: {whatIfCalc.clientCount}</span>
             <span>vs current: {whatIfCalc.profitDelta >= 0 ? '+' : ''}{formatCurrency(whatIfCalc.profitDelta)}/mo</span>
@@ -821,18 +825,18 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         <button
           onClick={() => { setWhatIfMode(prev => !prev); if (whatIfMode) resetWhatIf(); }}
           className={cn(
-            'px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all border cursor-pointer',
+            'px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer',
             whatIfMode
-              ? 'bg-purple-500/15 text-purple-400 border-purple-500/40'
-              : 'bg-surface-tertiary/40 text-text-secondary border-border/50'
+              ? 'bg-surface-tertiary text-text-primary border-border-light'
+              : 'bg-surface-tertiary text-text-secondary border-border'
           )}
         >
           {whatIfMode ? 'Exit What-If' : '🔧 What-If'}
         </button>
-        <button onClick={() => setShowSnapshotModal(true)} className="px-2.5 py-1.5 rounded-xl text-[11px] font-medium bg-surface-tertiary/40 text-text-secondary border border-border/50 cursor-pointer">
+        <button onClick={() => setShowSnapshotModal(true)} className="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-surface-tertiary text-text-secondary border border-border cursor-pointer">
           + Record
         </button>
-        <button onClick={() => setShowBankImport(true)} className="px-2.5 py-1.5 rounded-xl text-[11px] font-medium bg-surface-tertiary/40 text-text-secondary border border-border/50 cursor-pointer">
+        <button onClick={() => setShowBankImport(true)} className="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-surface-tertiary text-text-secondary border border-border cursor-pointer">
           CSV
         </button>
       </div>
@@ -844,10 +848,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              'px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors duration-200 border-b-2 -mb-px cursor-pointer whitespace-nowrap flex-shrink-0',
+              'px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all duration-200 border-b-2 -mb-px cursor-pointer whitespace-nowrap flex-shrink-0',
               activeTab === tab.key
                 ? 'text-accent border-accent'
-                : 'text-text-secondary border-transparent hover:text-text-primary'
+                : 'text-text-tertiary border-transparent hover:text-text-secondary'
             )}
           >
             {tab.label}
@@ -862,78 +866,75 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           {isFuture && futureProjection ? (
             <div className="space-y-3">
               {/* Projected revenue range */}
-              <div className="card-surface border border-purple-500/30 rounded-2xl p-4 sm:p-5 bg-purple-500/5">
-                <p className="text-[11px] font-semibold text-purple-400 uppercase tracking-wider mb-2">Projected Revenue Range</p>
-                <p className="text-2xl font-bold text-text-primary">
+              <div className="card-elevated rounded-2xl p-5 sm:p-6 bg-surface-tertiary">
+                <p className="text-xs font-semibold text-text-primary  mb-2 flex items-center gap-1">Projected Revenue Range <InfoTip text="Low end = confirmed retainers only. High end = confirmed + all pipeline leads. Reality will likely be somewhere in between." position="bottom" /></p>
+                <p className="text-2xl font-bold text-text-primary display-number">
                   {formatCurrency(futureProjection.confirmed)} – {formatCurrency(futureProjection.total)}
                 </p>
-                <p className="text-[10px] text-text-tertiary mt-1">Confirmed to optimistic (incl. pipeline)</p>
+                <p className="text-xs text-text-tertiary mt-1">Confirmed to optimistic (incl. pipeline)</p>
               </div>
 
               {/* Three tier cards */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-surface border border-emerald-500/30 rounded-2xl card-hover p-3 sm:p-4 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'ring-1 ring-emerald-500/30' : '')}>
-                  <p className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-1">Confirmed</p>
+                <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-elevated rounded-2xl card-hover p-3 sm:p-4 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'ring-1 ring-border-light' : '')}>
+                  <p className="text-xs font-semibold text-emerald-400  mb-1 flex items-center gap-1">Confirmed <InfoTip text="Revenue from active clients with signed retainers. This money is coming in." position="bottom" /></p>
                   <p className="text-lg sm:text-xl font-bold text-emerald-400">{formatCurrency(futureProjection.confirmed)}</p>
-                  <p className="text-[9px] text-text-tertiary mt-1">Active clients</p>
-                  <p className="text-[8px] text-emerald-400/40 mt-1.5">Tap for client list</p>
+                  <p className="text-xs text-text-tertiary mt-1">Active clients</p>
                 </button>
-                <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-surface border border-amber-500/30 rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'ring-1 ring-amber-500/30' : '')}>
-                  <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-1">Likely</p>
+                <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-elevated rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'ring-1 ring-border-light' : '')}>
+                  <p className="text-xs font-semibold text-amber-400  mb-1 flex items-center gap-1">Likely <InfoTip text="Pipeline leads with 60%+ close probability. Good chance these convert." position="bottom" /></p>
                   <p className="text-xl font-bold text-amber-400">{formatCurrency(futureProjection.likely)}</p>
-                  <p className="text-[9px] text-text-tertiary mt-1">Pipeline ≥60%</p>
-                  <p className="text-[8px] text-amber-400/40 mt-1.5">Tap for breakdown</p>
+                  <p className="text-xs text-text-tertiary mt-1">Pipeline ≥60%</p>
                 </button>
-                <button onClick={() => setExpandedBox(expandedBox === 'possible' ? null : 'possible')} className={cn('card-surface border border-purple-500/30 rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'possible' ? 'ring-1 ring-purple-500/30' : '')}>
-                  <p className="text-[10px] font-semibold text-purple-400 uppercase tracking-wider mb-1">Possible</p>
-                  <p className="text-xl font-bold text-purple-400">{formatCurrency(futureProjection.possible)}</p>
-                  <p className="text-[9px] text-text-tertiary mt-1">Pipeline &lt;60%</p>
-                  <p className="text-[8px] text-purple-400/40 mt-1.5">Tap for breakdown</p>
+                <button onClick={() => setExpandedBox(expandedBox === 'possible' ? null : 'possible')} className={cn('card-elevated rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'possible' ? 'ring-1 ring-border-light' : '')}>
+                  <p className="text-xs font-semibold text-text-primary  mb-1 flex items-center gap-1">Possible <InfoTip text="Pipeline leads under 60% probability. Don't count on these yet." position="bottom" /></p>
+                  <p className="text-xl font-bold text-text-primary">{formatCurrency(futureProjection.possible)}</p>
+                  <p className="text-xs text-text-tertiary mt-1">Pipeline &lt;60%</p>
                 </button>
               </div>
 
               {/* Bottom row: expenses + left in company */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="card-surface border border-border rounded-2xl p-4">
-                  <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Est. Expenses</p>
+                <div className="card-elevated rounded-2xl p-4">
+                  <p className="text-xs font-semibold text-text-tertiary  mb-1 flex items-center gap-1">Est. Expenses <InfoTip text="Assumes same expenses as current month. Adjust in the Expenses tab if you expect changes." position="bottom" /></p>
                   <p className="text-lg font-bold text-text-secondary">{formatCurrency(effectiveExpenses)}</p>
-                  <p className="text-[9px] text-text-tertiary mt-1">Carried from current</p>
+                  <p className="text-xs text-text-tertiary mt-1">Carried from current</p>
                 </div>
-                <div className="card-surface border border-accent/30 rounded-2xl p-4 bg-accent/5">
-                  <p className="text-[10px] font-semibold text-accent uppercase tracking-wider mb-1">Est. Left in Co.</p>
-                  <p className="text-lg font-bold text-accent">{formatCurrency(effectiveLeftInCompany)}</p>
-                  <p className="text-[9px] text-amber-400/60 mt-1">~{formatCurrency(effectiveTaxReserve)} tax</p>
+                <div className="card-elevated rounded-2xl p-4 bg-surface-tertiary">
+                  <p className="text-xs font-semibold text-text-primary  mb-1 flex items-center gap-1">Est. Left in Co. <InfoTip text="Confirmed revenue minus estimated expenses. What would stay in the business." position="bottom" /></p>
+                  <p className="text-lg font-bold text-text-primary">{formatCurrency(effectiveLeftInCompany)}</p>
+                  <p className="text-xs text-amber-400/60 mt-1">~{formatCurrency(effectiveTaxReserve)} tax</p>
                 </div>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3">
-              <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-surface border rounded-2xl card-hover p-5 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'border-accent/40 ring-1 ring-accent/20' : 'border-border')}>
-                <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Revenue</p>
-                <p className="text-2xl font-bold text-text-primary">{formatCurrency(monthlyRevenue)}</p>
-                <p className="text-[10px] text-text-tertiary mt-1">{activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
+              <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'ring-1 ring-accent/20' : '')}>
+                <p className="text-xs font-semibold text-text-tertiary mb-1 flex items-center gap-1">Revenue <InfoTip text="Total monthly income from all active client retainers. Tap for breakdown." position="bottom" /></p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary display-number">{formatCurrency(monthlyRevenue)}</p>
+                <p className="text-xs text-text-tertiary mt-1">{activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
               </button>
-              <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-surface border rounded-2xl card-hover p-5 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'border-accent/40 ring-1 ring-accent/20' : 'border-border')}>
-                <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Expenses</p>
-                <p className="text-2xl font-bold text-text-secondary">{formatCurrency(monthlyExpenses)}</p>
-                <p className="text-[10px] text-text-tertiary mt-1">Inc. salary & staff</p>
+              <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'ring-1 ring-accent/20' : '')}>
+                <p className="text-xs font-semibold text-text-tertiary mb-1 flex items-center gap-1">Expenses <InfoTip text="All business costs: your expenses, director salary, and staff costs. Tap for breakdown." position="bottom" /></p>
+                <p className="text-xl sm:text-2xl font-bold text-text-secondary display-number">{formatCurrency(monthlyExpenses)}</p>
+                <p className="text-xs text-text-tertiary mt-1">Inc. salary & staff</p>
               </button>
-              <button onClick={() => setExpandedBox(expandedBox === 'net' ? null : 'net')} className={cn('card-surface border rounded-2xl card-hover p-5 text-left transition-all cursor-pointer', expandedBox === 'net' ? 'ring-1 ring-accent/30 border-accent/40' : 'border-accent/30 bg-accent/5')}>
-                <p className="text-[11px] font-semibold text-accent uppercase tracking-wider mb-1">Left in Company</p>
-                <p className="text-2xl font-bold text-accent">{formatCurrency(leftInCompany)}</p>
-                <p className="text-[10px] text-amber-400/60 mt-1">~{formatCurrency(taxReserve)} tax</p>
+              <button onClick={() => setExpandedBox(expandedBox === 'net' ? null : 'net')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'net' ? 'ring-1 ring-accent/20' : '')}>
+                <p className="text-xs font-semibold text-text-primary mb-1 flex items-center gap-1">Left in Company <InfoTip text="Revenue minus expenses. This is what stays in the business before corporation tax (19%, paid at year-end)." position="bottom" /></p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary display-number">{formatCurrency(leftInCompany)}</p>
+                <p className="text-xs text-amber-400/60 mt-1">~{formatCurrency(taxReserve)} tax</p>
               </button>
             </div>
           )}
 
           {/* Metric Breakdown Panel */}
           {expandedBox && (
-            <div className="p-4 rounded-xl bg-surface-tertiary/40 border border-border/50 animate-fade-in">
+            <div className="p-4 rounded-2xl bg-surface-tertiary border border-border animate-fade-in">
               {expandedBox === 'revenue' && isFuture && futureProjection ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-emerald-400">Confirmed Revenue — Active Clients</p>
-                    <span className="text-[9px] text-text-tertiary">Click amount to set override</span>
+                    <span className="text-xs text-text-tertiary">Click amount to set override</span>
                   </div>
                   {futureProjection.confirmedBreakdown.length === 0 && futureProjection.lostClients.length === 0 ? (
                     <p className="text-xs text-text-tertiary">No confirmed revenue for this month</p>
@@ -942,12 +943,12 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       {futureProjection.confirmedBreakdown.map((item, i) => {
                         const isEditingThis = item.clientId && editingOverrideClientId === item.clientId;
                         return (
-                        <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                        <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                           <div className="flex items-center gap-2">
                             <span className={cn('text-xs', item.isLost ? 'text-red-400' : 'text-text-secondary')}>{item.name}</span>
                             {item.note && (
                               <span className={cn(
-                                'text-[9px] px-1.5 py-0.5 rounded-md font-medium',
+                                'text-xs px-1.5 py-0.5 rounded-md font-medium',
                                 item.isLost ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'
                               )}>{item.note}</span>
                             )}
@@ -955,7 +956,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                           <div className="flex items-center gap-2">
                             {isEditingThis ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-text-tertiary">£</span>
+                                <span className="text-xs text-text-tertiary">£</span>
                                 <input
                                   type="number"
                                   value={overrideEditAmount}
@@ -985,18 +986,18 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                                       setOverrideEditAmount('');
                                     }
                                   }}
-                                  className="w-20 text-xs bg-surface-secondary border border-accent/40 rounded-lg px-2 py-0.5 text-text-primary outline-none focus:ring-1 focus:ring-accent/20 font-mono"
+                                  className="w-20 text-xs bg-surface-secondary border border-border rounded-lg px-2 py-0.5 text-text-primary outline-none focus:ring-1 focus:ring-border-light font-mono"
                                   autoFocus
                                 />
                                 <button
                                   onClick={() => { setEditingOverrideClientId(null); setOverrideEditAmount(''); }}
-                                  className="text-[10px] text-text-tertiary hover:text-text-secondary"
+                                  className="text-xs text-text-tertiary hover:text-text-secondary"
                                 >✕</button>
                               </div>
                             ) : item.clientId && !item.isLost ? (
                               <button
                                 onClick={() => { setEditingOverrideClientId(item.clientId!); setOverrideEditAmount(String(item.amount)); }}
-                                className={cn('text-xs font-mono hover:text-accent transition-colors cursor-pointer', item.isLost ? 'text-red-400' : 'text-emerald-400')}
+                                className={cn('text-xs font-mono hover:text-text-primary transition-colors cursor-pointer', item.isLost ? 'text-red-400' : 'text-emerald-400')}
                                 title="Click to set override for this month"
                               >
                                 {formatCurrency(item.amount)}
@@ -1010,12 +1011,12 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       })}
                       {futureProjection.lostClients.length > 0 && (
                         <div className="pt-2 mt-2 border-t border-red-500/20">
-                          <p className="text-[10px] font-semibold text-red-400 mb-2">Lost by This Month</p>
+                          <p className="text-xs font-semibold text-red-400 mb-2">Lost by This Month</p>
                           {futureProjection.lostClients.map((lc, i) => (
-                            <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                            <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-red-400 line-through">{lc.name}</span>
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-400 font-medium">{lc.reason}</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-400 font-medium">{lc.reason}</span>
                               </div>
                               <span className="text-xs font-mono text-red-400/60 line-through">{formatCurrency(lc.amount)}</span>
                             </div>
@@ -1024,12 +1025,12 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       )}
                       {futureProjection.upcomingClients && futureProjection.upcomingClients.length > 0 && (
                         <div className="pt-2 mt-2 border-t border-blue-500/20">
-                          <p className="text-[10px] font-semibold text-blue-400 mb-2">Starting After This Month</p>
+                          <p className="text-xs font-semibold text-blue-400 mb-2">Starting After This Month</p>
                           {futureProjection.upcomingClients.map((uc, i) => (
-                            <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                            <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-blue-400">{uc.name}</span>
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-400 font-medium">
+                                <span className="text-xs px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-400 font-medium">
                                   Starts {new Date(uc.startDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
                                 </span>
                               </div>
@@ -1045,7 +1046,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 <div className="space-y-2">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-text-primary">Monthly Revenue Breakdown</p>
-                    <span className="text-[9px] text-text-tertiary">Click amount to adjust for this month</span>
+                    <span className="text-xs text-text-tertiary">Click amount to adjust for this month</span>
                   </div>
                   {activeClients.length === 0 ? (
                     <p className="text-xs text-text-tertiary">No active clients</p>
@@ -1055,17 +1056,17 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       const amount = getClientMonthlyAmount(c);
                       const isEditingThis = editingOverrideClientId === c.id;
                       return (
-                        <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                        <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-text-secondary">{c.name}</span>
                             {hasOverride && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-medium">override</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-medium">override</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
                             {isEditingThis ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-text-tertiary">£</span>
+                                <span className="text-xs text-text-tertiary">£</span>
                                 <input
                                   type="number"
                                   value={overrideEditAmount}
@@ -1103,7 +1104,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                                       setOverrideEditAmount('');
                                     }
                                   }}
-                                  className="w-20 text-xs bg-surface-secondary border border-accent/40 rounded-lg px-2 py-0.5 text-text-primary outline-none focus:ring-1 focus:ring-accent/20 font-mono"
+                                  className="w-20 text-xs bg-surface-secondary border border-border rounded-lg px-2 py-0.5 text-text-primary outline-none focus:ring-1 focus:ring-border-light font-mono"
                                   autoFocus
                                 />
                                 <button
@@ -1133,21 +1134,21 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                                       });
                                     }
                                   }}
-                                  className="text-[10px] text-accent hover:text-accent/80 font-medium cursor-pointer"
+                                  className="text-xs text-text-primary hover:text-text-primary/80 font-medium cursor-pointer"
                                 >Save</button>
                                 <button
                                   onClick={() => { setEditingOverrideClientId(null); setOverrideEditAmount(''); }}
-                                  className="text-[10px] text-text-tertiary hover:text-text-secondary cursor-pointer"
+                                  className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer"
                                 >✕</button>
                               </div>
                             ) : (
                               <>
                                 {hasOverride && (
-                                  <span className="text-[10px] text-text-tertiary line-through">{formatCurrency(c.retainer_amount || 0)}</span>
+                                  <span className="text-xs text-text-tertiary line-through">{formatCurrency(c.retainer_amount || 0)}</span>
                                 )}
                                 <button
                                   onClick={() => { setEditingOverrideClientId(c.id); setOverrideEditAmount(String(amount)); }}
-                                  className="text-xs font-mono text-text-primary hover:text-accent transition-colors cursor-pointer"
+                                  className="text-xs font-mono text-text-primary hover:text-text-primary transition-colors cursor-pointer"
                                   title="Click to set override for this month"
                                 >
                                   {formatCurrency(amount)}
@@ -1160,7 +1161,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                     })
                   )}
                   {!isCurrent && !isFuture && snapshot?.total_revenue ? (
-                    <p className="text-[10px] text-text-tertiary mt-2 pt-2 border-t border-border/30">Using recorded snapshot data for this month</p>
+                    <p className="text-xs text-text-tertiary mt-2 pt-2 border-t border-border">Using recorded snapshot data for this month</p>
                   ) : null}
                 </div>
               )}
@@ -1171,10 +1172,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                     <p className="text-xs text-text-tertiary">No likely pipeline leads</p>
                   ) : (
                     futureProjection.likelyBreakdown.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                      <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-text-secondary">{item.name}</span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-medium">{item.probability}%</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-medium">{item.probability}%</span>
                         </div>
                         <span className="text-xs font-mono text-amber-400">{formatCurrency(item.amount)}</span>
                       </div>
@@ -1194,29 +1195,29 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                           return acc;
                         }, {})
                       ).sort((a, b) => b[1] - a[1]).map(([cat, total]) => (
-                        <div key={cat} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                        <div key={cat} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                           <span className="text-xs text-text-secondary capitalize">{cat}</span>
                           <span className="text-xs font-mono text-text-primary">{formatCurrency(total)}</span>
                         </div>
                       ))}
                       {monthlySalary > 0 && (
-                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                        <div className="flex items-center justify-between py-1.5 border-b border-border">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs text-text-secondary">Director salary</span>
                             {salaryExceedsAllowance && (
-                              <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/15 text-red-400 font-medium">Over £{(UK_PERSONAL_ALLOWANCE / 1000).toFixed(1)}k</span>
+                              <span className="text-xs px-1 py-0.5 rounded bg-red-500/15 text-red-400 font-medium">Over £{(UK_PERSONAL_ALLOWANCE / 1000).toFixed(1)}k</span>
                             )}
                           </div>
                           <span className="text-xs font-mono text-text-primary">{formatCurrency(monthlySalary)}</span>
                         </div>
                       )}
                       {staffCost > 0 && (
-                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                        <div className="flex items-center justify-between py-1.5 border-b border-border">
                           <span className="text-xs text-text-secondary">Staff / contractors</span>
                           <span className="text-xs font-mono text-text-primary">{formatCurrency(staffCost)}</span>
                         </div>
                       )}
-                      <div className="flex items-center justify-between py-1.5 mt-1 pt-2 border-t border-border/40">
+                      <div className="flex items-center justify-between py-1.5 mt-1 pt-2 border-t border-border">
                         <span className="text-xs font-semibold text-text-primary">Total</span>
                         <span className="text-xs font-mono font-semibold text-text-primary">{formatCurrency(monthlyExpenses)}</span>
                       </div>
@@ -1226,17 +1227,17 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               )}
               {expandedBox === 'possible' && isFuture && futureProjection && (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-purple-400 mb-2">Possible Revenue — Pipeline &lt;60%</p>
+                  <p className="text-xs font-semibold text-text-primary mb-2">Possible Revenue — Pipeline &lt;60%</p>
                   {futureProjection.possibleBreakdown.length === 0 ? (
                     <p className="text-xs text-text-tertiary">No possible pipeline leads</p>
                   ) : (
                     futureProjection.possibleBreakdown.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                      <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-text-secondary">{item.name}</span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-400 font-medium">{item.probability}%</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded-md bg-surface-tertiary text-text-primary font-medium">{item.probability}%</span>
                         </div>
-                        <span className="text-xs font-mono text-purple-400">{formatCurrency(item.amount)}</span>
+                        <span className="text-xs font-mono text-text-primary">{formatCurrency(item.amount)}</span>
                       </div>
                     ))
                   )}
@@ -1245,30 +1246,30 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               {expandedBox === 'net' && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-text-primary mb-3">Left in Company</p>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <div className="flex items-center justify-between py-1.5 border-b border-border">
                     <span className="text-xs text-text-secondary">Revenue</span>
                     <span className="text-xs font-mono text-text-primary">{formatCurrency(monthlyRevenue)}</span>
                   </div>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                  <div className="flex items-center justify-between py-1.5 border-b border-border">
                     <span className="text-xs text-red-400">− Expenses</span>
                     <span className="text-xs font-mono text-red-400">{formatCurrency(monthlyExpenses)}</span>
                   </div>
                   {(monthlySalary > 0 || staffCost > 0) && (
-                    <p className="text-[9px] text-text-tertiary -mt-1 mb-1 pl-3">
+                    <p className="text-xs text-text-tertiary -mt-1 mb-1 pl-3">
                       Inc. {monthlySalary > 0 ? `${formatCurrency(monthlySalary)} salary` : ''}{monthlySalary > 0 && staffCost > 0 ? ', ' : ''}{staffCost > 0 ? `${formatCurrency(staffCost)} staff` : ''}
                     </p>
                   )}
                   <div className="flex items-center justify-between py-1.5">
-                    <span className="text-xs font-semibold text-accent">= Left in company</span>
-                    <span className="text-xs font-mono font-semibold text-accent">{formatCurrency(leftInCompany)}</span>
+                    <span className="text-xs font-semibold text-text-primary">= Left in company</span>
+                    <span className="text-xs font-mono font-semibold text-text-primary">{formatCurrency(leftInCompany)}</span>
                   </div>
-                  <div className="flex items-center justify-between py-1 mt-1 pt-2 border-t border-border/20">
-                    <span className="text-[10px] text-amber-400/70">Est. corp tax (19%, year-end)</span>
-                    <span className="text-[10px] font-mono text-amber-400/70">{formatCurrency(taxReserve)}</span>
+                  <div className="flex items-center justify-between py-1 mt-1 pt-2 border-t border-border">
+                    <span className="text-xs text-amber-400/70">Est. corp tax (19%, year-end)</span>
+                    <span className="text-xs font-mono text-amber-400/70">{formatCurrency(taxReserve)}</span>
                   </div>
                   {monthlySalary > 0 && salaryExceedsAllowance && (
                     <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 mt-2">
-                      <p className="text-[10px] text-red-400">
+                      <p className="text-xs text-red-400">
                         Salary ({formatCurrency(annualSalaryProjected)}/yr) exceeds £{(UK_PERSONAL_ALLOWANCE / 1000).toFixed(1)}k allowance by {formatCurrency(salaryExcess)}. Excess is taxed as income — pay as dividends instead.
                       </p>
                     </div>
@@ -1280,18 +1281,18 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Override save error */}
           {overrideError && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-between animate-fade-in">
+            <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-between animate-fade-in">
               <p className="text-xs text-red-400">{overrideError}</p>
-              <button onClick={() => setOverrideError(null)} className="text-[10px] text-red-400 hover:text-red-300 ml-3">✕</button>
+              <button onClick={() => setOverrideError(null)} className="text-xs text-red-400 hover:text-red-300 ml-3">✕</button>
             </div>
           )}
 
           {/* Stability + Pipeline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <section className="card-surface border border-border rounded-2xl card-hover p-6">
+            <section className="card-elevated rounded-2xl p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-1 h-5 rounded-full bg-blue-500" />
-                <h2 className="text-sm font-bold text-text-primary">Revenue Stability</h2>
+                <h2 className="text-section-heading text-text-primary">Revenue Stability</h2>
                 <InfoBox title="Revenue Stability">
                   <p>Measures client diversification (Herfindahl index) weighted by renewal probability and client count.</p>
                   <p className="mt-1">Higher = more stable. Low score means revenue is concentrated in few clients.</p>
@@ -1302,22 +1303,22 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 <div className="flex-1">
                   <div className="w-full h-2 bg-surface-tertiary rounded-full overflow-hidden">
                     <div
-                      className={cn('h-full rounded-full progress-fill', stabilityScore >= 70 ? 'bg-accent' : stabilityScore >= 40 ? 'bg-amber-400' : 'bg-red-400')}
+                      className={cn('h-full rounded-full progress-fill', stabilityScore >= 70 ? 'bg-text-primary' : stabilityScore >= 40 ? 'bg-text-secondary' : 'bg-text-tertiary')}
                       style={{ width: `${stabilityScore}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-text-tertiary mt-1.5">
+                  <p className="text-xs text-text-tertiary mt-1.5">
                     {stabilityScore >= 70 ? 'Healthy diversification' : stabilityScore >= 40 ? 'Moderate concentration risk' : 'High concentration risk'}
                   </p>
                 </div>
               </div>
               {/* Auto insights */}
               {stabilityInsights.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-border/50 space-y-1.5">
+                <div className="mt-4 pt-3 border-t border-border space-y-1.5">
                   {stabilityInsights.map((insight, i) => {
                     // Pick contextual icon + color based on insight content
                     let icon = '→';
-                    let iconColor = 'text-accent';
+                    let iconColor = 'text-text-primary';
                     if (insight.includes('concentration risk') || insight.includes('at risk') || insight.includes('ending')) {
                       icon = '⚠';
                       iconColor = 'text-amber-400';
@@ -1338,8 +1339,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       iconColor = 'text-blue-400';
                     }
                     return (
-                      <p key={i} className="text-[11px] text-text-secondary flex items-start gap-2">
-                        <span className={cn('mt-0.5 shrink-0 text-[10px]', iconColor)}>{icon}</span>
+                      <p key={i} className="text-xs text-text-secondary flex items-start gap-2">
+                        <span className={cn('mt-0.5 shrink-0 text-xs', iconColor)}>{icon}</span>
                         {insight}
                       </p>
                     );
@@ -1348,10 +1349,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               )}
             </section>
 
-            <section className="card-surface border border-border rounded-2xl card-hover p-6">
+            <section className="card-elevated rounded-2xl p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-1 h-5 rounded-full bg-purple-500" />
-                <h2 className="text-sm font-bold text-text-primary">Pipeline</h2>
+                <h2 className="text-section-heading text-text-primary">Pipeline</h2>
                 <InfoBox title="Pipeline Value">
                   <p>Total estimated value of all active pipeline leads (not yet closed or lost).</p>
                   <p className="mt-1">Go to the Pipeline tab to manage leads and set probability for each.</p>
@@ -1360,11 +1361,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               <div className="flex items-center gap-4">
                 <div className="text-4xl font-bold text-text-primary">{formatCurrency(pipelineRevenue)}</div>
               </div>
-              <p className="text-[10px] text-text-tertiary mt-2">
+              <p className="text-xs text-text-tertiary mt-2">
                 {pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed').length} active leads in pipeline
               </p>
               {pipelineLeads.filter(l => l.stage === 'proposal_sent').length > 0 && (
-                <p className="text-[10px] text-amber-400 mt-1">
+                <p className="text-xs text-amber-400 mt-1">
                   {pipelineLeads.filter(l => l.stage === 'proposal_sent').length} proposals awaiting response
                 </p>
               )}
@@ -1373,10 +1374,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <section className="card-surface border border-border rounded-2xl card-hover p-6">
+            <section className="card-elevated rounded-2xl p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-1 h-5 rounded-full bg-accent" />
-                <h2 className="text-sm font-bold text-text-primary">Income Over Time</h2>
+                <div className="w-1 h-5 rounded-full bg-text-secondary" />
+                <h2 className="text-section-heading text-text-primary">Income Over Time</h2>
                 <InfoBox title="Income Over Time">
                   <p>Historical monthly revenue and expenses from your financial snapshots.</p>
                   <p className="mt-1">Add monthly records via the Forecast tab to build this history.</p>
@@ -1384,10 +1385,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               </div>
               <IncomeChart snapshots={history} currentMonthRevenue={isCurrent ? liveRevenue : undefined} currentMonthExpenses={isCurrent ? liveExpenses : undefined} />
             </section>
-            <section className="card-surface border border-border rounded-2xl card-hover p-6">
+            <section className="card-elevated rounded-2xl p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-1 h-5 rounded-full bg-cyan-500" />
-                <h2 className="text-sm font-bold text-text-primary">Revenue by Client</h2>
+                <h2 className="text-section-heading text-text-primary">Revenue by Client</h2>
                 <InfoBox title="Revenue by Client">
                   <p>Visual breakdown of how your monthly revenue is split across active clients.</p>
                   <p className="mt-1">Large slices indicate concentration risk — aim for balanced distribution.</p>
@@ -1399,10 +1400,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Insights & Recommendations */}
           {insights.length > 0 && (
-            <section className="card-surface border border-border rounded-2xl card-hover p-6 space-y-3">
+            <section className="card-elevated rounded-2xl p-5 space-y-3">
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-1 h-5 rounded-full bg-amber-500" />
-                <h2 className="text-sm font-bold text-text-primary">Insights & Recommendations</h2>
+                <h2 className="text-section-heading text-text-primary">Insights & Recommendations</h2>
                 <InfoBox title="Insights">
                   <p>Auto-generated observations based on your client data, contracts, and revenue patterns.</p>
                   <p className="mt-1">Colour-coded by severity: green = positive, amber = warning, red = action needed.</p>
@@ -1414,10 +1415,10 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Mental Energy Per Client */}
           {clientEnergyProfiles.length > 0 && clientEnergyProfiles.some(p => p.totalMLU > 0) && (
-            <section className="card-surface border border-border rounded-2xl card-hover p-6 space-y-4">
+            <section className="card-elevated rounded-2xl p-5 space-y-4">
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-1 h-5 rounded-full bg-purple-500" />
-                <h2 className="text-sm font-bold text-text-primary">Mental Energy Per Client</h2>
+                <h2 className="text-section-heading text-text-primary">Mental Energy Per Client</h2>
                 <InfoBox title="Mental Energy">
                   <p>Shows how much cognitive energy (MLU) each client demands relative to what they pay.</p>
                   <p className="mt-1">Higher £/MLU = better return on your mental investment.</p>
@@ -1441,7 +1442,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       const creativePct = totalMix > 0 ? (profile.energyMix.creative / totalMix) * 100 : 0;
                       const adminPct = totalMix > 0 ? (profile.energyMix.admin / totalMix) * 100 : 0;
                       return (
-                        <tr key={profile.clientId} className="border-b border-border/50 hover:bg-surface-tertiary/30 transition-colors">
+                        <tr key={profile.clientId} className="border-b border-border hover:bg-surface-tertiary transition-colors">
                           <td className="py-2.5 text-text-primary font-medium">{profile.name}</td>
                           <td className="py-2.5 text-right text-text-secondary">{formatCurrency(profile.monthlyRevenue)}/mo</td>
                           <td className="py-2.5 text-right text-text-secondary">{profile.totalMLU}</td>
@@ -1456,7 +1457,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                           <td className="py-2.5 text-right font-mono text-text-primary">£{profile.revenuePerMLU.toFixed(2)}</td>
                           <td className="py-2.5 text-right">
                             <span className={cn(
-                              'px-2 py-0.5 rounded-md text-[10px] font-medium',
+                              'px-2 py-0.5 rounded-md text-xs font-medium',
                               profile.revenuePerMLU > 5 ? 'bg-emerald-500/15 text-emerald-400' :
                               profile.revenuePerMLU > 2 ? 'bg-amber-500/15 text-amber-400' :
                               'bg-red-500/15 text-red-400'
@@ -1470,7 +1471,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center gap-4 text-[10px] text-text-tertiary pt-1">
+              <div className="flex items-center gap-4 text-xs text-text-tertiary pt-1">
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-purple-400" /><span>Creative</span></div>
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-gray-500" /><span>Admin</span></div>
               </div>
@@ -1535,8 +1536,58 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         const dividendPaid = Number(snapshot?.dividend_paid) || 0;
         const salary = monthlySalary;
         const grossPersonalIncome = dividendPaid + salary;
-        const taxableDividends = Math.max(0, dividendPaid - UK_DIVIDEND_ALLOWANCE / 12); // monthly allowance share
-        const dividendTaxActual = taxableDividends * UK_DIVIDEND_TAX_RATE;
+
+        // ── Intelligent cumulative dividend tax (UK FY: 6 April → 5 April) ──
+        // Determine FY bounds for the viewed month
+        const viewedDate = new Date(currentMonth + 'T12:00:00');
+        const viewedMonth = viewedDate.getMonth(); // 0-indexed (0=Jan, 3=Apr)
+        const fyStartYear = viewedMonth >= 3 ? viewedDate.getFullYear() : viewedDate.getFullYear() - 1;
+        const fyStart = `${fyStartYear}-04-01`;
+        const viewedMonthKey = currentMonth.slice(0, 7);
+
+        // Get all FY snapshots BEFORE the viewed month (for cumulative totals)
+        const priorSnapshots = history
+          .filter(s => s.month >= fyStart && s.month.slice(0, 7) < viewedMonthKey)
+          .sort((a, b) => a.month.localeCompare(b.month));
+
+        // Cumulative salary = months elapsed in FY (Apr=1, May=2, ...) × monthly salary
+        const fyStartDate = new Date(fyStart + 'T12:00:00');
+        const monthsInFyBeforeCurrent = Math.max(0,
+          (viewedDate.getFullYear() - fyStartDate.getFullYear()) * 12
+          + (viewedDate.getMonth() - fyStartDate.getMonth())
+        );
+        const ytdSalaryBefore = monthsInFyBeforeCurrent * monthlySalary; // salary paid in prior FY months
+        const ytdDividendsBefore = priorSnapshots.reduce((sum, s) => sum + (Number(s.dividend_paid) || 0), 0);
+
+        // Cumulative totals INCLUDING this month
+        const ytdSalary = ytdSalaryBefore + salary;
+        const ytdDividends = ytdDividendsBefore + dividendPaid;
+        const ytdTotalIncome = ytdSalary + ytdDividends;
+
+        // Apply £1,000 annual dividend allowance against YTD dividends
+        const ytdTaxableDividends = Math.max(0, ytdDividends - UK_DIVIDEND_ALLOWANCE);
+        const prevTaxableDividends = Math.max(0, ytdDividendsBefore - UK_DIVIDEND_ALLOWANCE);
+
+        // Calculate which bands YTD dividends fall into (salary occupies the band first)
+        const basicBandRemaining = Math.max(0, UK_BASIC_RATE_LIMIT - ytdSalary);
+
+        // YTD cumulative tax on all taxable dividends
+        const ytdDivsInBasic = Math.min(ytdTaxableDividends, basicBandRemaining);
+        const ytdDivsInHigher = Math.max(0, ytdTaxableDividends - ytdDivsInBasic);
+        const ytdDividendTaxTotal = ytdDivsInBasic * UK_DIVIDEND_TAX_RATE + ytdDivsInHigher * UK_HIGHER_DIVIDEND_RATE;
+
+        // Prior months cumulative tax
+        const prevBasicBandRemaining = Math.max(0, UK_BASIC_RATE_LIMIT - ytdSalaryBefore);
+        const prevDivsInBasic = Math.min(prevTaxableDividends, prevBasicBandRemaining);
+        const prevDivsInHigher = Math.max(0, prevTaxableDividends - prevDivsInBasic);
+        const prevDividendTaxTotal = prevDivsInBasic * UK_DIVIDEND_TAX_RATE + prevDivsInHigher * UK_HIGHER_DIVIDEND_RATE;
+
+        // This month's tax = marginal increase (YTD total - prior total)
+        const dividendTaxActual = Math.max(0, ytdDividendTaxTotal - prevDividendTaxTotal);
+        const actualInHigherRate = ytdDivsInHigher > prevDivsInHigher;
+        const allowanceUsed = Math.min(ytdDividends, UK_DIVIDEND_ALLOWANCE);
+        const allowanceRemaining = UK_DIVIDEND_ALLOWANCE - allowanceUsed;
+
         const personalExpTotal = livePersonalExpenses;
         const personalNet = grossPersonalIncome - dividendTaxActual - personalExpTotal;
 
@@ -1575,29 +1626,54 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         return (
           <div className="space-y-5 stagger-in">
             <div>
-              <h3 className="text-lg font-semibold text-text-primary">Personal Finance</h3>
+              <h3 className="text-section-heading text-text-primary">Personal Finance</h3>
               <p className="text-xs text-text-tertiary mt-0.5">What you take home from the business</p>
             </div>
 
             {/* ━━━ This Month — what you actually took ━━━ */}
-            <div className="card-surface border border-accent/30 rounded-2xl p-4 sm:p-5 bg-accent/5">
-              <h4 className="text-xs uppercase tracking-wider text-accent font-medium mb-3">This Month — Actuals</h4>
+            <div className="card-elevated rounded-2xl p-5 sm:p-6 bg-surface-tertiary">
+              <h4 className="text-xs  text-text-primary font-medium mb-3">This Month — Actuals</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-text-secondary">Salary</span>
                   <span className="text-text-primary font-medium">{formatCurrency(salary)}</span>
                 </div>
-                {dividendPaid > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Dividends</span>
-                    <span className="text-text-primary font-medium">{formatCurrency(dividendPaid)}</span>
-                  </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-secondary">Dividends</span>
+                  <span className="text-text-primary font-medium">{formatCurrency(dividendPaid)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-secondary">
+                    Dividend tax{dividendTaxActual > 0 ? (actualInHigherRate ? ' (8.75% + 33.75%)' : ' (8.75%)') : ''}
+                  </span>
+                  <span className={dividendTaxActual > 0 ? 'text-amber-400' : 'text-text-tertiary'}>
+                    {dividendTaxActual > 0 ? `-${formatCurrency(dividendTaxActual)}` : formatCurrency(0)}
+                  </span>
+                </div>
+                {dividendPaid > 0 && allowanceRemaining > 0 && dividendTaxActual === 0 && (
+                  <p className="text-xs text-green-400/70">
+                    Covered by dividend allowance — {formatCurrency(allowanceRemaining)} of {formatCurrency(UK_DIVIDEND_ALLOWANCE)} remaining this FY.
+                  </p>
                 )}
-                {dividendTaxActual > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Dividend tax (8.75%)</span>
-                    <span className="text-amber-400">-{formatCurrency(dividendTaxActual)}</span>
-                  </div>
+                {dividendPaid === 0 && ytdDividends === 0 && (
+                  <p className="text-xs text-text-tertiary">
+                    No dividends taken yet this FY. Allowance: {formatCurrency(UK_DIVIDEND_ALLOWANCE)} tax-free, then 8.75% basic rate.
+                  </p>
+                )}
+                {dividendPaid === 0 && ytdDividends > 0 && (
+                  <p className="text-xs text-text-tertiary">
+                    No dividends this month. YTD: {formatCurrency(ytdDividends)} taken, {formatCurrency(ytdDividendTaxTotal)} tax accrued.
+                  </p>
+                )}
+                {allowanceRemaining <= 0 && !actualInHigherRate && dividendTaxActual > 0 && (
+                  <p className="text-xs text-text-tertiary">
+                    £{UK_DIVIDEND_ALLOWANCE.toLocaleString()} allowance used. Basic rate (8.75%) applies.
+                  </p>
+                )}
+                {actualInHigherRate && (
+                  <p className="text-xs text-amber-400/70">
+                    YTD income ({formatCurrency(ytdTotalIncome)}) exceeds {formatCurrency(UK_BASIC_RATE_LIMIT)} — some dividends taxed at 33.75%.
+                  </p>
                 )}
                 {personalExpTotal > 0 && (
                   <div className="flex justify-between text-sm">
@@ -1611,13 +1687,47 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 </div>
               </div>
               {salary === 0 && dividendPaid === 0 && (
-                <p className="text-[10px] text-text-tertiary mt-2">Set salary in Expenses tab. Log dividends in Monthly Record.</p>
+                <p className="text-xs text-text-tertiary mt-2">Set salary in Expenses tab. Log dividends in Monthly Record.</p>
+              )}
+              {/* YTD cumulative strip */}
+              {(ytdSalary > 0 || ytdDividends > 0) && (
+                <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  <p className="text-xs  text-text-tertiary font-medium mb-1">FY {fyStartYear}/{String(fyStartYear + 1).slice(-2)} Year-to-Date</p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-text-tertiary">YTD salary</span>
+                    <span className="text-text-secondary font-mono">{formatCurrency(ytdSalary)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-text-tertiary">YTD dividends</span>
+                    <span className="text-text-secondary font-mono">{formatCurrency(ytdDividends)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-text-tertiary">YTD total income</span>
+                    <span className={`font-mono ${ytdTotalIncome > UK_BASIC_RATE_LIMIT ? 'text-amber-400' : 'text-text-secondary'}`}>{formatCurrency(ytdTotalIncome)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-text-tertiary">YTD dividend tax</span>
+                    <span className="text-amber-400 font-mono">{formatCurrency(ytdDividendTaxTotal)}</span>
+                  </div>
+                  {allowanceRemaining > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-text-tertiary">Dividend allowance left</span>
+                      <span className="text-green-400 font-mono">{formatCurrency(allowanceRemaining)}</span>
+                    </div>
+                  )}
+                  {ytdTotalIncome < UK_BASIC_RATE_LIMIT && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-text-tertiary">Basic rate band left</span>
+                      <span className="text-text-secondary font-mono">{formatCurrency(UK_BASIC_RATE_LIMIT - ytdTotalIncome)}</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
             {/* ━━━ Annual business overview (synced with Overview tab) ━━━ */}
-            <div className="card-surface border border-border rounded-2xl p-4 sm:p-5 space-y-2">
-              <h4 className="text-xs uppercase tracking-wider text-text-tertiary font-medium mb-2">Annual Business Summary</h4>
+            <div className="card-elevated rounded-2xl p-5 sm:p-6 space-y-2">
+              <h4 className="text-xs  text-text-tertiary font-medium mb-2">Annual Business Summary</h4>
               <div className="flex justify-between text-sm">
                 <span className="text-text-secondary">Revenue</span>
                 <span className="text-text-primary font-mono">{formatCurrency(annualRevenue)}</span>
@@ -1632,33 +1742,33 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               </div>
               <div className="border-t border-border pt-2 flex justify-between text-sm font-semibold">
                 <span className="text-text-primary">Left in company</span>
-                <span className="text-accent font-mono">{formatCurrency(annualProfit - annualProfit * UK_CORP_TAX_RATE)}</span>
+                <span className="text-text-primary font-mono">{formatCurrency(annualProfit - annualProfit * UK_CORP_TAX_RATE)}</span>
               </div>
-              <p className="text-[10px] text-text-tertiary pt-1">Based on {formatCurrency(monthlyRevenue)}/mo revenue, {formatCurrency(monthlyExpenses)}/mo costs</p>
+              <p className="text-xs text-text-tertiary pt-1">Based on {formatCurrency(monthlyRevenue)}/mo revenue, {formatCurrency(monthlyExpenses)}/mo costs</p>
             </div>
 
             {/* ━━━ Tax-Efficient Strategy ━━━ */}
             {annualProfit > 0 && (
-              <div className="card-surface border border-blue-500/30 rounded-2xl overflow-hidden bg-blue-500/5">
+              <div className="card-elevated rounded-2xl overflow-hidden ">
                 <div className="p-5 space-y-4">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-xs uppercase tracking-wider text-blue-400 font-medium">Optimal Extraction</h4>
-                    <span className="text-[9px] text-text-tertiary bg-surface-tertiary/50 px-2 py-0.5 rounded-full">Recommendation</span>
+                    <h4 className="text-xs  text-blue-400 font-medium">Optimal Extraction</h4>
+                    <span className="text-xs text-text-tertiary bg-surface-tertiary px-2 py-0.5 rounded-full">Recommendation</span>
                   </div>
 
                   {/* Simple 3-row summary */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-text-secondary">Salary</span>
-                      <span className="text-text-primary font-mono">{formatCurrency(annualSalary)}<span className="text-text-tertiary text-[10px]">/yr</span></span>
+                      <span className="text-text-primary font-mono">{formatCurrency(annualSalary)}<span className="text-text-tertiary text-xs">/yr</span></span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-text-secondary">Dividends (max available)</span>
-                      <span className="text-text-primary font-mono">{formatCurrency(maxDividend)}<span className="text-text-tertiary text-[10px]">/yr</span></span>
+                      <span className="text-text-primary font-mono">{formatCurrency(maxDividend)}<span className="text-text-tertiary text-xs">/yr</span></span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-text-secondary">Dividend tax</span>
-                      <span className="text-amber-400 font-mono">-{formatCurrency(dividendTaxOpt)}<span className="text-text-tertiary text-[10px]">/yr</span></span>
+                      <span className="text-amber-400 font-mono">-{formatCurrency(dividendTaxOpt)}<span className="text-text-tertiary text-xs">/yr</span></span>
                     </div>
                     <div className="border-t border-blue-500/20 pt-2 flex justify-between text-base font-bold">
                       <span className="text-text-primary">Take-home</span>
@@ -1675,7 +1785,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                   </div>
 
                   {inHigherRate && (
-                    <p className="text-[11px] text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2">
+                    <p className="text-xs text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2">
                       {formatCurrency(dividendsInHigherRate)} of dividends falls in the higher rate band (33.75%). You could leave some in the company to stay under {formatCurrency(UK_BASIC_RATE_LIMIT)}.
                     </p>
                   )}
@@ -1684,7 +1794,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 {/* Expandable detail */}
                 <button
                   onClick={() => setShowTaxDetail(!showTaxDetail)}
-                  className="w-full px-5 py-2.5 border-t border-blue-500/20 flex items-center justify-center gap-2 text-[11px] text-blue-400 hover:bg-blue-500/5 transition-colors cursor-pointer"
+                  className="w-full px-5 py-2.5 border-t border-blue-500/20 flex items-center justify-center gap-2 text-xs text-blue-400 hover: transition-colors cursor-pointer"
                 >
                   <svg className={cn('w-3 h-3 transition-transform', showTaxDetail && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -1693,21 +1803,21 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 </button>
 
                 {showTaxDetail && (
-                  <div className="px-5 pb-5 space-y-3 border-t border-blue-500/10 pt-4 animate-fade-in text-[11px]">
+                  <div className="px-5 pb-5 space-y-3 border-t border-blue-500/10 pt-4 animate-fade-in text-xs">
                     <div className="space-y-1.5">
-                      <p className="text-text-tertiary font-medium uppercase tracking-wider text-[10px]">Salary</p>
+                      <p className="text-text-tertiary font-medium  text-xs">Salary</p>
                       <p className="text-text-secondary">{formatCurrency(annualSalary)}/yr — deducted as a business cost before corp tax.{annualSalary <= UK_NI_SECONDARY_THRESHOLD ? ' Below the NI threshold: zero income tax, zero NI.' : ''}</p>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-text-tertiary font-medium uppercase tracking-wider text-[10px]">Corporation Tax</p>
+                      <p className="text-text-tertiary font-medium  text-xs">Corporation Tax</p>
                       <p className="text-text-secondary">Profit after all costs: {formatCurrency(annualProfit)}, taxed at 19% = {formatCurrency(corpTax)}. Leaves {formatCurrency(distributableProfit)} for dividends.</p>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-text-tertiary font-medium uppercase tracking-wider text-[10px]">Dividends</p>
+                      <p className="text-text-tertiary font-medium  text-xs">Dividends</p>
                       <p className="text-text-secondary">First {formatCurrency(UK_DIVIDEND_ALLOWANCE)} tax-free. Basic rate 8.75% up to {formatCurrency(UK_BASIC_RATE_LIMIT)} total income.{inHigherRate ? ` Higher rate 33.75% on the rest.` : ''}</p>
                     </div>
-                    <div className="space-y-1 border-t border-border/30 pt-3">
-                      <p className="text-text-tertiary font-medium uppercase tracking-wider text-[10px]">Tax Summary</p>
+                    <div className="space-y-2 border-t border-border pt-3">
+                      <p className="text-text-tertiary font-medium  text-xs">Tax Summary</p>
                       <div className="flex justify-between"><span className="text-text-secondary">Corp tax (company pays)</span><span className="font-mono text-text-primary">{formatCurrency(corpTax)}</span></div>
                       <div className="flex justify-between"><span className="text-text-secondary">Dividend tax (you pay)</span><span className="font-mono text-text-primary">{formatCurrency(dividendTaxOpt)}</span></div>
                       <div className="flex justify-between font-semibold"><span className="text-text-primary">Total tax</span><span className="font-mono text-amber-400">{formatCurrency(corpTax + dividendTaxOpt)}</span></div>
@@ -1720,8 +1830,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* Personal expenses detail */}
             {personalExpensesList.length > 0 && (
-              <div className="card-surface border border-border rounded-2xl p-4 sm:p-5 space-y-2">
-                <h4 className="text-xs uppercase tracking-wider text-purple-400 font-medium mb-1">Personal Expenses</h4>
+              <div className="card-elevated rounded-2xl p-5 sm:p-6 space-y-2">
+                <h4 className="text-xs  text-text-primary font-medium mb-1">Personal Expenses</h4>
                 {personalExpensesList.map(e => (
                   <div key={e.id} className="flex justify-between text-sm">
                     <span className="text-text-secondary">{e.description}</span>
@@ -1735,7 +1845,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               </div>
             )}
 
-            <p className="text-[10px] text-text-tertiary">
+            <p className="text-xs text-text-tertiary">
               Salary &amp; staff costs: Expenses tab. Dividends: Monthly Record. Rates: UK 2024/25.
             </p>
           </div>
@@ -1811,7 +1921,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             {/* FY Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-text-primary">
+                <h2 className="text-section-heading text-text-primary">
                   Financial Year {fyLabel}
                 </h2>
                 <p className="text-xs text-text-tertiary mt-0.5">
@@ -1822,73 +1932,73 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* YTD Summary Cards */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <div className="card-surface border border-accent/20 rounded-xl p-3 sm:p-4 bg-accent/5">
-                <p className="text-[9px] text-accent uppercase tracking-wider font-medium">YTD Revenue</p>
-                <p className="text-lg sm:text-xl font-bold text-accent mt-1">{formatCurrency(ytdRevenue)}</p>
+              <div className="card-elevated rounded-2xl p-3 sm:p-4 bg-surface-tertiary">
+                <p className="text-xs text-text-primary  font-medium">YTD Revenue</p>
+                <p className="text-lg sm:text-xl font-bold text-text-primary mt-1">{formatCurrency(ytdRevenue)}</p>
               </div>
-              <div className="card-surface border border-border rounded-xl p-3 sm:p-4">
-                <p className="text-[9px] text-text-tertiary uppercase tracking-wider font-medium">YTD Expenses</p>
+              <div className="card-elevated rounded-2xl p-3 sm:p-4">
+                <p className="text-xs text-text-tertiary  font-medium">YTD Expenses</p>
                 <p className="text-lg sm:text-xl font-bold text-text-secondary mt-1">{formatCurrency(ytdExpenses)}</p>
               </div>
-              <div className={cn('card-surface border rounded-xl p-3 sm:p-4', ytdNet > 0 ? 'border-accent/30 bg-accent/5' : 'border-red-500/20 bg-red-500/5')}>
-                <p className={cn('text-[9px] uppercase tracking-wider font-medium', ytdNet > 0 ? 'text-accent' : 'text-red-400')}>Left in Company</p>
-                <p className={cn('text-lg sm:text-xl font-bold mt-1', ytdNet > 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(ytdNet)}</p>
-                <p className="text-[8px] text-amber-400/60 mt-0.5">~{formatCurrency(ytdTax)} tax</p>
+              <div className={cn('card-elevated rounded-2xl p-3 sm:p-4', ytdNet > 0 ? '' : 'border border-red-500/20 bg-red-500/5')}>
+                <p className={cn('text-xs  font-medium', ytdNet > 0 ? 'text-text-primary' : 'text-red-400')}>Left in Company</p>
+                <p className={cn('text-lg sm:text-xl font-bold mt-1', ytdNet > 0 ? 'text-text-primary' : 'text-red-400')}>{formatCurrency(ytdNet)}</p>
+                <p className="text-xs text-amber-400/60 mt-0.5">~{formatCurrency(ytdTax)} tax</p>
               </div>
             </div>
 
             {/* Projection bar */}
-            <div className={cn('card-surface border rounded-xl p-4 sm:p-5', Object.keys(fyOverrides).length > 0 ? 'border-blue-500/30' : 'border-border')}>
+            <div className="card-elevated rounded-2xl p-5 sm:p-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-medium text-text-secondary">Annual Projection</p>
                   {Object.keys(fyOverrides).length > 0 && (
-                    <span className="text-[8px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold">WITH OVERRIDES</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold">WITH OVERRIDES</span>
                   )}
                 </div>
                 <p className="text-xs text-text-tertiary">Based on {monthsElapsed}-month average</p>
               </div>
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
-                  <p className="text-[9px] text-text-tertiary uppercase tracking-wider">Projected Revenue</p>
-                  <p className="text-sm font-bold text-accent mt-0.5">{formatCurrency(projectedAnnualRevenue)}</p>
+                  <p className="text-xs text-text-tertiary ">Projected Revenue</p>
+                  <p className="text-sm font-bold text-text-primary mt-0.5">{formatCurrency(projectedAnnualRevenue)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-text-tertiary uppercase tracking-wider">Avg Monthly</p>
-                  <p className="text-sm font-bold text-text-primary mt-0.5">{formatCurrency(avgMonthlyRevenue)}</p>
+                  <p className="text-xs text-text-tertiary ">Avg Monthly</p>
+                  <p className="text-section-heading text-text-primary mt-0.5">{formatCurrency(avgMonthlyRevenue)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-text-tertiary uppercase tracking-wider">Dividends Drawn</p>
-                  <p className="text-sm font-bold text-purple-400 mt-0.5">{formatCurrency(ytdDividends)}</p>
+                  <p className="text-xs text-text-tertiary ">Dividends Drawn</p>
+                  <p className="text-sm font-bold text-text-primary mt-0.5">{formatCurrency(ytdDividends)}</p>
                 </div>
               </div>
             </div>
 
             {/* Monthly Breakdown Table */}
-            <div className="card-surface border border-border rounded-xl overflow-hidden">
-              <div className="px-4 sm:px-5 py-3 border-b border-border/50 flex items-center justify-between">
+            <div className="card-elevated rounded-2xl overflow-hidden">
+              <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center justify-between">
                 <p className="text-xs font-medium text-text-secondary">Monthly Breakdown</p>
                 <div className="flex items-center gap-2">
                   {Object.keys(fyOverrides).length > 0 && (
                     <button
                       onClick={() => { setFyOverrides({}); setFyEditingMonth(null); }}
-                      className="text-[9px] text-text-tertiary hover:text-text-secondary cursor-pointer"
+                      className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer"
                     >
                       Clear overrides
                     </button>
                   )}
-                  <p className="text-[9px] text-text-tertiary">Click revenue or expenses to override</p>
+                  <p className="text-xs text-text-tertiary">Click revenue or expenses to override</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-border/30">
-                      <th className="text-left px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px]">Month</th>
-                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px]">Revenue</th>
-                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px] hidden sm:table-cell">Expenses</th>
-                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium uppercase tracking-wider text-[9px]">Left in Co.</th>
-                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary/50 font-medium uppercase tracking-wider text-[9px] hidden sm:table-cell" title="Estimated 19% corp tax (paid year-end)">Tax est.</th>
+                    <tr className="border-b border-border">
+                      <th className="text-left px-3 sm:px-4 py-2 text-text-tertiary font-medium  text-xs">Month</th>
+                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium  text-xs">Revenue</th>
+                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium  text-xs hidden sm:table-cell">Expenses</th>
+                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary font-medium  text-xs">Left in Co.</th>
+                      <th className="text-right px-3 sm:px-4 py-2 text-text-tertiary/50 font-medium  text-xs hidden sm:table-cell" title="Estimated 19% corp tax (paid year-end)">Tax est.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1898,14 +2008,14 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       const isEditingExpenses = fyEditingMonth === monthKey && fyEditField === 'expenses';
 
                       return (
-                        <tr key={m.month} className={cn('border-b border-border/20 hover:bg-surface-hover/30', m.isLive && 'bg-accent/5', m.hasOverride && 'bg-blue-500/5')}>
+                        <tr key={m.month} className={cn('border-b border-border hover:bg-surface-hover/30', m.isLive && 'bg-surface-tertiary', m.hasOverride && '')}>
                           <td className="px-3 sm:px-4 py-2.5 font-medium text-text-primary">
                             {m.label}
-                            {m.isLive && <span className="ml-1.5 text-[8px] px-1.5 py-0.5 rounded bg-accent/20 text-accent font-semibold">LIVE</span>}
-                            {m.hasOverride && <span className="ml-1.5 text-[8px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold">EST</span>}
+                            {m.isLive && <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded bg-surface-tertiary text-text-primary font-semibold">LIVE</span>}
+                            {m.hasOverride && <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold">EST</span>}
                           </td>
                           <td
-                            className="text-right px-3 sm:px-4 py-2.5 text-accent font-medium cursor-pointer hover:bg-accent/10 transition-colors"
+                            className="text-right px-3 sm:px-4 py-2.5 text-text-primary font-medium cursor-pointer hover:bg-surface-tertiary transition-colors"
                             onClick={() => {
                               if (isEditingRevenue) return;
                               setFyEditingMonth(monthKey);
@@ -1937,7 +2047,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                                     setFyEditingMonth(null);
                                   }
                                 }}
-                                className="w-20 text-right bg-surface-secondary border border-accent/40 rounded px-1.5 py-0.5 text-xs text-accent font-medium outline-none focus:border-accent"
+                                className="w-20 text-right bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-xs text-text-primary font-medium outline-none focus:border-border-light"
                               />
                             ) : (
                               <span className={m.hasOverride && fyOverrides[monthKey]?.revenue !== undefined ? 'underline decoration-dotted decoration-blue-400' : ''}>
@@ -1978,7 +2088,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                                     setFyEditingMonth(null);
                                   }
                                 }}
-                                className="w-20 text-right bg-surface-secondary border border-border/60 rounded px-1.5 py-0.5 text-xs text-text-secondary font-medium outline-none focus:border-accent"
+                                className="w-20 text-right bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-xs text-text-secondary font-medium outline-none focus:border-border-light"
                               />
                             ) : (
                               <span className={m.hasOverride && fyOverrides[monthKey]?.expenses !== undefined ? 'underline decoration-dotted decoration-blue-400' : ''}>
@@ -1986,18 +2096,18 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                               </span>
                             )}
                           </td>
-                          <td className={cn('text-right px-3 sm:px-4 py-2.5 font-medium', m.net > 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(m.net)}</td>
+                          <td className={cn('text-right px-3 sm:px-4 py-2.5 font-medium', m.net > 0 ? 'text-text-primary' : 'text-red-400')}>{formatCurrency(m.net)}</td>
                           <td className="text-right px-3 sm:px-4 py-2.5 text-amber-400/40 hidden sm:table-cell">{formatCurrency(m.tax)}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t border-border bg-surface-tertiary/20 font-semibold">
+                    <tr className="border-t border-border  font-semibold">
                       <td className="px-3 sm:px-4 py-2.5 text-text-primary">Total</td>
-                      <td className="text-right px-3 sm:px-4 py-2.5 text-accent">{formatCurrency(ytdRevenue)}</td>
+                      <td className="text-right px-3 sm:px-4 py-2.5 text-text-primary">{formatCurrency(ytdRevenue)}</td>
                       <td className="text-right px-3 sm:px-4 py-2.5 text-text-secondary hidden sm:table-cell">{formatCurrency(ytdExpenses)}</td>
-                      <td className={cn('text-right px-3 sm:px-4 py-2.5', ytdNet > 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(ytdNet)}</td>
+                      <td className={cn('text-right px-3 sm:px-4 py-2.5', ytdNet > 0 ? 'text-text-primary' : 'text-red-400')}>{formatCurrency(ytdNet)}</td>
                       <td className="text-right px-3 sm:px-4 py-2.5 text-amber-400/40 hidden sm:table-cell">{formatCurrency(ytdTax)}</td>
                     </tr>
                   </tfoot>
@@ -2143,11 +2253,11 @@ function ForecastTab({
   return (
     <div className="space-y-5 stagger-in">
       {/* Cash Projection */}
-      <section className="card-surface border border-border rounded-2xl card-hover p-6">
+      <section className="card-elevated rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-5 rounded-full bg-accent" />
-            <h2 className="text-sm font-bold text-text-primary">Cash Projection</h2>
+            <div className="w-1 h-5 rounded-full bg-text-secondary" />
+            <h2 className="text-section-heading text-text-primary">Cash Projection</h2>
             <InfoBox title="Cash Projection">
               <p>Projects cash accumulation from your starting balance plus monthly net income.</p>
               <p className="mt-1">Set your starting balance to match your current business account.</p>
@@ -2160,7 +2270,7 @@ function ForecastTab({
                 onClick={() => setForecastMonths(m)}
                 className={cn(
                   'text-xs px-3 py-1 rounded-lg font-medium transition-colors',
-                  forecastMonths === m ? 'bg-accent/15 text-accent' : 'text-text-tertiary hover:text-text-secondary'
+                  forecastMonths === m ? 'bg-surface-tertiary text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
                 )}
               >
                 {m}mo
@@ -2170,7 +2280,7 @@ function ForecastTab({
         </div>
 
         {/* Starting balance */}
-        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-surface-tertiary/40 border border-border/50">
+        <div className="flex items-center gap-3 mb-4 pt-4 border-t border-border">
           <span className="text-xs text-text-secondary">Starting Balance:</span>
           {editingStartBalance ? (
             <div className="flex items-center gap-2">
@@ -2179,41 +2289,41 @@ function ForecastTab({
                 value={startingBalance}
                 onChange={(e) => setStartingBalance(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSaveStartingBalance()}
-                className="w-28 text-sm bg-surface-secondary border border-border/40 rounded-xl px-2 py-1 text-text-primary outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-colors font-mono"
+                className="w-28 text-sm bg-surface-secondary border border-border rounded-xl px-2 py-1 text-text-primary outline-none focus:border-border focus:ring-1 focus:ring-border-light transition-colors font-mono"
                 autoFocus
               />
-              <button onClick={handleSaveStartingBalance} className="text-[10px] text-accent font-medium">
+              <button onClick={handleSaveStartingBalance} className="text-xs text-text-primary font-medium">
                 Save
               </button>
-              <button onClick={() => setEditingStartBalance(false)} className="text-[10px] text-text-tertiary">Cancel</button>
+              <button onClick={() => setEditingStartBalance(false)} className="text-xs text-text-tertiary">Cancel</button>
             </div>
           ) : (
             <button
               onClick={() => setEditingStartBalance(true)}
-              className="text-sm font-bold text-text-primary hover:text-accent transition-colors font-mono"
+              className="text-section-heading text-text-primary hover:text-text-primary transition-colors font-mono"
             >
               {formatCurrency(startBal)}
             </button>
           )}
-          <span className="text-[10px] text-text-tertiary ml-auto">Click to edit</span>
+          <span className="text-xs text-text-tertiary ml-auto">Click to edit</span>
         </div>
 
         <div className="space-y-3">
           <div className="flex items-baseline gap-3 flex-wrap">
-            <span className="text-3xl font-bold text-accent">
+            <span className="text-3xl font-bold text-text-primary">
               {formatCurrency(projectionData[projectionData.length - 1]?.cumulative || 0)}
             </span>
             <span className="text-sm text-text-tertiary">conservative in {forecastMonths} months</span>
             {projectionData[projectionData.length - 1]?.cumulativeOptimistic !== projectionData[projectionData.length - 1]?.cumulative && (
-              <span className="text-sm text-purple-400/70">
+              <span className="text-sm text-text-primary/70">
                 (optimistic: {formatCurrency(projectionData[projectionData.length - 1]?.cumulativeOptimistic || 0)})
               </span>
             )}
           </div>
 
           {/* Stacked revenue bars — tiered */}
-          <div className="space-y-1">
-            <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-2">Monthly Revenue Projection</p>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-text-tertiary  mb-2">Monthly Revenue Projection</p>
             <div className="grid grid-cols-1 gap-1.5">
               {projectionData.map((row, i) => {
                 const confirmedPct = maxRevenue > 0 ? (row.confirmed / maxRevenue) * 100 : 0;
@@ -2223,43 +2333,43 @@ function ForecastTab({
                 const net = Math.max(0, row.confirmed - expenses);
                 return (
                   <div key={i} className="group/bar relative flex items-center gap-3">
-                    <span className="text-[10px] text-text-tertiary w-14 text-right font-mono">{row.month}</span>
+                    <span className="text-xs text-text-tertiary w-14 text-right font-mono">{row.month}</span>
                     <div className="flex-1 h-5 bg-surface-tertiary rounded-md overflow-hidden flex cursor-pointer">
                       <div className="h-full bg-emerald-500/40" style={{ width: `${Math.min(100, confirmedPct)}%` }} />
                       <div className="h-full bg-amber-500/40" style={{ width: `${Math.min(100 - confirmedPct, likelyPct)}%` }} />
                       <div className="h-full bg-purple-500/30" style={{ width: `${Math.min(100 - confirmedPct - likelyPct, possiblePct)}%` }} />
                     </div>
-                    <span className="text-[10px] font-mono w-20 text-right shrink-0 text-text-secondary">
+                    <span className="text-xs font-mono w-20 text-right shrink-0 text-text-secondary">
                       {formatCurrency(row.confirmed + row.likely + row.possible)}
                     </span>
                     {/* Hover tooltip */}
-                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/bar:block w-56 p-3 rounded-xl bg-surface-primary border border-border shadow-lg">
-                      <p className="text-[10px] font-semibold text-text-primary mb-2">{row.month} Breakdown</p>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px]">
+                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/bar:block w-56 p-3 rounded-2xl bg-surface-primary border border-border">
+                      <p className="text-xs font-semibold text-text-primary mb-2">{row.month} Breakdown</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
                           <span className="text-emerald-400">Confirmed</span>
                           <span className="font-mono text-text-primary">{formatCurrency(row.confirmed)}</span>
                         </div>
                         {row.likely > 0 && (
-                          <div className="flex justify-between text-[10px]">
+                          <div className="flex justify-between text-xs">
                             <span className="text-amber-400">Likely (≥60%)</span>
                             <span className="font-mono text-text-primary">{formatCurrency(row.likely)}</span>
                           </div>
                         )}
                         {row.possible > 0 && (
-                          <div className="flex justify-between text-[10px]">
-                            <span className="text-purple-400">Possible (&lt;60%)</span>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-text-primary">Possible (&lt;60%)</span>
                             <span className="font-mono text-text-primary">{formatCurrency(row.possible)}</span>
                           </div>
                         )}
-                        <div className="border-t border-border/50 pt-1 mt-1">
-                          <div className="flex justify-between text-[10px]">
+                        <div className="border-t border-border pt-1 mt-1">
+                          <div className="flex justify-between text-xs">
                             <span className="text-text-tertiary">− Expenses</span>
                             <span className="font-mono text-red-400">{formatCurrency(expenses)}</span>
                           </div>
-                          <div className="flex justify-between text-[10px] font-semibold pt-1">
-                            <span className={net >= 0 ? 'text-accent' : 'text-red-400'}>Left in co.</span>
-                            <span className={cn('font-mono', net >= 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(net)}</span>
+                          <div className="flex justify-between text-xs font-semibold pt-1">
+                            <span className={net >= 0 ? 'text-text-primary' : 'text-red-400'}>Left in co.</span>
+                            <span className={cn('font-mono', net >= 0 ? 'text-text-primary' : 'text-red-400')}>{formatCurrency(net)}</span>
                           </div>
                         </div>
                       </div>
@@ -2268,7 +2378,7 @@ function ForecastTab({
                 );
               })}
             </div>
-            <div className="flex items-center gap-4 text-[10px] text-text-tertiary pt-2">
+            <div className="flex items-center gap-4 text-xs text-text-tertiary pt-2">
               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-emerald-500/40" /><span>Confirmed</span></div>
               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-amber-500/40" /><span>Likely (≥60%)</span></div>
               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-purple-500/30" /><span>Possible (&lt;60%)</span></div>
@@ -2276,8 +2386,8 @@ function ForecastTab({
           </div>
 
           {/* Cumulative cash bars */}
-          <div className="space-y-1 mt-4">
-            <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-2">Cumulative Cash (Conservative)</p>
+          <div className="space-y-2 mt-4">
+            <p className="text-xs font-semibold text-text-tertiary  mb-2">Cumulative Cash (Conservative)</p>
             <div className="grid grid-cols-1 gap-1.5">
               {projectionData.map((row, i) => {
                 const pct = maxCum > 0 ? Math.max(2, (Math.abs(row.cumulative) / maxCum) * 100) : 0;
@@ -2285,7 +2395,7 @@ function ForecastTab({
                 const diff = row.cumulativeOptimistic - row.cumulative;
                 return (
                   <div key={i} className="group/cum relative flex items-center gap-3">
-                    <span className="text-[10px] text-text-tertiary w-14 text-right font-mono">{row.month}</span>
+                    <span className="text-xs text-text-tertiary w-14 text-right font-mono">{row.month}</span>
                     <div className="flex-1 relative h-5 cursor-pointer">
                       {/* Optimistic dotted outline */}
                       <div
@@ -2297,34 +2407,34 @@ function ForecastTab({
                         <div
                           className={cn(
                             'h-full rounded-md progress-fill',
-                            row.cumulative >= 0 ? 'bg-accent/30' : 'bg-red-500/30'
+                            row.cumulative >= 0 ? 'bg-surface-tertiary' : 'bg-red-500/30'
                           )}
                           style={{ width: `${Math.min(100, pct)}%` }}
                         />
                       </div>
                     </div>
                     <span className={cn(
-                      'text-[10px] font-mono w-20 text-right shrink-0',
-                      row.cumulative >= 0 ? 'text-accent' : 'text-red-400'
+                      'text-xs font-mono w-20 text-right shrink-0',
+                      row.cumulative >= 0 ? 'text-text-primary' : 'text-red-400'
                     )}>
                       {formatCurrency(row.cumulative)}
                     </span>
                     {/* Hover tooltip */}
-                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/cum:block w-52 p-3 rounded-xl bg-surface-primary border border-border shadow-lg">
-                      <p className="text-[10px] font-semibold text-text-primary mb-2">{row.month} Cash Position</p>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px]">
+                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/cum:block w-52 p-3 rounded-2xl bg-surface-primary border border-border">
+                      <p className="text-xs font-semibold text-text-primary mb-2">{row.month} Cash Position</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
                           <span className="text-text-secondary">Conservative</span>
-                          <span className={cn('font-mono', row.cumulative >= 0 ? 'text-accent' : 'text-red-400')}>{formatCurrency(row.cumulative)}</span>
+                          <span className={cn('font-mono', row.cumulative >= 0 ? 'text-text-primary' : 'text-red-400')}>{formatCurrency(row.cumulative)}</span>
                         </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-purple-400">Optimistic</span>
-                          <span className="font-mono text-purple-400">{formatCurrency(row.cumulativeOptimistic)}</span>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-primary">Optimistic</span>
+                          <span className="font-mono text-text-primary">{formatCurrency(row.cumulativeOptimistic)}</span>
                         </div>
                         {diff > 0 && (
-                          <div className="flex justify-between text-[10px] pt-1 border-t border-border/50">
+                          <div className="flex justify-between text-xs pt-1 border-t border-border">
                             <span className="text-text-tertiary">Pipeline upside</span>
-                            <span className="font-mono text-purple-400">+{formatCurrency(diff)}</span>
+                            <span className="font-mono text-text-primary">+{formatCurrency(diff)}</span>
                           </div>
                         )}
                       </div>
@@ -2333,8 +2443,8 @@ function ForecastTab({
                 );
               })}
             </div>
-            <div className="flex items-center gap-4 text-[10px] text-text-tertiary pt-2">
-              <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-accent/30" /><span>Conservative (confirmed only)</span></div>
+            <div className="flex items-center gap-4 text-xs text-text-tertiary pt-2">
+              <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-surface-tertiary" /><span>Conservative (confirmed only)</span></div>
               <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm border border-dashed border-purple-400/30" /><span>Optimistic (all tiers)</span></div>
             </div>
           </div>
@@ -2343,56 +2453,56 @@ function ForecastTab({
 
       {/* Revenue forecast breakdown — 3 tier cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <section className="card-surface border border-emerald-500/20 rounded-2xl card-hover p-5">
+        <section className="card-elevated rounded-2xl border border-emerald-500/20 card-hover p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-1 h-5 rounded-full bg-emerald-500" />
-            <h2 className="text-sm font-bold text-emerald-400">Confirmed</h2>
+            <h2 className="text-section-heading text-emerald-400">Confirmed</h2>
             <InfoBox title="Confirmed Revenue">
               <p>Revenue from active clients with current retainers. This is your baseline income.</p>
               <p className="mt-1">Monthly overrides are reflected here if set.</p>
             </InfoBox>
           </div>
-          <p className="text-2xl font-bold text-text-primary mb-3">{formatCurrency(monthlyRevenue)}</p>
-          <div className="space-y-1">
+          <p className="text-2xl font-bold text-text-primary display-number mb-3">{formatCurrency(monthlyRevenue)}</p>
+          <div className="space-y-2">
             {activeClients.map(c => {
               const hasOverride = overrideMap[c.id] !== undefined;
               const amount = hasOverride ? overrideMap[c.id] : (c.retainer_amount || 0);
               return (
                 <div key={c.id} className="flex items-center justify-between py-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-text-secondary">{c.name}</span>
-                    {hasOverride && <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-400">override</span>}
+                    <span className="text-xs text-text-secondary">{c.name}</span>
+                    {hasOverride && <span className="text-xs px-1 py-0.5 rounded bg-amber-500/15 text-amber-400">override</span>}
                   </div>
-                  <span className="text-[11px] font-mono text-text-primary">{formatCurrency(amount)}</span>
+                  <span className="text-xs font-mono text-text-primary">{formatCurrency(amount)}</span>
                 </div>
               );
             })}
           </div>
         </section>
 
-        <section className="card-surface border border-amber-500/20 rounded-2xl card-hover p-5">
+        <section className="card-elevated rounded-2xl border border-amber-500/20 card-hover p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-1 h-5 rounded-full bg-amber-500" />
-            <h2 className="text-sm font-bold text-amber-400">Likely</h2>
+            <h2 className="text-section-heading text-amber-400">Likely</h2>
             <InfoBox title="Likely Revenue">
               <p>Pipeline leads with ≥60% probability. These are strong prospects that may convert.</p>
               <p className="mt-1">Full deal value is shown — adjust probability in the Pipeline tab.</p>
             </InfoBox>
           </div>
-          <p className="text-2xl font-bold text-amber-400 mb-3">
+          <p className="text-2xl font-bold text-amber-400 display-number mb-3">
             {formatCurrency(pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed').reduce((sum, l) => {
               const prob = l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0;
               return prob >= 60 ? sum + (l.estimated_value || 0) : sum;
             }, 0))}
           </p>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed' && (l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0) >= 60).map(l => (
               <div key={l.id} className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-text-secondary">{l.name}</span>
-                  <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-400">{l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0}%</span>
+                  <span className="text-xs text-text-secondary">{l.name}</span>
+                  <span className="text-xs px-1 py-0.5 rounded bg-amber-500/15 text-amber-400">{l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0}%</span>
                 </div>
-                <span className="text-[11px] font-mono text-text-primary">{formatCurrency(l.estimated_value || 0)}</span>
+                <span className="text-xs font-mono text-text-primary">{formatCurrency(l.estimated_value || 0)}</span>
               </div>
             ))}
             {pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed' && (l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0) >= 60).length === 0 && (
@@ -2401,29 +2511,29 @@ function ForecastTab({
           </div>
         </section>
 
-        <section className="card-surface border border-purple-500/20 rounded-2xl card-hover p-5">
+        <section className="card-elevated rounded-2xl card-hover p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-1 h-5 rounded-full bg-purple-500" />
-            <h2 className="text-sm font-bold text-purple-400">Possible</h2>
+            <h2 className="text-section-heading text-text-primary">Possible</h2>
             <InfoBox title="Possible Revenue">
               <p>Pipeline leads with &lt;60% probability. Earlier-stage prospects that could convert.</p>
               <p className="mt-1">Use the Pipeline tab to update stages and probability as deals progress.</p>
             </InfoBox>
           </div>
-          <p className="text-2xl font-bold text-purple-400 mb-3">
+          <p className="text-2xl font-bold text-text-primary display-number mb-3">
             {formatCurrency(pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed').reduce((sum, l) => {
               const prob = l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0;
               return prob > 0 && prob < 60 ? sum + (l.estimated_value || 0) : sum;
             }, 0))}
           </p>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed' && (l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0) > 0 && (l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0) < 60).map(l => (
               <div key={l.id} className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-text-secondary">{l.name}</span>
-                  <span className="text-[8px] px-1 py-0.5 rounded bg-purple-500/15 text-purple-400">{l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0}%</span>
+                  <span className="text-xs text-text-secondary">{l.name}</span>
+                  <span className="text-xs px-1 py-0.5 rounded bg-surface-tertiary text-text-primary">{l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0}%</span>
                 </div>
-                <span className="text-[11px] font-mono text-text-primary">{formatCurrency(l.estimated_value || 0)}</span>
+                <span className="text-xs font-mono text-text-primary">{formatCurrency(l.estimated_value || 0)}</span>
               </div>
             ))}
             {pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed' && (l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0) > 0 && (l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0) < 60).length === 0 && (
@@ -2434,47 +2544,54 @@ function ForecastTab({
       </div>
 
       {/* Monthly P&L */}
-      <section className="card-surface border border-border rounded-2xl card-hover p-6">
+      <section className="card-elevated rounded-2xl p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-5 rounded-full bg-amber-500" />
-          <h2 className="text-sm font-bold text-text-primary">Monthly P&amp;L Breakdown</h2>
+          <h2 className="text-section-heading text-text-primary">Monthly P&amp;L Breakdown</h2>
           <InfoBox title="P&L Breakdown">
             <p>Revenue minus expenses = what stays in the business each month.</p>
           </InfoBox>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 rounded-xl bg-surface-tertiary/50">
-            <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Revenue</p>
-            <p className="text-sm font-bold text-text-primary">{formatCurrency(monthlyRevenue)}</p>
+          <div className="p-3 rounded-2xl bg-surface-tertiary">
+            <p className="text-xs text-text-tertiary mb-1">Revenue</p>
+            <p className="text-section-heading text-text-primary">{formatCurrency(monthlyRevenue)}</p>
           </div>
-          <div className="p-3 rounded-xl bg-surface-tertiary/50">
-            <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Expenses</p>
+          <div className="p-3 rounded-2xl bg-surface-tertiary">
+            <p className="text-xs text-text-tertiary mb-1">Expenses</p>
             <p className="text-sm font-bold text-text-secondary">{formatCurrency(monthlyExpenses)}</p>
           </div>
-          <div className="p-3 rounded-xl bg-accent/10 border border-accent/20">
-            <p className="text-[10px] text-accent uppercase tracking-wider mb-1">Left in Co.</p>
-            <p className="text-sm font-bold text-accent">{formatCurrency(leftInCompany)}</p>
-            <p className="text-[8px] text-amber-400/60 mt-0.5">~{formatCurrency(Math.max(0, monthlyRevenue - monthlyExpenses) * UK_CORP_TAX_RATE)} tax</p>
+          <div className="p-3 rounded-2xl bg-surface-tertiary">
+            <p className="text-xs text-text-primary mb-1">Left in Co.</p>
+            <p className="text-sm font-bold text-text-primary">{formatCurrency(leftInCompany)}</p>
+            <p className="text-xs text-amber-400/60 mt-0.5">~{formatCurrency(Math.max(0, monthlyRevenue - monthlyExpenses) * UK_CORP_TAX_RATE)} tax</p>
           </div>
         </div>
       </section>
 
       {/* Historical Snapshots — Editable */}
-      <section className="card-surface border border-border rounded-2xl card-hover p-6">
+      <section className="card-elevated rounded-2xl p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-5 rounded-full bg-cyan-500" />
-          <h2 className="text-sm font-bold text-text-primary">Monthly History</h2>
+          <h2 className="text-section-heading text-text-primary">Monthly History</h2>
           <InfoBox title="Monthly History">
             <p>Your recorded financial snapshots. Click Edit to adjust revenue or expense figures for any month.</p>
             <p className="mt-1">Use &quot;+ Monthly Record&quot; to backfill historical months or record the current month.</p>
           </InfoBox>
-          <span className="text-[10px] text-text-tertiary ml-auto">{history.length} months recorded</span>
+          <span className="text-xs text-text-tertiary ml-auto">{history.length} months recorded</span>
         </div>
         {history.length === 0 ? (
-          <p className="text-xs text-text-tertiary text-center py-4">No historical data yet. Use &quot;+ Monthly Record&quot; to add previous months.</p>
+          <div className="empty-state py-6">
+            <div className="empty-state-icon" style={{ width: 32, height: 32 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-xs text-text-tertiary">No historical data yet. Use &quot;+ Monthly Record&quot; to add previous months.</p>
+          </div>
         ) : (
-          <div className="space-y-1">
-            <div className="grid grid-cols-5 gap-2 px-3 py-1.5 text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
+          <div className="space-y-2">
+            <div className="grid grid-cols-5 gap-2 px-3 py-1.5 text-xs font-semibold text-text-tertiary ">
               <span>Month</span>
               <span className="text-right">Revenue</span>
               <span className="text-right">Expenses</span>
@@ -2491,24 +2608,24 @@ function ForecastTab({
               const net = (Number(snap.total_revenue) || 0) - (Number(snap.total_expenses) || 0);
 
               return (
-                <div key={snap.id} className="grid grid-cols-5 gap-2 px-3 py-2 rounded-lg hover:bg-surface-tertiary/40 transition-colors items-center">
+                <div key={snap.id} className="grid grid-cols-5 gap-2 px-3 py-2 rounded-lg hover:bg-surface-tertiary transition-colors items-center">
                   <span className="text-xs text-text-primary font-medium">{label}</span>
                   <span className="text-xs font-mono text-text-primary text-right">{formatCurrency(Number(snap.total_revenue) || 0)}</span>
                   <span className="text-xs font-mono text-text-secondary text-right">{formatCurrency(Number(snap.total_expenses) || 0)}</span>
-                  <span className={cn('text-xs font-mono text-right font-medium', net >= 0 ? 'text-accent' : 'text-red-400')}>
+                  <span className={cn('text-xs font-mono text-right font-medium', net >= 0 ? 'text-text-primary' : 'text-red-400')}>
                     {formatCurrency(net)}
                   </span>
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => setEditingSnapshot(snap)}
-                      className="text-[10px] text-text-tertiary hover:text-accent transition-colors cursor-pointer"
+                      className="text-xs text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
                       title="Edit snapshot"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteSnapshot(snap.id)}
-                      className="text-[10px] text-text-tertiary hover:text-red-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      className="text-xs text-text-tertiary hover:text-red-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
                       title="Delete snapshot"
                     >
                       Delete
@@ -2582,8 +2699,15 @@ function ClientsTab({
       </div>
 
       {clients.length === 0 ? (
-        <div className="card-surface border border-border rounded-2xl p-8 text-center">
-          <p className="text-sm text-text-tertiary">No clients yet. Add your first client to track revenue.</p>
+        <div className="card-elevated rounded-2xl p-10">
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+              </svg>
+            </div>
+            <p className="text-sm text-text-tertiary">No clients yet. Add your first client to track revenue.</p>
+          </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -2592,7 +2716,7 @@ function ClientsTab({
             return (
               <div
                 key={client.id}
-                className="card-surface border border-border rounded-xl p-4 card-hover cursor-pointer"
+                className="card-elevated rounded-2xl p-4 card-hover cursor-pointer"
                 onClick={() => setEditingClient(client)}
               >
                 <div className="flex items-center justify-between">
@@ -2615,7 +2739,7 @@ function ClientsTab({
                         </span>
                       )}
                       {overrideMap[client.id] !== undefined && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-medium">override</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-medium">override</span>
                       )}
                       {client.is_active && monthlyRevenue > 0 && (
                         <span className="text-text-tertiary">{share.toFixed(0)}% of revenue</span>
@@ -2630,7 +2754,7 @@ function ClientsTab({
                       )}
                       {client.renewal_probability != null && (
                         <span className={cn(
-                          client.renewal_probability >= 70 ? 'text-accent' : client.renewal_probability >= 40 ? 'text-amber-400' : 'text-red-400'
+                          client.renewal_probability >= 70 ? 'text-text-primary' : client.renewal_probability >= 40 ? 'text-amber-400' : 'text-red-400'
                         )}>
                           {formatPercentage(client.renewal_probability)} renewal
                         </span>
@@ -2655,7 +2779,7 @@ function ClientsTab({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                    <span className="text-[10px] text-text-tertiary group-hover:text-text-secondary">Edit</span>
+                    <span className="text-xs text-text-tertiary group-hover:text-text-secondary">Edit</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-text-tertiary">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
@@ -2785,47 +2909,47 @@ function ClientEditModal({ client, currentMonth, onClose, onDelete }: {
         </div>
 
         {/* Monthly Overrides Section */}
-        <div className="border-t border-border/50 pt-4">
+        <div className="border-t border-border pt-4">
           <p className="text-xs font-semibold text-text-primary mb-3 flex items-center gap-2">
             Monthly Amount Overrides
-            <span className="text-[9px] font-normal text-text-tertiary">Set different amounts for specific months</span>
+            <span className="text-xs font-normal text-text-tertiary">Set different amounts for specific months</span>
           </p>
 
           {/* Add override form */}
           <div className="flex items-end gap-2 mb-3 flex-wrap">
             <div>
-              <label className="text-[10px] text-text-tertiary block mb-1">Month</label>
+              <label className="text-xs text-text-tertiary block mb-1">Month</label>
               <input
                 type="month"
                 value={overrideMonth}
                 onChange={(e) => setOverrideMonth(e.target.value)}
-                className="text-xs bg-surface-secondary border border-border/40 rounded-xl px-2 py-1.5 text-text-primary outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-colors"
+                className="text-xs bg-surface-secondary border border-border rounded-xl px-2 py-1.5 text-text-primary outline-none focus:border-border focus:ring-1 focus:ring-border-light transition-colors"
               />
             </div>
             <div>
-              <label className="text-[10px] text-text-tertiary block mb-1">Amount (GBP)</label>
+              <label className="text-xs text-text-tertiary block mb-1">Amount (GBP)</label>
               <input
                 type="number"
                 value={overrideAmount}
                 onChange={(e) => setOverrideAmount(e.target.value)}
                 placeholder={String(client.retainer_amount || 0)}
-                className="w-28 text-xs bg-surface-secondary border border-border/40 rounded-xl px-2 py-1.5 text-text-primary outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-colors"
+                className="w-28 text-xs bg-surface-secondary border border-border rounded-xl px-2 py-1.5 text-text-primary outline-none focus:border-border focus:ring-1 focus:ring-border-light transition-colors"
               />
             </div>
             <div>
-              <label className="text-[10px] text-text-tertiary block mb-1">Notes</label>
+              <label className="text-xs text-text-tertiary block mb-1">Notes</label>
               <input
                 type="text"
                 value={overrideNotes}
                 onChange={(e) => setOverrideNotes(e.target.value)}
                 placeholder="Optional note"
-                className="w-32 text-xs bg-surface-secondary border border-border/40 rounded-xl px-2 py-1.5 text-text-primary outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-colors"
+                className="w-32 text-xs bg-surface-secondary border border-border rounded-xl px-2 py-1.5 text-text-primary outline-none focus:border-border focus:ring-1 focus:ring-border-light transition-colors"
               />
             </div>
             <button
               onClick={handleAddOverride}
               disabled={overridePending || !overrideMonth || !overrideAmount}
-              className="text-[10px] text-accent font-medium disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 cursor-pointer"
+              className="text-xs text-text-primary font-medium disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 cursor-pointer"
             >
               {overridePending ? '...' : 'Set'}
             </button>
@@ -2833,23 +2957,23 @@ function ClientEditModal({ client, currentMonth, onClose, onDelete }: {
 
           {/* Existing overrides list */}
           {loadingOverrides ? (
-            <p className="text-[10px] text-text-tertiary">Loading overrides...</p>
+            <p className="text-xs text-text-tertiary">Loading overrides...</p>
           ) : overrides.length > 0 ? (
-            <div className="space-y-1 max-h-32 overflow-y-auto">
+            <div className="space-y-2 max-h-32 overflow-y-auto">
               {overrides.map(o => {
                 const d = new Date(o.month + '-01T00:00:00');
                 const label = d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
                 return (
-                  <div key={o.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-surface-tertiary/30 text-xs">
+                  <div key={o.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-surface-tertiary text-xs">
                     <div className="flex items-center gap-2">
                       <span className="text-text-primary font-medium">{label}</span>
                       <span className="font-mono text-amber-400">{formatCurrency(Number(o.amount))}</span>
-                      {o.notes && <span className="text-text-tertiary text-[10px]">({o.notes})</span>}
+                      {o.notes && <span className="text-text-tertiary text-xs">({o.notes})</span>}
                     </div>
                     <button
                       onClick={() => handleDeleteOverride(o.id)}
                       disabled={overridePending}
-                      className="text-[10px] text-text-tertiary hover:text-red-400 transition-colors cursor-pointer"
+                      className="text-xs text-text-tertiary hover:text-red-400 transition-colors cursor-pointer"
                     >
                       Remove
                     </button>
@@ -2858,12 +2982,12 @@ function ClientEditModal({ client, currentMonth, onClose, onDelete }: {
               })}
             </div>
           ) : (
-            <p className="text-[10px] text-text-tertiary">No overrides set. Base retainer ({formatCurrency(client.retainer_amount || 0)}/mo) used for all months.</p>
+            <p className="text-xs text-text-tertiary">No overrides set. Base retainer ({formatCurrency(client.retainer_amount || 0)}/mo) used for all months.</p>
           )}
         </div>
 
         {/* Termination section */}
-        <div className="border-t border-border/50 pt-4">
+        <div className="border-t border-border pt-4">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={isEnding} onChange={(e) => setIsEnding(e.target.checked)} className="accent-red-500" />
             <span className="text-red-400 font-medium">Client ending work</span>
@@ -2874,7 +2998,7 @@ function ClientEditModal({ client, currentMonth, onClose, onDelete }: {
                 <Input label="Notice Period (months)" type="number" min="0" value={noticePeriod} onChange={(e) => setNoticePeriod(e.target.value)} placeholder="e.g., 2" />
                 <Input label="Final Payment Date" type="date" value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} />
               </div>
-              <p className="text-[10px] text-text-tertiary pl-3">
+              <p className="text-xs text-text-tertiary pl-3">
                 Revenue from this client will be excluded from stability calculations after the termination date.
               </p>
             </div>
@@ -2976,18 +3100,18 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
   }
 
   return (
-    <section className="card-surface border border-border rounded-2xl card-hover p-6">
+    <section className="card-elevated rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-1 h-5 rounded-full bg-emerald-500" />
-          <h2 className="text-sm font-bold text-text-primary">Savings Goals</h2>
+          <h2 className="text-section-heading text-text-primary">Savings Goals</h2>
           <InfoBox title="Savings Goals">
             <p>Set up custom savings goals and track progress. Click the balance to update it.</p>
           </InfoBox>
         </div>
         <button
           onClick={() => setShowAddGoal(!showAddGoal)}
-          className="text-[10px] text-accent hover:text-accent/80 font-medium flex items-center gap-1 transition-colors"
+          className="text-xs text-text-primary hover:text-text-primary/80 font-medium flex items-center gap-1 transition-colors"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           Add Goal
@@ -2996,7 +3120,7 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
 
       {/* Add Goal Form */}
       {showAddGoal && (
-        <div className="p-4 rounded-xl bg-surface-tertiary/40 border border-border/50 space-y-4 mb-4 animate-fade-in">
+        <div className="pt-4 mt-4 border-t border-border space-y-4 mb-4 animate-fade-in">
           <input
             type="text"
             value={newLabel}
@@ -3006,30 +3130,30 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
             autoFocus
           />
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-text-tertiary uppercase tracking-wider">Target Amount (£)</label>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-text-tertiary ">Target Amount (£)</label>
               <input
                 type="number"
                 value={newTarget}
                 onChange={(e) => setNewTarget(e.target.value)}
                 placeholder="e.g. 10000"
-                className="w-full text-xs bg-surface-secondary border border-border/40 rounded-xl px-2.5 py-2 text-text-primary outline-none focus:border-accent/50 transition-colors"
+                className="w-full text-xs bg-surface-secondary border border-border rounded-xl px-2.5 py-2 text-text-primary outline-none focus:border-border-light/50 transition-colors"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-text-tertiary uppercase tracking-wider">Saved So Far (£)</label>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-text-tertiary ">Saved So Far (£)</label>
               <input
                 type="number"
                 value={newCurrent}
                 onChange={(e) => setNewCurrent(e.target.value)}
                 placeholder="0"
-                className="w-full text-xs bg-surface-secondary border border-border/40 rounded-xl px-2.5 py-2 text-text-primary outline-none focus:border-accent/50 transition-colors"
+                className="w-full text-xs bg-surface-secondary border border-border rounded-xl px-2.5 py-2 text-text-primary outline-none focus:border-border-light/50 transition-colors"
               />
             </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-text-tertiary mr-1">Colour:</span>
+              <span className="text-xs text-text-tertiary mr-1">Colour:</span>
               {GOAL_COLORS.map(c => (
                 <button
                   key={c}
@@ -3045,7 +3169,7 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
             <button
               onClick={handleAddGoal}
               disabled={isPending || !newLabel.trim() || !newTarget}
-              className="text-xs text-accent font-medium disabled:opacity-40 hover:text-accent/80 transition-colors cursor-pointer px-3 py-1.5 rounded-lg hover:bg-accent/10"
+              className="text-xs text-text-primary font-medium disabled:opacity-40 hover:text-text-primary/80 transition-colors cursor-pointer px-3 py-1.5 rounded-lg hover:bg-surface-tertiary"
             >
               {isPending ? 'Saving...' : 'Create Goal'}
             </button>
@@ -3054,9 +3178,14 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
       )}
 
       {goals.length === 0 && !showAddGoal ? (
-        <p className="text-xs text-text-tertiary text-center py-4">
-          No savings goals set up yet. Click &quot;+ Add Goal&quot; to create your first one.
-        </p>
+        <div className="empty-state py-6">
+          <div className="empty-state-icon" style={{ width: 32, height: 32 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-xs text-text-tertiary">No savings goals yet. Click &quot;+ Add Goal&quot; to get started.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {goals.map(g => {
@@ -3066,14 +3195,14 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
             const isEditing = editingGoal?.id === g.id;
 
             return (
-              <div key={g.id} className="p-4 rounded-xl bg-surface-tertiary/40 space-y-3 group">
+              <div key={g.id} className="p-4 rounded-2xl bg-surface-tertiary space-y-3 group">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-text-primary">{g.label}</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-[10px] text-text-tertiary">{pct.toFixed(0)}%</p>
+                    <p className="text-xs text-text-tertiary">{pct.toFixed(0)}%</p>
                     <button
                       onClick={() => handleDeleteGoal(g.id)}
-                      className="text-[10px] text-text-tertiary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                      className="text-xs text-text-tertiary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
                     >
                       ✕
                     </button>
@@ -3090,53 +3219,53 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleUpdateBalance(g, Number(editValue))}
-                        className="w-24 text-xs bg-surface-secondary border border-border/40 rounded-xl px-2 py-1 text-text-primary outline-none focus:border-accent/40 transition-colors"
+                        className="w-24 text-xs bg-surface-secondary border border-border rounded-xl px-2 py-1 text-text-primary outline-none focus:border-border transition-colors"
                         autoFocus
                       />
-                      <button onClick={() => handleUpdateBalance(g, Number(editValue))} className="text-[10px] text-accent font-medium cursor-pointer">Save</button>
-                      <button onClick={() => { setEditingGoal(null); setEditValue(''); }} className="text-[10px] text-text-tertiary cursor-pointer">Cancel</button>
+                      <button onClick={() => handleUpdateBalance(g, Number(editValue))} className="text-xs text-text-primary font-medium cursor-pointer">Save</button>
+                      <button onClick={() => { setEditingGoal(null); setEditValue(''); }} className="text-xs text-text-tertiary cursor-pointer">Cancel</button>
                     </div>
                   ) : isEditing && editMode === 'adjust' ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-text-tertiary">+/-</span>
+                      <span className="text-xs text-text-tertiary">+/-</span>
                       <input
                         type="number"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAdjustBalance(g, Number(editValue))}
                         placeholder="e.g. 500 or -200"
-                        className="w-28 text-xs bg-surface-secondary border border-border/40 rounded-xl px-2 py-1 text-text-primary outline-none focus:border-accent/40 transition-colors"
+                        className="w-28 text-xs bg-surface-secondary border border-border rounded-xl px-2 py-1 text-text-primary outline-none focus:border-border transition-colors"
                         autoFocus
                       />
-                      <button onClick={() => handleAdjustBalance(g, Number(editValue))} className="text-[10px] text-accent font-medium cursor-pointer">Apply</button>
-                      <button onClick={() => { setEditingGoal(null); setEditValue(''); }} className="text-[10px] text-text-tertiary cursor-pointer">Cancel</button>
+                      <button onClick={() => handleAdjustBalance(g, Number(editValue))} className="text-xs text-text-primary font-medium cursor-pointer">Apply</button>
+                      <button onClick={() => { setEditingGoal(null); setEditValue(''); }} className="text-xs text-text-tertiary cursor-pointer">Cancel</button>
                     </div>
                   ) : isEditing && editMode === 'target' ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-text-tertiary">Target:</span>
+                      <span className="text-xs text-text-tertiary">Target:</span>
                       <input
                         type="number"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleUpdateTarget(g, Number(editValue))}
-                        className="w-24 text-xs bg-surface-secondary border border-border/40 rounded-xl px-2 py-1 text-text-primary outline-none focus:border-accent/40 transition-colors"
+                        className="w-24 text-xs bg-surface-secondary border border-border rounded-xl px-2 py-1 text-text-primary outline-none focus:border-border transition-colors"
                         autoFocus
                       />
-                      <button onClick={() => handleUpdateTarget(g, Number(editValue))} className="text-[10px] text-accent font-medium cursor-pointer">Save</button>
-                      <button onClick={() => { setEditingGoal(null); setEditValue(''); }} className="text-[10px] text-text-tertiary cursor-pointer">Cancel</button>
+                      <button onClick={() => handleUpdateTarget(g, Number(editValue))} className="text-xs text-text-primary font-medium cursor-pointer">Save</button>
+                      <button onClick={() => { setEditingGoal(null); setEditValue(''); }} className="text-xs text-text-tertiary cursor-pointer">Cancel</button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { setEditingGoal(g); setEditMode('balance'); setEditValue(String(g.current_amount)); }}
-                        className="text-sm font-bold text-text-primary hover:text-accent transition-colors cursor-pointer"
+                        className="text-section-heading text-text-primary hover:text-text-primary transition-colors cursor-pointer"
                         title="Set exact balance"
                       >
                         {formatCurrency(g.current_amount)}
                       </button>
                       <button
                         onClick={() => { setEditingGoal(g); setEditMode('adjust'); setEditValue(''); }}
-                        className="text-[10px] text-text-tertiary hover:text-accent transition-colors opacity-0 group-hover:opacity-100 cursor-pointer px-1"
+                        className="text-xs text-text-tertiary hover:text-text-primary transition-colors opacity-0 group-hover:opacity-100 cursor-pointer px-1"
                         title="Add or subtract amount"
                       >
                         +/-
@@ -3145,14 +3274,14 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
                   )}
                   <button
                     onClick={() => { setEditingGoal(g); setEditMode('target'); setEditValue(String(g.target_amount)); }}
-                    className="text-[10px] text-text-tertiary hover:text-accent transition-colors cursor-pointer"
+                    className="text-xs text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
                     title="Edit target"
                   >
                     of {formatCurrency(g.target_amount)}
                   </button>
                 </div>
                 {remaining > 0 && leftInCompany > 0 && monthsToGoal !== Infinity && (
-                  <p className="text-[10px] text-text-tertiary">
+                  <p className="text-xs text-text-tertiary">
                     ~{monthsToGoal} months to goal at current rate
                   </p>
                 )}
@@ -3176,7 +3305,7 @@ function InsightCards({ insights }: { insights: RevenueInsight[] }) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const severityStyles: Record<string, { bg: string; icon: string; text: string }> = {
     positive: { bg: 'bg-emerald-500/8 border-emerald-500/20', icon: '↑', text: 'text-emerald-400' },
-    info: { bg: 'bg-accent/8 border-accent/20', icon: '→', text: 'text-accent' },
+    info: { bg: 'bg-surface-tertiary border-border', icon: '→', text: 'text-text-primary' },
     warning: { bg: 'bg-amber-500/8 border-amber-500/20', icon: '⚠', text: 'text-amber-400' },
     danger: { bg: 'bg-red-500/8 border-red-500/20', icon: '!', text: 'text-red-400' },
   };
@@ -3191,7 +3320,7 @@ function InsightCards({ insights }: { insights: RevenueInsight[] }) {
             key={i}
             onClick={() => setExpandedIdx(isExpanded ? null : i)}
             className={cn(
-              'rounded-xl border px-4 py-3 text-left transition-all cursor-pointer',
+              'rounded-2xl border px-4 py-3 text-left transition-all cursor-pointer',
               style.bg,
               isExpanded && 'ring-1 ring-white/10'
             )}
@@ -3211,7 +3340,7 @@ function InsightCards({ insights }: { insights: RevenueInsight[] }) {
               )}
             </div>
             {isExpanded && (
-              <p className="text-[11px] text-text-secondary leading-relaxed mt-2 ml-7">{insight.detail}</p>
+              <p className="text-xs text-text-secondary leading-relaxed mt-2 ml-7">{insight.detail}</p>
             )}
           </button>
         );
@@ -3260,15 +3389,15 @@ function ExpensesTab({
 
   function renderExpenseList(items: Expense[]) {
     if (items.length === 0) return (
-      <div className="card-surface border border-border rounded-2xl p-4 sm:p-6 text-center">
+      <div className="card-elevated rounded-2xl p-4 sm:p-6 text-center">
         <p className="text-xs text-text-tertiary">No expenses.</p>
       </div>
     );
     return (
       <div className="space-y-2">
         {items.map((expense) => (
-          <div key={expense.id} className="card-surface border border-border rounded-xl p-4 flex items-center justify-between card-hover group">
-            <div className="space-y-1 min-w-0 flex-1 cursor-pointer" onClick={() => onEditExpense(expense)}>
+          <div key={expense.id} className="card-elevated rounded-2xl p-4 flex items-center justify-between card-hover group">
+            <div className="space-y-2 min-w-0 flex-1 cursor-pointer" onClick={() => onEditExpense(expense)}>
               <p className="text-sm font-medium text-text-primary">{expense.description}</p>
               <div className="flex items-center gap-3 text-xs text-text-secondary">
                 <Badge variant="default">{expense.category}</Badge>
@@ -3278,7 +3407,7 @@ function ExpensesTab({
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-text-primary">{formatCurrency(expense.amount, true)}</span>
-              <button onClick={() => onEditExpense(expense)} className="text-text-tertiary hover:text-accent transition-colors text-xs cursor-pointer opacity-0 group-hover:opacity-100">Edit</button>
+              <button onClick={() => onEditExpense(expense)} className="text-text-tertiary hover:text-text-primary transition-colors text-xs cursor-pointer opacity-0 group-hover:opacity-100">Edit</button>
               <button onClick={() => onDeleteExpense(expense.id)} className="text-text-tertiary hover:text-danger transition-colors text-xs cursor-pointer opacity-0 group-hover:opacity-100">Delete</button>
             </div>
           </div>
@@ -3298,14 +3427,14 @@ function ExpensesTab({
       </div>
 
       {/* Salary & Contractor Costs */}
-      <div className="card-surface border border-border rounded-2xl p-4 sm:p-5 space-y-4">
-        <h4 className="text-xs uppercase tracking-wider text-text-tertiary font-medium">Salary & Staff Costs</h4>
+      <div className="card-elevated rounded-2xl p-5 sm:p-6 space-y-4">
+        <h4 className="text-xs  text-text-tertiary font-medium">Salary & Staff Costs</h4>
 
         {/* Personal Salary */}
         <div className="flex items-center justify-between group">
-          <div className="space-y-0.5">
+          <div className="space-y-1.5">
             <p className="text-sm text-text-primary">Your Salary</p>
-            <p className="text-[10px] text-text-tertiary">Monthly salary drawn from business — auto-imported to Personal Income</p>
+            <p className="text-xs text-text-tertiary">Monthly salary drawn from business — auto-imported to Personal Income</p>
           </div>
           {editingSalary ? (
             <div className="flex items-center gap-2">
@@ -3313,11 +3442,11 @@ function ExpensesTab({
                 type="number"
                 value={salaryInput}
                 onChange={(e) => setSalaryInput(e.target.value)}
-                className="w-24 bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary text-right font-mono focus:outline-none focus:border-accent"
+                className="w-24 bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary text-right font-mono focus:outline-none focus:border-border-light"
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveSalary(); if (e.key === 'Escape') { setEditingSalary(false); setSalaryInput(String(monthlySalary)); } }}
               />
-              <button onClick={handleSaveSalary} disabled={savingField === 'salary'} className="text-xs text-accent hover:text-accent/80 cursor-pointer">
+              <button onClick={handleSaveSalary} disabled={savingField === 'salary'} className="text-xs text-text-primary hover:text-text-primary/80 cursor-pointer">
                 {savingField === 'salary' ? '...' : 'Save'}
               </button>
               <button onClick={() => { setEditingSalary(false); setSalaryInput(String(monthlySalary)); }} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
@@ -3327,7 +3456,7 @@ function ExpensesTab({
           ) : (
             <button
               onClick={() => setEditingSalary(true)}
-              className="text-sm font-semibold text-text-primary hover:text-accent transition-colors cursor-pointer group-hover:underline decoration-dotted underline-offset-2"
+              className="text-sm font-semibold text-text-primary hover:text-text-primary transition-colors cursor-pointer group-hover:underline decoration-dotted underline-offset-2"
             >
               {formatCurrency(monthlySalary)}/mo
             </button>
@@ -3335,10 +3464,10 @@ function ExpensesTab({
         </div>
 
         {/* Contractor / Staff Cost */}
-        <div className="flex items-center justify-between group border-t border-border/50 pt-4">
-          <div className="space-y-0.5">
+        <div className="flex items-center justify-between group border-t border-border pt-4">
+          <div className="space-y-1.5">
             <p className="text-sm text-text-primary">Staff / Contractor Costs</p>
-            <p className="text-[10px] text-text-tertiary">Monthly staff costs — deducted from business profit before corp tax</p>
+            <p className="text-xs text-text-tertiary">Monthly staff costs — deducted from business profit before corp tax</p>
           </div>
           {editingStaff ? (
             <div className="flex items-center gap-2">
@@ -3346,11 +3475,11 @@ function ExpensesTab({
                 type="number"
                 value={staffInput}
                 onChange={(e) => setStaffInput(e.target.value)}
-                className="w-24 bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary text-right font-mono focus:outline-none focus:border-accent"
+                className="w-24 bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary text-right font-mono focus:outline-none focus:border-border-light"
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveStaff(); if (e.key === 'Escape') { setEditingStaff(false); setStaffInput(String(staffCost)); } }}
               />
-              <button onClick={handleSaveStaff} disabled={savingField === 'staff'} className="text-xs text-accent hover:text-accent/80 cursor-pointer">
+              <button onClick={handleSaveStaff} disabled={savingField === 'staff'} className="text-xs text-text-primary hover:text-text-primary/80 cursor-pointer">
                 {savingField === 'staff' ? '...' : 'Save'}
               </button>
               <button onClick={() => { setEditingStaff(false); setStaffInput(String(staffCost)); }} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
@@ -3360,7 +3489,7 @@ function ExpensesTab({
           ) : (
             <button
               onClick={() => setEditingStaff(true)}
-              className="text-sm font-semibold text-text-primary hover:text-accent transition-colors cursor-pointer group-hover:underline decoration-dotted underline-offset-2"
+              className="text-sm font-semibold text-text-primary hover:text-text-primary transition-colors cursor-pointer group-hover:underline decoration-dotted underline-offset-2"
             >
               {formatCurrency(staffCost)}/mo
             </button>
@@ -3376,14 +3505,14 @@ function ExpensesTab({
 
       {/* Business Expenses */}
       <div className="space-y-2">
-        <h4 className="text-xs uppercase tracking-wider text-text-tertiary font-medium">Business Expenses — {formatCurrency(businessTotal)}</h4>
+        <h4 className="text-xs  text-text-tertiary font-medium">Business Expenses — {formatCurrency(businessTotal)}</h4>
         {renderExpenseList(businessExpenses)}
       </div>
 
       {/* Personal Expenses */}
       {personalExpenses.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs uppercase tracking-wider text-purple-400 font-medium">Personal — {formatCurrency(personalTotal)}</h4>
+          <h4 className="text-xs  text-text-primary font-medium">Personal — {formatCurrency(personalTotal)}</h4>
           {renderExpenseList(personalExpenses)}
         </div>
       )}
@@ -3443,7 +3572,7 @@ function ClientFormModal({ open, onClose }: {
         </label>
 
         {fixedContract && (
-          <div className="space-y-3 pl-1 border-l-2 border-accent/20 ml-1 animate-fade-in">
+          <div className="space-y-3 pl-1 border-l-2 border-border ml-1 animate-fade-in">
             <div className="grid grid-cols-2 gap-3 pl-3">
               <Input label="Contract Start" type="date" value={contractStart} onChange={(e) => setContractStart(e.target.value)} />
               <Input label="Contract End" type="date" value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} />
@@ -3530,7 +3659,7 @@ function ExpenseFormModal({ open, onClose, expense }: {
           </label>
           <div className="flex items-center gap-1 bg-surface-secondary rounded-lg p-0.5">
             <button type="button" onClick={() => setExpenseType('business')}
-              className={cn('px-3 py-1 text-xs rounded-md transition-all cursor-pointer', expenseType === 'business' ? 'bg-accent text-white' : 'text-text-tertiary hover:text-text-secondary')}>
+              className={cn('px-3 py-1 text-xs rounded-md transition-all cursor-pointer', expenseType === 'business' ? 'bg-text-primary text-background' : 'text-text-tertiary hover:text-text-secondary')}>
               Business
             </button>
             <button type="button" onClick={() => setExpenseType('personal')}
@@ -3581,7 +3710,7 @@ function SnapshotFormModal({ open, onClose }: {
           <Input label="Total Income (GBP)" type="number" step="0.01" value={revenue} onChange={(e) => setRevenue(e.target.value)} placeholder="Include all income — retainers, one-off work, etc." />
           <Input label="Total Expenses (GBP)" type="number" step="0.01" value={expensesAmt} onChange={(e) => setExpensesAmt(e.target.value)} placeholder="0" />
         </div>
-        <p className="text-[10px] text-text-tertiary">
+        <p className="text-xs text-text-tertiary">
           Record total income for this month — including one-off projects, past clients, and retainer work.
           When you scroll to this month, these figures will be used instead of current client retainers.
         </p>

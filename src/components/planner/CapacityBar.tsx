@@ -13,17 +13,17 @@ interface CapacityBarProps {
 }
 
 const LEVEL_FILL: Record<LoadLevel, string> = {
-  light: 'bg-accent',
-  moderate: 'bg-accent',
-  heavy: 'bg-amber-400',
-  overloaded: 'bg-red-400',
+  light: 'bg-text-tertiary',
+  moderate: 'bg-text-secondary',
+  heavy: 'bg-text-primary',
+  overloaded: 'bg-text-primary',
 };
 
 const LEVEL_BG: Record<LoadLevel, string> = {
-  light: 'bg-accent/10',
-  moderate: 'bg-accent/10',
-  heavy: 'bg-amber-400/10',
-  overloaded: 'bg-red-400/10',
+  light: 'bg-surface-tertiary',
+  moderate: 'bg-surface-tertiary',
+  heavy: 'bg-surface-tertiary',
+  overloaded: 'bg-surface-tertiary',
 };
 
 export function CapacityBar({
@@ -40,7 +40,7 @@ export function CapacityBar({
   return (
     <div className={cn('w-full', isCompact ? 'space-y-0' : 'space-y-1')}>
       {showLabel && (
-        <div className="flex items-center justify-between text-[9px] text-text-tertiary">
+        <div className="flex items-center justify-between text-xs text-text-tertiary">
           <span>{Math.round(mlu)} MLU</span>
           <span>{Math.round(pct)}%</span>
         </div>
@@ -64,7 +64,7 @@ export function CapacityBar({
             )}
             {energyBreakdown.creative > 0 && (
               <div
-                className="h-full bg-purple-400 transition-all duration-500"
+                className="h-full bg-text-primary transition-all duration-500"
                 style={{
                   width: `${(energyBreakdown.creative / (energyBreakdown.admin + energyBreakdown.creative)) * 100}%`,
                 }}

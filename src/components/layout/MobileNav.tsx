@@ -14,7 +14,9 @@ const MOBILE_ITEMS = [
 ];
 
 const MORE_ITEMS = [
+  { href: '/score', label: 'Score', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { href: '/pipeline', label: 'Pipeline', icon: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' },
+  { href: '/outbound', label: 'Outbound', icon: 'M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5' },
   { href: '/knowledge', label: 'Knowledge', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
   { href: '/settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ];
@@ -55,9 +57,18 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
       {/* More menu overlay */}
       {moreOpen && (
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
-          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-3 right-3 animate-slide-up">
-            <div className="bg-surface-secondary border border-border rounded-xl p-1.5">
+            <div
+              className="rounded-2xl p-1.5"
+              style={{
+                background: 'rgba(10, 10, 10, 0.95)',
+                border: '1px solid var(--border-light)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+              }}
+            >
               {MORE_ITEMS.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
@@ -65,14 +76,27 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                      isActive ? 'bg-surface-tertiary text-text-primary' : 'text-text-secondary active:bg-surface-tertiary'
+                      'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150',
+                      isActive ? 'text-text-primary' : 'text-text-secondary active:bg-surface-tertiary'
                     )}
+                    style={isActive ? {
+                      background: 'linear-gradient(90deg, rgba(139, 115, 255, 0.12), rgba(139, 115, 255, 0.03))',
+                    } : undefined}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={isActive ? '2' : '1.5'}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={isActive ? 'text-accent' : ''}
+                    >
                       <path d={item.icon} />
                     </svg>
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className={cn('text-sm', isActive && 'font-medium')}>{item.label}</span>
                   </Link>
                 );
               })}
@@ -82,7 +106,16 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
       )}
 
       {/* Bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-primary border-t border-border">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+        style={{
+          background: 'var(--glass-bg)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderTop: '1px solid var(--border-color)',
+          boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.2)',
+        }}
+      >
         <div className="flex items-stretch justify-around safe-area-inset-bottom">
           {MOBILE_ITEMS.map((item) => {
             const isActive = pathname.startsWith(item.href);
@@ -92,14 +125,17 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 py-2 pt-2.5 flex-1 min-h-[52px] transition-colors duration-150',
-                  isActive ? 'text-accent' : 'text-text-tertiary'
+                  'flex flex-col items-center justify-center gap-1 py-2.5 pt-3 flex-1 min-h-[64px] transition-all duration-200 relative',
+                  isActive ? 'text-accent' : 'text-text-tertiary active:text-text-secondary'
                 )}
               >
-                <div className="relative">
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
+                )}
+                <div className="relative flex items-center justify-center w-8 h-6">
                   <svg
-                    width="22"
-                    height="22"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -110,19 +146,14 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
                     <path d={item.icon} />
                   </svg>
                   {showDot && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+                    <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent" />
                     </span>
                   )}
                 </div>
-                {/* Active dot */}
-                {isActive && (
-                  <span className="w-1 h-1 rounded-full bg-accent" />
-                )}
                 <span className={cn(
                   'text-[10px] leading-none',
-                  isActive ? 'font-semibold text-accent' : 'font-medium'
+                  isActive ? 'font-medium' : 'font-normal'
                 )}>{item.label}</span>
               </Link>
             );
@@ -132,19 +163,21 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
           <button
             onClick={() => setMoreOpen(prev => !prev)}
             className={cn(
-              'flex flex-col items-center justify-center gap-1 py-2 pt-2.5 flex-1 min-h-[52px] transition-colors duration-150',
+              'flex flex-col items-center justify-center gap-1 py-2.5 pt-3 flex-1 min-h-[64px] transition-all duration-200 relative',
               moreOpen || isMoreActive ? 'text-accent' : 'text-text-tertiary'
             )}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-            </svg>
             {(moreOpen || isMoreActive) && (
-              <span className="w-1 h-1 rounded-full bg-accent" />
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-accent rounded-full" />
             )}
+            <div className="flex items-center justify-center w-8 h-6">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
+              </svg>
+            </div>
             <span className={cn(
               'text-[10px] leading-none',
-              (moreOpen || isMoreActive) ? 'font-semibold text-accent' : 'font-medium'
+              (moreOpen || isMoreActive) ? 'font-medium' : 'font-normal'
             )}>More</span>
           </button>
         </div>

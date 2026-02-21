@@ -78,7 +78,7 @@ export function WeekHeader({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onNavigateWeek(-1)}
-            className="w-7 h-7 rounded-lg border border-border/50 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:border-border transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-text-tertiary hover:text-text-primary hover:border-border transition-colors cursor-pointer"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M7.5 2.5L4 6L7.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -89,7 +89,7 @@ export function WeekHeader({
           </span>
           <button
             onClick={() => onNavigateWeek(1)}
-            className="w-7 h-7 rounded-lg border border-border/50 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:border-border transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-text-tertiary hover:text-text-primary hover:border-border transition-colors cursor-pointer"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M4.5 2.5L8 6L4.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -98,7 +98,7 @@ export function WeekHeader({
           {!isCurrentWeek && (
             <button
               onClick={onGoToCurrentWeek}
-              className="text-[10px] text-accent hover:text-accent/80 transition-colors cursor-pointer"
+              className="text-xs text-text-primary hover:text-text-secondary transition-colors cursor-pointer"
             >
               Today
             </button>
@@ -124,8 +124,8 @@ export function WeekHeader({
           <button
             onClick={onToggleHideCompleted}
             className={cn(
-              'text-[10px] px-2 py-1 rounded-lg transition-colors cursor-pointer',
-              hideCompleted ? 'text-accent bg-accent/10' : 'text-text-tertiary hover:text-text-secondary'
+              'text-xs px-2 py-1 rounded-lg transition-colors cursor-pointer',
+              hideCompleted ? 'text-text-primary bg-surface-tertiary' : 'text-text-tertiary hover:text-text-secondary'
             )}
           >
             {hideCompleted ? 'Show done' : 'Hide done'}
@@ -144,13 +144,13 @@ export function WeekHeader({
             energyBreakdown={weekEnergyBreakdown}
           />
         </div>
-        <div className="flex items-center gap-2 text-[9px] text-text-tertiary shrink-0">
+        <div className="flex items-center gap-2 text-xs text-text-tertiary shrink-0">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-text-tertiary/60" />
             Admin
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-purple-400" />
+            <span className="w-2 h-2 rounded-full bg-text-primary" />
             Creative
           </span>
         </div>

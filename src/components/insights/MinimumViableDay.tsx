@@ -150,7 +150,7 @@ export function MinimumViableDay({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-[10px] font-medium text-accent uppercase tracking-widest">
+        <p className="text-xs font-medium text-text-tertiary ">
           Minimum Viable Day
         </p>
         <InfoBox title="Minimum Viable Day">
@@ -160,26 +160,19 @@ export function MinimumViableDay({
           </p>
         </InfoBox>
         {analysis.mvdMet ? (
-          <span className="text-[9px] px-2 py-0.5 rounded-md font-medium bg-accent/15 text-accent">
+          <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-surface-tertiary text-text-primary">
             MVD Achieved
           </span>
         ) : (
-          <span className="text-[9px] px-2 py-0.5 rounded-md font-medium bg-surface-tertiary text-text-tertiary">
+          <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-surface-tertiary text-text-tertiary">
             {analysis.mvdProgress}/{analysis.criteria.length}
           </span>
         )}
       </div>
 
       {/* MVD Checklist */}
-      <div
-        className={cn(
-          'rounded-xl border p-4 space-y-2.5 transition-all duration-500',
-          analysis.mvdMet
-            ? 'bg-accent/5 border-accent/30 shadow-[0_0_15px_-3px] shadow-accent/10'
-            : 'bg-surface-tertiary/40 border-border/50'
-        )}
-      >
-        <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-wider mb-2">
+      <div className="space-y-2.5 transition-all duration-500">
+        <p className="text-xs font-medium text-text-tertiary  mb-2">
           Core Protocol
         </p>
 
@@ -193,8 +186,8 @@ export function MinimumViableDay({
                 className={cn(
                   'w-5 h-5 rounded-lg border flex-shrink-0 flex items-center justify-center transition-all duration-200 hover:scale-110',
                   criterion.met
-                    ? 'bg-accent border-accent shadow-sm shadow-accent/30'
-                    : 'border-border hover:border-accent/50'
+                    ? 'bg-text-primary border-text-primary'
+                    : 'border-border hover:border-border-light'
                 )}
                 title="Go to fundamentals"
               >
@@ -209,7 +202,7 @@ export function MinimumViableDay({
                     />
                   </svg>
                 ) : (
-                  <span className="text-[8px] text-text-tertiary">{'\u2715'}</span>
+                  <span className="text-xs text-text-tertiary">{'\u2715'}</span>
                 )}
               </button>
             ) : (
@@ -217,7 +210,7 @@ export function MinimumViableDay({
                 className={cn(
                   'w-5 h-5 rounded-lg border flex-shrink-0 flex items-center justify-center transition-all duration-200',
                   criterion.met
-                    ? 'bg-accent border-accent shadow-sm shadow-accent/30'
+                    ? 'bg-text-primary border-text-primary'
                     : 'border-border'
                 )}
               >
@@ -232,7 +225,7 @@ export function MinimumViableDay({
                     />
                   </svg>
                 ) : (
-                  <span className="text-[8px] text-text-tertiary">{'\u2715'}</span>
+                  <span className="text-xs text-text-tertiary">{'\u2715'}</span>
                 )}
               </div>
             )}
@@ -250,8 +243,8 @@ export function MinimumViableDay({
 
             <span
               className={cn(
-                'text-[10px] font-mono flex-shrink-0',
-                criterion.met ? 'text-accent' : 'text-text-tertiary'
+                'text-xs font-mono flex-shrink-0',
+                criterion.met ? 'text-text-primary' : 'text-text-tertiary'
               )}
             >
               {criterion.detail}
@@ -262,7 +255,7 @@ export function MinimumViableDay({
               <button
                 type="button"
                 onClick={() => setQuickWinOpen(!quickWinOpen)}
-                className="text-[9px] px-2 py-0.5 rounded-md font-medium bg-accent/15 text-accent hover:bg-accent/25 transition-colors flex-shrink-0"
+                className="text-xs px-2 py-0.5 rounded-md font-medium bg-surface-tertiary text-text-primary hover:bg-surface-tertiary transition-colors flex-shrink-0"
               >
                 Quick Win
               </button>
@@ -272,8 +265,8 @@ export function MinimumViableDay({
 
         {/* Quick Win expanded panel */}
         {quickWinOpen && analysis.firstIncompleteTask && (
-          <div className="mt-2 p-3 rounded-lg bg-surface-secondary/60 border border-accent/20 space-y-2 animate-fade-in">
-            <p className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium">
+          <div className="mt-2 p-3 rounded-lg bg-surface-secondary/60 border border-border space-y-2 animate-fade-in">
+            <p className="text-xs text-text-tertiary  font-medium">
               First incomplete task
             </p>
             <div className="flex items-center justify-between gap-3">
@@ -285,17 +278,17 @@ export function MinimumViableDay({
                 onClick={() => handleQuickComplete(analysis.firstIncompleteTask!.id)}
                 disabled={isPending}
                 className={cn(
-                  'text-[10px] px-3 py-1 rounded-lg font-medium transition-all flex-shrink-0',
+                  'text-xs px-3 py-1 rounded-lg font-medium transition-all flex-shrink-0',
                   isPending
                     ? 'bg-surface-tertiary text-text-tertiary cursor-wait'
-                    : 'bg-accent text-black hover:bg-accent/90 active:scale-95'
+                    : 'bg-text-primary text-background hover:bg-text-primary/90 active:scale-95'
                 )}
               >
                 {isPending ? 'Completing...' : 'Complete'}
               </button>
             </div>
             {analysis.firstIncompleteTask.weight === 'high' && (
-              <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">
+              <span className="inline-block text-xs px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">
                 High energy
               </span>
             )}
@@ -306,13 +299,13 @@ export function MinimumViableDay({
         <div
           className={cn(
             'mt-3 pt-3 border-t',
-            analysis.mvdMet ? 'border-accent/15' : 'border-border/30'
+            analysis.mvdMet ? 'border-border' : 'border-border'
           )}
         >
           <p
             className={cn(
-              'text-[11px] leading-relaxed',
-              analysis.mvdMet ? 'text-accent' : 'text-text-secondary'
+              'text-xs leading-relaxed',
+              analysis.mvdMet ? 'text-text-primary' : 'text-text-secondary'
             )}
           >
             {analysis.statusMessage}
@@ -321,13 +314,13 @@ export function MinimumViableDay({
       </div>
 
       {/* Stretch Goals */}
-      <div className="rounded-xl bg-surface-tertiary/40 border border-border/50 p-4 space-y-2.5">
+      <div className="border-t border-border pt-3 space-y-2.5">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-wider">
+          <p className="text-xs font-medium text-text-tertiary ">
             Stretch Goals
           </p>
           {analysis.stretchMet > 0 && (
-            <span className="text-[9px] font-mono text-accent">
+            <span className="text-xs font-mono text-text-primary">
               {analysis.stretchMet}/{analysis.stretchGoals.length}
             </span>
           )}
@@ -338,8 +331,8 @@ export function MinimumViableDay({
               className={cn(
                 'w-4 h-4 rounded-md border flex-shrink-0 flex items-center justify-center',
                 goal.met
-                  ? 'bg-accent-blue border-accent-blue'
-                  : 'border-border/60'
+                  ? 'bg-text-secondary border-text-secondary'
+                  : 'border-border'
               )}
             >
               {goal.met && (
@@ -356,7 +349,7 @@ export function MinimumViableDay({
             </div>
             <span
               className={cn(
-                'text-[11px] flex-1',
+                'text-xs flex-1',
                 goal.met ? 'text-text-primary' : 'text-text-tertiary'
               )}
             >
@@ -364,8 +357,8 @@ export function MinimumViableDay({
             </span>
             <span
               className={cn(
-                'text-[10px] font-mono',
-                goal.met ? 'text-accent-blue' : 'text-text-tertiary'
+                'text-xs font-mono',
+                goal.met ? 'text-text-secondary' : 'text-text-tertiary'
               )}
             >
               {goal.detail}

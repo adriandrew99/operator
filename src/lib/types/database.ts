@@ -7,6 +7,7 @@ export type KnowledgeEntryType = 'reading' | 'idea' | 'lesson' | 'quote' | 'ment
 export type ReadingStatus = 'to_read' | 'reading' | 'completed';
 export type ExpenseCategoryType = 'software' | 'hosting' | 'marketing' | 'office' | 'travel' | 'professional' | 'insurance' | 'subscriptions' | 'other';
 export type TimePeriod = 'morning' | 'afternoon' | 'evening';
+export type OutboundCampaignStatus = 'active' | 'paused' | 'completed';
 
 export interface Profile {
   id: string;
@@ -63,17 +64,42 @@ export interface DeepWorkSession {
   created_at: string;
 }
 
+export interface CheckInRatings {
+  focus: number;     // 1-5
+  energy: number;    // 1-5
+  decisions: number; // 1-5
+  clarity: number;   // 1-5
+  stress: number;    // 1-5
+}
+
+export interface ScoreBreakdownV2 {
+  execution: number;  // max 25 — auto (task completion + MLU delivery)
+  habits: number;     // max 20 — auto (fundamental completion)
+  focus: number;      // max 12 — self-rated
+  energy: number;     // max 10 — self-rated
+  decisions: number;  // max 8 — self-rated
+  clarity: number;    // max 8 — self-rated
+  stress: number;     // max 7 — self-rated
+  momentum: number;   // max 10 — auto (streak)
+}
+
+// Legacy breakdown from v1 auto-only scores
+export interface ScoreBreakdownV1 {
+  fundamentals: number;
+  objectives: number;
+  deepWork: number;
+  streak: number;
+}
+
 export interface OperatorScore {
   id: string;
   user_id: string;
   date: string;
   score: number;
-  breakdown: {
-    fundamentals: number;
-    objectives: number;
-    deepWork: number;
-    streak: number;
-  };
+  breakdown: ScoreBreakdownV2 | ScoreBreakdownV1;
+  check_in: CheckInRatings | null;
+  notes: string | null;
+  version: number;
   created_at: string;
 }
 
@@ -326,4 +352,43 @@ export interface DayTheme {
   theme: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface OutboundCampaign {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  channel: string;
+  status: OutboundCampaignStatus;
+  message_template: string | null;
+  target_audience: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutboundEntry {
+  id: string;
+  user_id: string;
+  campaign_id: string;
+  date: string;
+  sends: number;
+  responses: number;
+  calls_booked: number;
+  closes: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutboundCampaignWithEntries extends OutboundCampaign {
+  entries: OutboundEntry[];
+  totals: {
+    sends: number;
+    responses: number;
+    calls_booked: number;
+    closes: number;
+  };
 }

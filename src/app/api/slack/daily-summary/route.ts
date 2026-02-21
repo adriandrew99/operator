@@ -67,13 +67,13 @@ export async function GET(request: Request) {
         const [tasksRes, completedRes, fundamentalsRes, completionsRes] = await Promise.all([
           supabase
             .from('tasks')
-            .select('id, title, weight, energy, status, flagged_for_today, scheduled_date, deadline')
+            .select('id, title, weight, energy, status, flagged_for_today, scheduled_date, deadline, is_personal')
             .eq('user_id', user.id)
             .eq('status', 'active')
             .or(`flagged_for_today.eq.true,scheduled_date.eq.${today},deadline.eq.${today}`),
           supabase
             .from('tasks')
-            .select('id, weight, energy')
+            .select('id, weight, energy, is_personal')
             .eq('user_id', user.id)
             .eq('status', 'completed')
             .gte('completed_at', `${today}T00:00:00`),
@@ -94,8 +94,8 @@ export async function GET(request: Request) {
         const fundamentals = fundamentalsRes.data || [];
         const completions = completionsRes.data || [];
 
-        const totalMLU = todayTasks.reduce((sum, t) => sum + getTaskMLU({ weight: t.weight, energy: t.energy }), 0);
-        const completedMLU = completedTasks.reduce((sum, t) => sum + getTaskMLU({ weight: t.weight, energy: t.energy }), 0);
+        const totalMLU = todayTasks.filter(t => !t.is_personal).reduce((sum, t) => sum + getTaskMLU({ weight: t.weight, energy: t.energy }), 0);
+        const completedMLU = completedTasks.filter(t => !t.is_personal).reduce((sum, t) => sum + getTaskMLU({ weight: t.weight, energy: t.energy }), 0);
 
         const completedFundamentalIds = new Set(
           completions.filter((c: { completed: boolean }) => c.completed).map((c: { fundamental_id: string }) => c.fundamental_id)

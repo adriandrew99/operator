@@ -237,7 +237,9 @@ export async function suggestPlan(weekStart: string): Promise<SuggestionResult[]
       .eq('week_start', weekStart),
   ]);
 
-  const tasks = tasksRes.data || [];
+  const allTasks = tasksRes.data || [];
+  // Exclude personal tasks from planning — they don't contribute to MLU
+  const tasks = allTasks.filter((t: any) => !t.is_personal);
   if (tasks.length === 0) return [];
 
   const events = eventsRes.data || [];
@@ -311,8 +313,20 @@ export async function suggestPlan(weekStart: string): Promise<SuggestionResult[]
     return 0;
   });
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const currentHour = now.getHours();
   const suggestions: SuggestionResult[] = [];
+
+  // Determine which periods are still available today based on current time
+  function getAvailablePeriodsForDate(date: string): TimePeriod[] {
+    if (date !== todayStr) return ['morning', 'afternoon', 'evening'];
+    const available: TimePeriod[] = [];
+    if (currentHour < 12) available.push('morning');
+    if (currentHour < 17) available.push('afternoon');
+    available.push('evening'); // evening is always available
+    return available;
+  }
 
   // Energy-to-period preference
   const ENERGY_PERIOD_PREF: Record<string, TimePeriod[]> = {
@@ -330,8 +344,9 @@ export async function suggestPlan(weekStart: string): Promise<SuggestionResult[]
     const weight = task.weight || 'medium';
     const mlu = getTaskMLU(task);
 
-    // Determine day ordering
+    // Determine day ordering — only today and future workdays
     const allDays = weekDates.filter(date => {
+      if (date < todayStr) return false; // skip past days
       const dow = new Date(date + 'T00:00:00').getDay();
       return workDays.includes(dow);
     });
@@ -370,10 +385,15 @@ export async function suggestPlan(weekStart: string): Promise<SuggestionResult[]
     const weightPref = WEIGHT_PERIOD_PREF[weight] || WEIGHT_PERIOD_PREF.medium;
 
     // Merge: energy preference takes priority, weight breaks ties
-    const periodOrder = mergePreferences(energyPref, weightPref);
+    const basePeriodOrder = mergePreferences(energyPref, weightPref);
 
     let placed = false;
     for (const date of targetDays) {
+      // Filter out periods that have already passed (for today only)
+      const availablePeriods = getAvailablePeriodsForDate(date);
+      const periodOrder = basePeriodOrder.filter(p => availablePeriods.includes(p));
+      if (periodOrder.length === 0) continue;
+
       for (const period of periodOrder) {
         const key = initKey(date, period);
         if ((periodLoad[key] || 0) + mlu <= periodBudget[period]) {
@@ -395,7 +415,8 @@ export async function suggestPlan(weekStart: string): Promise<SuggestionResult[]
     // If no period had budget, place in least-loaded period of best day
     if (!placed && targetDays.length > 0) {
       const bestDay = targetDays[0];
-      const bestPeriod = periodOrder.reduce((best, p) => {
+      const fallbackPeriods = getAvailablePeriodsForDate(bestDay);
+      const bestPeriod = fallbackPeriods.reduce((best, p) => {
         const key = initKey(bestDay, p);
         const bestKey = initKey(bestDay, best);
         return (periodLoad[key] || 0) < (periodLoad[bestKey] || 0) ? p : best;

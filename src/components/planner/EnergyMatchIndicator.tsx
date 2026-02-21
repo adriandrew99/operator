@@ -19,8 +19,8 @@ export function EnergyMatchIndicator({ task, period }: EnergyMatchIndicatorProps
     <span
       className={cn(
         'inline-block w-1.5 h-1.5 rounded-full shrink-0',
-        match === 'optimal' && 'bg-accent',
-        match === 'mismatch' && 'bg-amber-400'
+        match === 'optimal' && 'bg-text-primary',
+        match === 'mismatch' && 'bg-text-tertiary'
       )}
       title={
         match === 'optimal'

@@ -12,7 +12,7 @@ export default function AppError({
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 text-center">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-text-primary">Something went wrong</h2>
+        <h2 className="text-page-title text-text-primary">Something went wrong</h2>
         <p className="text-sm text-text-secondary max-w-md">
           {error.message || 'An unexpected error occurred. Try refreshing the page.'}
         </p>

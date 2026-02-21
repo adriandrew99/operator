@@ -12,15 +12,15 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+          <label className="text-xs font-medium text-text-secondary">
             {label}
           </label>
         )}
         <select
           ref={ref}
           className={cn(
-            'w-full bg-surface-tertiary border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary',
-            'focus:border-accent focus:ring-1 focus:ring-accent/20',
+            'w-full bg-surface-inset border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary',
+            'focus:border-border-light focus:bg-surface-secondary',
             'transition-all duration-200 appearance-none',
             error && 'border-danger',
             className

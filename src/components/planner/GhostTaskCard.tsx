@@ -11,11 +11,11 @@ interface GhostTaskCardProps {
 
 export function GhostTaskCard({ suggestion, onAccept, onReject }: GhostTaskCardProps) {
   return (
-    <div className="relative border border-dashed border-accent/30 rounded-lg px-2.5 py-1.5 bg-accent/5 text-[11px] animate-fade-in">
+    <div className="relative border border-dashed border-border-light rounded-lg px-2.5 py-1.5 bg-surface-tertiary text-xs animate-fade-in">
       <div className="flex items-start gap-1.5">
         <div className="flex-1 min-w-0">
           <span className="text-text-secondary truncate block">{suggestion.taskTitle}</span>
-          <span className="text-[9px] text-text-tertiary mt-0.5 block">{suggestion.reasoning}</span>
+          <span className="text-xs text-text-tertiary mt-0.5 block">{suggestion.reasoning}</span>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
@@ -24,7 +24,7 @@ export function GhostTaskCard({ suggestion, onAccept, onReject }: GhostTaskCardP
               e.stopPropagation();
               onAccept();
             }}
-            className="w-5 h-5 rounded-md bg-accent/15 text-accent hover:bg-accent/25 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-5 h-5 rounded-md text-text-primary hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
             title="Accept suggestion"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -36,7 +36,7 @@ export function GhostTaskCard({ suggestion, onAccept, onReject }: GhostTaskCardP
               e.stopPropagation();
               onReject();
             }}
-            className="w-5 h-5 rounded-md bg-surface-tertiary text-text-tertiary hover:text-text-secondary hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
+            className="w-5 h-5 rounded-md text-text-tertiary hover:text-text-secondary hover:bg-surface-hover flex items-center justify-center transition-colors cursor-pointer"
             title="Reject suggestion"
           >
             <svg width="8" height="8" viewBox="0 0 8 8" fill="none">

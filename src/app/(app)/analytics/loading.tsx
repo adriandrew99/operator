@@ -1,14 +1,14 @@
 export default function AnalyticsLoading() {
   return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-6 w-28 bg-surface-secondary rounded" />
+    <div className="space-y-6">
+      <div className="skeleton skeleton-heading w-28 h-6" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 bg-surface-secondary border border-border rounded-2xl" />
+          <div key={i} className="skeleton skeleton-card h-24" />
         ))}
       </div>
-      <div className="h-64 bg-surface-secondary border border-border rounded-2xl" />
-      <div className="h-48 bg-surface-secondary border border-border rounded-2xl" />
+      <div className="skeleton skeleton-card h-64" />
+      <div className="skeleton skeleton-card h-48" />
     </div>
   );
 }

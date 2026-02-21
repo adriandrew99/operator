@@ -55,9 +55,9 @@ export function MonkeyBrainOverride({ primaryObjective }: MonkeyBrainOverridePro
       <button
         onClick={startReset}
         className={cn(
-          'w-full py-3 px-4 border border-dashed border-border rounded-2xl',
+          'w-full py-3 px-4 border border-dashed border-border rounded-xl',
           'text-xs text-text-tertiary hover:text-text-secondary hover:border-border-light',
-          'transition-all duration-200 text-center uppercase tracking-wider'
+          'transition-all duration-200 text-center'
         )}
       >
         Monkey Brain Override
@@ -69,11 +69,11 @@ export function MonkeyBrainOverride({ primaryObjective }: MonkeyBrainOverridePro
   const secs = seconds % 60;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-lg flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-6">
       <div className="max-w-sm w-full space-y-8 text-center animate-fade-in">
         {phase === 'reset' && (
           <>
-            <p className="text-[10px] text-text-tertiary uppercase tracking-widest">
+            <p className="text-xs text-text-tertiary ">
               Reset Timer
             </p>
             <p className="font-mono text-5xl font-bold text-text-primary">
@@ -83,8 +83,8 @@ export function MonkeyBrainOverride({ primaryObjective }: MonkeyBrainOverridePro
               Breathe. Reset. Refocus.
             </p>
             {primaryObjective && (
-              <div className="card-surface border border-border rounded-2xl p-5">
-                <p className="text-[10px] text-text-tertiary uppercase tracking-widest mb-2">
+              <div className="bg-surface-secondary border border-border rounded-xl p-5">
+                <p className="text-xs text-text-tertiary  mb-2">
                   Your Objective
                 </p>
                 <p className="text-sm text-text-primary font-medium">
@@ -105,7 +105,7 @@ export function MonkeyBrainOverride({ primaryObjective }: MonkeyBrainOverridePro
 
         {phase === 'micro' && (
           <>
-            <p className="text-[10px] text-accent uppercase tracking-widest animate-pulse-accent">
+            <p className="text-xs text-text-secondary ">
               Micro Focus Active
             </p>
             <p className="font-mono text-5xl font-bold text-text-primary">

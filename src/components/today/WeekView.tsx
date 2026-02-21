@@ -25,13 +25,13 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEIGHT_DOT: Record<string, string> = {
   high: 'bg-red-400',
   medium: 'bg-amber-400',
-  low: 'bg-accent',
+  low: 'bg-text-primary/50',
 };
 
 const WEIGHT_BADGE: Record<string, string> = {
   high: 'bg-red-500/15 text-red-400',
   medium: 'bg-amber-500/15 text-amber-400',
-  low: 'bg-accent/15 text-accent',
+  low: 'bg-text-primary/10 text-text-secondary',
 };
 
 const ENERGY_COLORS: Record<string, string> = {
@@ -39,25 +39,6 @@ const ENERGY_COLORS: Record<string, string> = {
   creative: 'bg-purple-500/15 text-purple-400',
 };
 
-const CLIENT_BADGE_COLORS = [
-  'bg-blue-500/15 text-blue-400',
-  'bg-teal-500/15 text-teal-400',
-  'bg-orange-500/15 text-orange-400',
-  'bg-pink-500/15 text-pink-400',
-  'bg-indigo-500/15 text-indigo-400',
-  'bg-lime-500/15 text-lime-400',
-  'bg-rose-500/15 text-rose-400',
-  'bg-sky-500/15 text-sky-400',
-];
-
-function getClientColor(clientId: string): string {
-  let hash = 0;
-  for (let i = 0; i < clientId.length; i++) {
-    hash = ((hash << 5) - hash) + clientId.charCodeAt(i);
-    hash |= 0;
-  }
-  return CLIENT_BADGE_COLORS[Math.abs(hash) % CLIENT_BADGE_COLORS.length];
-}
 
 function getMonday(date: Date): Date {
   const d = new Date(date);
@@ -278,28 +259,28 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <p className="text-[10px] font-medium text-accent uppercase tracking-widest flex-shrink-0">Week</p>
+          <p className="text-xs font-medium text-text-secondary  flex-shrink-0">Week</p>
           <InfoBox title="Week View">
             <p>See all your scheduled and recurring tasks for the week. Recurring daily tasks automatically appear on their assigned days.</p>
             <p className="mt-1">Click any day to expand it. <strong>Drag tasks</strong> between days to reschedule. <strong>Click a task</strong> to edit it. Use <strong>+ Add Task</strong> to schedule a task to a specific day.</p>
           </InfoBox>
-          <span className="text-[10px] text-text-tertiary flex-shrink-0">{totalTasks} tasks</span>
+          <span className="text-xs text-text-tertiary flex-shrink-0">{totalTasks} tasks</span>
           {highCount > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-400 flex-shrink-0">{highCount} high</span>
+            <span className="text-xs px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-400 flex-shrink-0">{highCount} high</span>
           )}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setWeekOffset(prev => prev - 1)} className="text-text-tertiary hover:text-text-primary transition-colors p-1 btn-press">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
-          <button onClick={() => setWeekOffset(0)} className={cn('text-[10px] font-medium transition-colors btn-press', weekOffset === 0 ? 'text-accent' : 'text-text-tertiary hover:text-text-secondary')}>
+          <button onClick={() => setWeekOffset(0)} className={cn('text-xs font-medium transition-colors btn-press', weekOffset === 0 ? 'text-text-primary' : 'text-text-tertiary hover:text-text-secondary')}>
             {weekLabel}
           </button>
           <button onClick={() => setWeekOffset(prev => prev + 1)} className="text-text-tertiary hover:text-text-primary transition-colors p-1 btn-press">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
           </button>
           {weekOffset !== 0 && (
-            <button onClick={() => setWeekOffset(0)} className="text-[9px] text-accent/70 hover:text-accent transition-colors ml-1 btn-press">
+            <button onClick={() => setWeekOffset(0)} className="text-xs text-text-secondary hover:text-text-primary transition-colors ml-1 btn-press">
               Today
             </button>
           )}
@@ -308,13 +289,13 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
 
       {loadingWeek && (
         <div className="flex items-center justify-center py-4">
-          <div className="w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-          <span className="text-[10px] text-text-tertiary ml-2">Loading week...</span>
+          <div className="w-4 h-4 border-2 border-text-primary/20 border-t-text-primary/60 rounded-full animate-spin" />
+          <span className="text-xs text-text-tertiary ml-2">Loading week...</span>
         </div>
       )}
 
       {/* Day strip — drop targets */}
-      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none sm:grid sm:grid-cols-7 sm:overflow-visible">
+      <div className="flex gap-1 sm:gap-2 overflow-x-auto scrollbar-none sm:grid sm:grid-cols-7 sm:overflow-visible">
         {weekDays.map((dateStr, i) => {
           const dayTasks = tasksByDay[dateStr] || [];
           const dayRecurring = recurringByDayIndex[i] || [];
@@ -337,22 +318,22 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
               onDragLeave={(e) => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverDay(null); }}
               onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDrop(e, dateStr); }}
               className={cn(
-                'flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-xl transition-all duration-200 cursor-pointer select-none min-w-[48px] sm:min-w-0 flex-shrink-0',
-                isToday && 'bg-accent/8 border border-accent/20',
+                'flex flex-col items-center gap-1.5 py-3 px-1 sm:px-1.5 rounded-xl transition-all duration-200 cursor-pointer select-none min-w-[40px] sm:min-w-0 flex-shrink-0',
+                isToday && 'bg-text-primary/5 border border-border',
                 !isToday && !isExpanded && !isDragTarget && 'border border-transparent',
-                isExpanded ? 'bg-accent/10 shadow-sm border-accent/25' : 'hover:bg-surface-tertiary/60',
+                isExpanded ? 'bg-text-primary/8 border-border' : 'hover:bg-surface-tertiary',
                 isPast && !isToday && 'opacity-60',
-                isDragTarget && 'ring-2 ring-accent bg-accent/15 scale-[1.06]'
+                isDragTarget && 'ring-2 ring-border bg-text-primary/10 scale-[1.06]'
               )}
             >
-              <span className={cn('text-[10px] font-medium', isToday ? 'text-accent' : 'text-text-tertiary')}>{DAY_LABELS[i]}</span>
-              <span className={cn('text-sm font-bold w-7 h-7 flex items-center justify-center rounded-lg transition-colors', isToday ? 'bg-accent text-black' : 'text-text-primary')}>{dayNum}</span>
+              <span className={cn('text-xs font-medium', isToday ? 'text-text-primary' : 'text-text-tertiary')}>{DAY_LABELS[i]}</span>
+              <span className={cn('text-sm font-bold w-7 h-7 flex items-center justify-center rounded-lg transition-colors', isToday ? 'bg-text-primary text-background' : 'text-text-primary')}>{dayNum}</span>
               <div className="flex gap-1 h-2.5 items-center">
                 {dayTasks.slice(0, 3).map((t, j) => (
                   <div key={j} className={cn('w-1.5 h-1.5 rounded-full', WEIGHT_DOT[t.weight] || WEIGHT_DOT.medium)} />
                 ))}
-                {dayRecurring.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-accent-blue/60" />}
-                {allCount > 4 && <span className="text-[8px] text-text-tertiary ml-0.5">+{allCount - 4}</span>}
+                {dayRecurring.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-text-tertiary/60" />}
+                {allCount > 4 && <span className="text-xs text-text-tertiary ml-0.5">+{allCount - 4}</span>}
                 {allCount === 0 && <div className="w-1.5 h-1.5 rounded-full bg-border/40" />}
               </div>
               {/* Day load bar */}
@@ -366,8 +347,8 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                       <div
                         className={cn(
                           'h-full rounded-full',
-                          level === 'light' && 'bg-accent',
-                          level === 'moderate' && 'bg-accent',
+                          level === 'light' && 'bg-text-primary/50',
+                          level === 'moderate' && 'bg-text-primary/60',
                           level === 'heavy' && 'bg-amber-400',
                           level === 'overloaded' && 'bg-red-400',
                         )}
@@ -384,7 +365,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
 
       {/* Week summary stats */}
       {totalTasks > 0 && (
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap px-2 text-[10px] text-text-tertiary">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap px-2 text-xs text-text-tertiary">
           <span className="font-medium">{totalTasks} tasks</span>
           {totalEstimatedMinutes > 0 && (
             <span>~{totalEstimatedMinutes >= 60 ? `${Math.round(totalEstimatedMinutes / 60)}h${totalEstimatedMinutes % 60 > 0 ? ` ${totalEstimatedMinutes % 60}m` : ''}` : `${totalEstimatedMinutes}m`} est.</span>
@@ -392,7 +373,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
           <div className="flex items-center gap-2 ml-auto">
             {highCount > 0 && <span className="text-red-400 font-mono">{highCount}H</span>}
             {mediumCount > 0 && <span className="text-amber-400 font-mono">{mediumCount}M</span>}
-            {lowCount > 0 && <span className="text-accent font-mono">{lowCount}L</span>}
+            {lowCount > 0 && <span className="text-text-secondary font-mono">{lowCount}L</span>}
           </div>
         </div>
       )}
@@ -406,31 +387,31 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
         return (
           <div className="space-y-2 animate-fade-in">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-text-tertiary font-medium">
+              <p className="text-xs text-text-tertiary font-medium">
                 {new Date(expandedDay + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
                 <span className="ml-2 text-text-tertiary/60">{dayTasks.length + dayRecurring.length} items</span>
               </p>
-              <button onClick={() => setShowQuickAdd(!showQuickAdd)} className="text-[10px] text-accent hover:text-accent/80 transition-colors font-medium btn-press flex items-center gap-1">
+              <button onClick={() => setShowQuickAdd(!showQuickAdd)} className="text-xs text-text-secondary hover:text-text-primary transition-colors font-medium btn-press flex items-center gap-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                 Add Task
               </button>
             </div>
 
             {showQuickAdd && (
-              <div className="p-2.5 rounded-xl bg-surface-tertiary/40 border border-border/50 animate-fade-in space-y-2">
+              <div className="p-2.5 rounded-xl bg-surface-tertiary border border-border animate-fade-in space-y-2">
                 <input type="text" value={quickTitle} onChange={(e) => setQuickTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} placeholder="Task title..." className="w-full text-xs bg-transparent text-text-primary placeholder:text-text-tertiary/60 outline-none" autoFocus />
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-1">
                     {(['low', 'medium', 'high'] as const).map(w => (
-                      <button key={w} onClick={() => setQuickWeight(w)} className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium uppercase transition-all', quickWeight === w ? WEIGHT_BADGE[w] : 'text-text-tertiary/50 hover:text-text-tertiary')}>{w[0]}</button>
+                      <button key={w} onClick={() => setQuickWeight(w)} className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium uppercase transition-all', quickWeight === w ? WEIGHT_BADGE[w] : 'text-text-tertiary/50 hover:text-text-tertiary')}>{w[0]}</button>
                     ))}
                   </div>
                   <div className="flex items-center gap-1">
                     {(['creative', 'admin'] as const).map(e => (
-                      <button key={e} onClick={() => setQuickEnergy(e)} className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium transition-all', quickEnergy === e ? ENERGY_COLORS[e] : 'text-text-tertiary/50 hover:text-text-tertiary')}>{e}</button>
+                      <button key={e} onClick={() => setQuickEnergy(e)} className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium transition-all', quickEnergy === e ? ENERGY_COLORS[e] : 'text-text-tertiary/50 hover:text-text-tertiary')}>{e}</button>
                     ))}
                   </div>
-                  <button onClick={handleQuickAdd} disabled={!quickTitle.trim()} className="ml-auto text-[10px] text-accent font-medium disabled:opacity-40 btn-press">Add</button>
+                  <button onClick={handleQuickAdd} disabled={!quickTitle.trim()} className="ml-auto text-xs text-text-primary font-medium disabled:opacity-40 btn-press">Add</button>
                 </div>
               </div>
             )}
@@ -469,25 +450,21 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                         <div className={cn('w-2 h-2 rounded-full flex-shrink-0', WEIGHT_DOT[task.weight] || WEIGHT_DOT.medium)} />
                         <span className={cn('text-xs flex-1 truncate transition-colors', isCompleted ? 'text-text-tertiary line-through' : 'text-text-primary')}>{task.title}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 ml-4 flex-wrap">
-                        {task.is_urgent && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-md font-semibold bg-red-500/20 text-red-400">URGENT</span>
-                        )}
-                        {task.energy && (
-                          <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', ENERGY_COLORS[task.energy] || '')}>{task.energy}</span>
-                        )}
-                        {task.client_id && clientMap.has(task.client_id) && (
-                          <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', getClientColor(task.client_id))}>{clientMap.get(task.client_id)}</span>
-                        )}
-                        {task.estimated_minutes && <span className="text-[10px] text-text-tertiary">~{task.estimated_minutes}m</span>}
-                      </div>
+                      {(task.client_id || task.estimated_minutes) && (
+                        <div className="flex items-center gap-2 mt-0.5 ml-4">
+                          {task.client_id && clientMap.has(task.client_id) && (
+                            <span className="text-xs text-text-tertiary">{clientMap.get(task.client_id)}</span>
+                          )}
+                          {task.estimated_minutes && <span className="text-xs text-text-tertiary">~{task.estimated_minutes}m</span>}
+                        </div>
+                      )}
                     </div>
                     {/* Move to today + Edit on hover */}
                     <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                       {expandedDay !== todayStr && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMoveToToday(task.id); }}
-                          className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                          className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10"
                           title="Move to today"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -497,7 +474,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingTaskId(isEditing ? null : task.id); }}
-                        className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                        className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10"
                         title="Edit task"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -523,8 +500,8 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
 
             {dayRecurring.length > 0 && (
               <>
-                {dayTasks.length > 0 && <div className="border-t border-border/30 my-1" />}
-                <p className="text-[9px] text-text-tertiary/60 uppercase tracking-widest">Recurring</p>
+                {dayTasks.length > 0 && <div className="border-t border-border my-1" />}
+                <p className="text-xs text-text-tertiary/60 ">Recurring</p>
                 {dayRecurring.map(rt => {
                   const isChecked = completedRecurringIds.has(rt.id);
                   const isToday = expandedDay === todayStr;
@@ -533,23 +510,21 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
                       {isToday ? (
                         <AnimatedCheckbox checked={isChecked} onChange={() => handleRecurringToggle(rt.id)} size="sm" />
                       ) : (
-                        <div className={cn('w-2 h-2 rounded-full flex-shrink-0', isChecked ? 'bg-accent' : 'bg-accent-blue/40')} />
+                        <div className={cn('w-2 h-2 rounded-full flex-shrink-0', isChecked ? 'bg-text-primary/60' : 'bg-text-tertiary/40')} />
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <div className={cn('w-2 h-2 rounded-full flex-shrink-0', WEIGHT_DOT[rt.weight || 'low'] || WEIGHT_DOT.low)} />
                           <span className={cn('text-xs flex-1 truncate transition-colors', isChecked ? 'text-text-tertiary line-through' : 'text-text-primary')}>{rt.title}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 ml-4 flex-wrap">
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-md font-medium bg-cyan-500/15 text-cyan-400">recurring</span>
-                          {rt.energy && (
-                            <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', ENERGY_COLORS[rt.energy] || '')}>{rt.energy}</span>
-                          )}
-                          {rt.client_id && clientMap.has(rt.client_id) && (
-                            <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', getClientColor(rt.client_id))}>{clientMap.get(rt.client_id)}</span>
-                          )}
-                          {rt.estimated_minutes && <span className="text-[10px] text-text-tertiary">~{rt.estimated_minutes}m</span>}
-                        </div>
+                        {(rt.client_id || rt.estimated_minutes) && (
+                          <div className="flex items-center gap-2 mt-0.5 ml-4">
+                            {rt.client_id && clientMap.has(rt.client_id) && (
+                              <span className="text-xs text-text-tertiary">{clientMap.get(rt.client_id)}</span>
+                            )}
+                            {rt.estimated_minutes && <span className="text-xs text-text-tertiary">~{rt.estimated_minutes}m</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -558,7 +533,7 @@ export function WeekView({ weekTasks, todayStr, recurringTasks = [], clients = [
             )}
 
             {dayTasks.length === 0 && dayRecurring.length === 0 && !showQuickAdd && (
-              <p className="text-[10px] text-text-tertiary text-center py-3">No tasks scheduled — tap &quot;Add Task&quot; to plan this day</p>
+              <p className="text-xs text-text-tertiary text-center py-3">No tasks scheduled — tap &quot;Add Task&quot; to plan this day</p>
             )}
           </div>
         );
@@ -614,25 +589,25 @@ function WeekTaskEditor({
   return (
     <div
       ref={ref}
-      className="ml-10 mr-3 mt-1 mb-2 p-3 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/20 animate-fade-in space-y-3"
+      className="ml-10 mr-3 mt-1 mb-2 p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in space-y-3"
     >
       <input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border/40 pb-2"
+        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border pb-2"
         autoFocus
       />
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Weight:</span>
+          <span className="text-xs text-text-tertiary mr-1">Weight:</span>
           {(['low', 'medium', 'high'] as const).map(w => (
             <button
               key={w}
               onClick={() => setWeight(w)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium uppercase transition-all',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium uppercase transition-all',
                 weight === w ? WEIGHT_BADGE[w] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -641,13 +616,13 @@ function WeekTaskEditor({
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Energy:</span>
+          <span className="text-xs text-text-tertiary mr-1">Energy:</span>
           {(['creative', 'admin'] as const).map(e => (
             <button
               key={e}
               onClick={() => setEnergy(e)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium transition-all',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium transition-all',
                 energy === e ? ENERGY_COLORS[e] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -659,11 +634,11 @@ function WeekTaskEditor({
       <div className="flex items-center gap-4 flex-wrap">
         {clients.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-text-tertiary">Client:</span>
+            <span className="text-xs text-text-tertiary">Client:</span>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="text-[10px] bg-surface-tertiary/60 border border-border/40 rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-accent/40 transition-colors"
+              className="text-xs bg-surface-tertiary border border-border rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-border transition-colors"
             >
               <option value="">None</option>
               {clients.map(c => (
@@ -673,21 +648,21 @@ function WeekTaskEditor({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-text-tertiary">Time:</span>
+          <span className="text-xs text-text-tertiary">Time:</span>
           <input
             type="number"
             value={estimatedMinutes}
             onChange={(e) => setEstimatedMinutes(e.target.value)}
             placeholder="mins"
             min="0"
-            className="w-16 text-[10px] bg-surface-tertiary/60 border border-border/40 rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-accent/40 transition-colors"
+            className="w-16 text-xs bg-surface-tertiary border border-border rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-border transition-colors"
           />
-          <span className="text-[9px] text-text-tertiary">min</span>
+          <span className="text-xs text-text-tertiary">min</span>
         </div>
       </div>
       <div className="flex items-center justify-end gap-2">
-        <button onClick={onClose} className="text-[10px] text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Cancel</button>
-        <button onClick={handleSave} className="text-[10px] text-accent font-medium hover:text-accent/80 transition-colors px-2 py-1 cursor-pointer">Save</button>
+        <button onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Cancel</button>
+        <button onClick={handleSave} className="text-xs text-text-primary font-medium hover:text-text-secondary transition-colors px-2 py-1 cursor-pointer">Save</button>
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ export function PrimaryObjective({ objective, completed }: PrimaryObjectiveProps
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+      <p className="text-xs font-medium text-text-tertiary">
         Primary Objective
       </p>
       <div className="flex items-start gap-3">
@@ -45,7 +45,7 @@ export function PrimaryObjective({ objective, completed }: PrimaryObjectiveProps
           className={cn(
             'mt-1 w-5 h-5 border-2 flex-shrink-0 flex items-center justify-center transition-all',
             isCompleted
-              ? 'bg-accent border-accent'
+              ? 'bg-text-primary border-text-primary'
               : 'border-border-light hover:border-text-secondary'
           )}
         >
@@ -71,8 +71,8 @@ export function PrimaryObjective({ objective, completed }: PrimaryObjectiveProps
             }}
             placeholder="What is your primary objective today?"
             className={cn(
-              'flex-1 bg-transparent text-lg font-semibold text-text-primary',
-              'placeholder:text-text-tertiary border-b border-accent pb-1',
+              'flex-1 bg-transparent heading-serif text-lg text-text-primary',
+              'placeholder:text-text-tertiary border-b border-border pb-1',
               'focus:outline-none'
             )}
           />

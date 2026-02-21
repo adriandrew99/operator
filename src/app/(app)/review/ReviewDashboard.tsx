@@ -65,17 +65,17 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
   const maxScore = Math.max(...weeklyScores.map((w) => w.avg), 100);
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8">
       {/* Prompts */}
       <div className="space-y-4">
-        <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+        <p className="text-xs font-medium text-text-tertiary ">
           Reflection Prompts
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {PROMPTS.map((prompt) => (
-            <div key={prompt.field} className="card-surface border border-border rounded-2xl card-hover p-5 space-y-2">
+            <div key={prompt.field} className="bg-surface-secondary border border-border rounded-xl p-5 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-accent text-sm">{prompt.icon}</span>
+                <span className="text-text-secondary text-sm">{prompt.icon}</span>
                 <p className="text-xs text-text-secondary">{prompt.question}</p>
               </div>
               <textarea
@@ -92,22 +92,22 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
       {/* Trend Chart (simple SVG) */}
       {weeklyScores.length > 1 && (
         <div className="space-y-3">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+          <p className="text-xs font-medium text-text-tertiary ">
             Operator Score Trend
           </p>
-          <div className="card-surface border border-border rounded-2xl card-hover p-5">
+          <div className="bg-surface-secondary border border-border rounded-xl p-5">
             <div className="h-32 flex items-end gap-2">
               {weeklyScores.slice(-8).map((w, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-text-secondary">{w.avg}</span>
+                  <span className="text-xs text-text-secondary">{w.avg}</span>
                   <div
                     className={cn(
                       'w-full transition-all duration-500',
-                      w.avg >= 70 ? 'bg-accent' : w.avg >= 40 ? 'bg-warning' : 'bg-danger'
+                      w.avg >= 70 ? 'bg-text-primary' : w.avg >= 40 ? 'bg-text-secondary' : 'bg-text-tertiary'
                     )}
                     style={{ height: `${(w.avg / maxScore) * 100}%`, minHeight: '4px' }}
                   />
-                  <span className="text-[8px] text-text-tertiary">{formatDate(w.week)}</span>
+                  <span className="text-xs text-text-tertiary">{formatDate(w.week)}</span>
                 </div>
               ))}
             </div>
@@ -117,18 +117,18 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
 
       {/* Focus Areas */}
       <div className="space-y-3">
-        <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+        <p className="text-xs font-medium text-text-tertiary ">
           Focus Areas for Next Week
         </p>
         <div className="space-y-2">
           {['focus_area_1', 'focus_area_2', 'focus_area_3'].map((field, i) => (
             <div key={field} className="flex items-center gap-3">
-              <span className="text-xs text-accent font-mono">{i + 1}</span>
+              <span className="text-xs text-text-tertiary font-mono">{i + 1}</span>
               <input
                 value={(localReview?.[field as keyof WeeklyReview] as string) || ''}
                 onChange={(e) => handleFieldChange(field, e.target.value)}
                 placeholder={`Focus area ${i + 1}...`}
-                className="flex-1 bg-surface-secondary border border-border rounded-xl px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent transition-colors"
+                className="flex-1 bg-surface-secondary border border-border rounded-xl px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-light transition-colors"
               />
             </div>
           ))}
@@ -138,23 +138,23 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
       {/* Review History */}
       {history.length > 1 && (
         <div className="space-y-3">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+          <p className="text-xs font-medium text-text-tertiary ">
             Past Reviews
           </p>
           <div className="space-y-1">
             {history.slice(1).map((r) => (
-              <div key={r.id} className="card-surface border border-border rounded-xl card-hover px-4 py-3 flex items-center justify-between">
+              <div key={r.id} className="card-elevated rounded-2xl card-hover px-4 py-3 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-text-primary">Week of {formatDate(r.week_start)}</p>
                   {r.total_operator_score_avg != null && (
                     <div className="flex gap-3 mt-1">
-                      <span className="text-[10px] text-text-tertiary">Score: {r.total_operator_score_avg}</span>
+                      <span className="text-xs text-text-tertiary">Score: {r.total_operator_score_avg}</span>
                     </div>
                   )}
                 </div>
                 <div className="flex gap-1 flex-wrap max-w-48">
                   {[r.focus_area_1, r.focus_area_2, r.focus_area_3].filter(Boolean).map((f, i) => (
-                    <span key={i} className="text-[10px] text-text-tertiary bg-surface-tertiary rounded-md px-1.5 py-0.5 truncate max-w-24">{f}</span>
+                    <span key={i} className="text-xs text-text-tertiary bg-surface-tertiary rounded-md px-1.5 py-0.5 truncate max-w-24">{f}</span>
                   ))}
                 </div>
               </div>

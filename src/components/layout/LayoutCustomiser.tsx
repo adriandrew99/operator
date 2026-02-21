@@ -62,10 +62,10 @@ export function LayoutCustomiser({ page, layout, onLayoutChange }: LayoutCustomi
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center gap-1.5 text-[10px] font-medium transition-all cursor-pointer rounded-lg px-2.5 py-1.5 active:scale-95',
+          'flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer rounded-lg px-2.5 py-1.5 active:scale-95',
           open
-            ? 'text-accent bg-accent/10'
-            : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary/50'
+            ? 'text-text-primary bg-surface-tertiary'
+            : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary'
         )}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,21 +76,21 @@ export function LayoutCustomiser({ page, layout, onLayoutChange }: LayoutCustomi
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-64 card-surface border border-border rounded-xl shadow-lg shadow-black/30 animate-fade-in overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 z-50 w-64 bg-surface-secondary border border-border rounded-xl animate-fade-in overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div>
               <p className="text-xs font-medium text-text-primary">
                 {page === 'today' ? 'Today' : 'Analytics'} Sections
               </p>
-              <p className="text-[9px] text-text-tertiary mt-0.5">{onCount}/{keys.length} visible</p>
+              <p className="text-xs text-text-tertiary mt-0.5">{onCount}/{keys.length} visible</p>
             </div>
             <div className="flex items-center gap-1.5">
-              {saved && <span className="text-[9px] text-accent animate-fade-in">Saved</span>}
+              {saved && <span className="text-xs text-text-secondary animate-fade-in">Saved</span>}
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="text-[10px] font-medium text-accent bg-accent/10 hover:bg-accent/15 px-2.5 py-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="text-xs font-medium text-text-primary bg-surface-tertiary hover:bg-surface-tertiary px-2.5 py-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 {saving ? '...' : 'Save'}
               </button>
@@ -104,17 +104,17 @@ export function LayoutCustomiser({ page, layout, onLayoutChange }: LayoutCustomi
                 key={key}
                 type="button"
                 onClick={() => handleToggle(key)}
-                className="w-full flex items-center justify-between px-4 py-2 hover:bg-surface-tertiary/30 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-4 py-2 hover:bg-surface-tertiary transition-colors cursor-pointer"
               >
                 <span className={cn(
-                  'text-[11px] transition-colors',
+                  'text-xs transition-colors',
                   (section[key] ?? true) ? 'text-text-primary' : 'text-text-tertiary'
                 )}>
                   {(labels as Record<string, string>)[key]}
                 </span>
                 <div className={cn(
                   'relative w-8 h-[18px] rounded-full transition-colors duration-200 flex-shrink-0',
-                  (section[key] ?? true) ? 'bg-accent' : 'bg-surface-tertiary border border-border'
+                  (section[key] ?? true) ? 'bg-text-primary' : 'bg-surface-tertiary border border-border'
                 )}>
                   <span className={cn(
                     'absolute top-[3px] left-[3px] w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200',

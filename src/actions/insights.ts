@@ -1564,6 +1564,201 @@ export async function detectPatterns(): Promise<DetectedPattern[]> {
   return patterns;
 }
 
+// ━━━ Scope Creep Analysis Types ━━━
+export interface ScopeCreepClient {
+  clientId: string;
+  clientName: string;
+  severity: 'stable' | 'drifting' | 'creeping';
+  weeklyMLU: number[];
+  weeklyRevenuePerMLU: number[];
+  currentMLU: number;
+  currentRevenuePerMLU: number;
+  mluTrendPct: number;
+  revenuePerMLUTrendPct: number;
+  signals: string[];
+  recommendation: string | null;
+}
+
+export interface ScopeCreepAnalysis {
+  clients: ScopeCreepClient[];
+  overallHealth: 'healthy' | 'watch' | 'action_needed';
+  summary: string;
+}
+
+// ━━━ Scope Creep Radar ━━━
+export async function getScopeCreepAnalysis(): Promise<ScopeCreepAnalysis | null> {
+  const [debriefHistory, clientsData] = await Promise.all([
+    getDebriefHistory().catch(() => []),
+    (async () => {
+      const { getClientsWithOverrides } = await import('@/actions/finance');
+      return getClientsWithOverrides().catch(() => []);
+    })(),
+  ]);
+
+  // Need at least 2 weeks of data for meaningful trend
+  if (debriefHistory.length < 2) return null;
+
+  // Sort oldest → newest for trend calculation
+  const sorted = [...debriefHistory].sort((a, b) => a.week_start.localeCompare(b.week_start));
+
+  // Build client lookup
+  const clientMap = new Map(clientsData.map(c => [c.id, c]));
+
+  // Collect all unique client IDs across all weeks
+  const allClientIds = new Set<string>();
+  for (const week of sorted) {
+    if (week.data?.clients) {
+      for (const c of week.data.clients) {
+        allClientIds.add(c.clientId);
+      }
+    }
+  }
+
+  // Simple linear regression helper: returns slope as % change per data point
+  function linearSlope(values: number[]): number {
+    if (values.length < 2) return 0;
+    const n = values.length;
+    const xMean = (n - 1) / 2;
+    const yMean = values.reduce((s, v) => s + v, 0) / n;
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < n; i++) {
+      num += (i - xMean) * (values[i] - yMean);
+      den += (i - xMean) * (i - xMean);
+    }
+    return den > 0 ? num / den : 0;
+  }
+
+  function pctChange(first: number, last: number): number {
+    if (first === 0) return last > 0 ? 100 : 0;
+    return Math.round(((last - first) / first) * 100);
+  }
+
+  const scopeClients: ScopeCreepClient[] = [];
+
+  for (const clientId of allClientIds) {
+    const client = clientMap.get(clientId);
+    if (!client || !client.is_active) continue;
+
+    // Extract weekly data for this client
+    const weeklyData: { mlu: number; perMLU: number; energyShare: number; taskCount: number; weeklyPay: number }[] = [];
+    for (const week of sorted) {
+      const cd = week.data?.clients?.find(c => c.clientId === clientId);
+      if (cd) {
+        weeklyData.push({
+          mlu: cd.totalMLU || 0,
+          perMLU: cd.perMLU || 0,
+          energyShare: cd.energyShare || 0,
+          taskCount: cd.taskCount || 0,
+          weeklyPay: cd.weeklyPay || 0,
+        });
+      } else {
+        weeklyData.push({ mlu: 0, perMLU: 0, energyShare: 0, taskCount: 0, weeklyPay: 0 });
+      }
+    }
+
+    // Need at least 2 non-zero entries for meaningful trend
+    const nonZero = weeklyData.filter(w => w.mlu > 0);
+    if (nonZero.length < 2) continue;
+
+    const mluValues = weeklyData.map(w => w.mlu);
+    const perMLUValues = weeklyData.map(w => w.perMLU);
+    const energyShareValues = weeklyData.map(w => w.energyShare);
+    const taskCountValues = weeklyData.map(w => w.taskCount);
+
+    const mluSlope = linearSlope(mluValues);
+    const perMLUSlope = linearSlope(perMLUValues);
+
+    const firstNonZeroMLU = nonZero[0].mlu;
+    const lastNonZeroMLU = nonZero[nonZero.length - 1].mlu;
+    const firstNonZeroPerMLU = nonZero.find(w => w.perMLU > 0)?.perMLU || 0;
+    const lastNonZeroPerMLU = [...nonZero].reverse().find(w => w.perMLU > 0)?.perMLU || 0;
+
+    const mluTrendPct = pctChange(firstNonZeroMLU, lastNonZeroMLU);
+    const perMLUTrendPct = pctChange(firstNonZeroPerMLU, lastNonZeroPerMLU);
+
+    const currentMLU = lastNonZeroMLU;
+    const currentPerMLU = lastNonZeroPerMLU;
+
+    // Classify severity
+    const mluRising = mluSlope > 0.3 && mluTrendPct > 15;
+    const perMLUFalling = perMLUSlope < -0.3 && perMLUTrendPct < -10;
+    const energyShareRising = linearSlope(energyShareValues) > 0.5;
+
+    // Check sustained trend (last 3 weeks rising)
+    const recentMLU = mluValues.slice(-3);
+    const sustainedRise = recentMLU.length >= 3 && recentMLU[2] > recentMLU[0] * 1.1;
+
+    let severity: 'stable' | 'drifting' | 'creeping' = 'stable';
+    if (mluRising && perMLUFalling && sustainedRise) {
+      severity = 'creeping';
+    } else if (mluRising || perMLUFalling || energyShareRising) {
+      severity = 'drifting';
+    }
+
+    // Generate signals
+    const signals: string[] = [];
+    if (mluTrendPct > 20) signals.push(`MLU up ${mluTrendPct}% over ${sorted.length} weeks`);
+    if (mluTrendPct < -20) signals.push(`MLU down ${Math.abs(mluTrendPct)}%`);
+    if (perMLUTrendPct < -15) signals.push(`£/MLU dropped from £${firstNonZeroPerMLU.toFixed(0)} to £${lastNonZeroPerMLU.toFixed(0)}`);
+    if (perMLUTrendPct > 15) signals.push(`£/MLU improved ${perMLUTrendPct}%`);
+    if (energyShareRising && energyShareValues[energyShareValues.length - 1] > 30) {
+      signals.push(`Energy share at ${energyShareValues[energyShareValues.length - 1]}%`);
+    }
+    const taskSlope = linearSlope(taskCountValues);
+    if (taskSlope > 0.5) signals.push(`Task volume trending up`);
+
+    // Generate recommendation
+    let recommendation: string | null = null;
+    if (severity === 'creeping') {
+      recommendation = currentPerMLU < 5
+        ? 'Scope review urgent — this client is well below viable £/MLU. Consider rate renegotiation.'
+        : 'Consider a scope review conversation. Workload is growing while efficiency drops.';
+    } else if (severity === 'drifting') {
+      if (mluRising && !perMLUFalling) {
+        recommendation = 'Workload increasing — monitor whether this becomes sustained.';
+      } else if (perMLUFalling) {
+        recommendation = 'Efficiency declining. A retainer increase may be warranted if scope has grown.';
+      }
+    }
+
+    scopeClients.push({
+      clientId,
+      clientName: client.name,
+      severity,
+      weeklyMLU: mluValues,
+      weeklyRevenuePerMLU: perMLUValues,
+      currentMLU: Math.round(currentMLU * 10) / 10,
+      currentRevenuePerMLU: Math.round(currentPerMLU * 100) / 100,
+      mluTrendPct,
+      revenuePerMLUTrendPct: perMLUTrendPct,
+      signals,
+      recommendation,
+    });
+  }
+
+  // Sort: creeping first, then drifting, then stable
+  const severityOrder = { creeping: 0, drifting: 1, stable: 2 };
+  scopeClients.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+  // Overall health
+  const creepingCount = scopeClients.filter(c => c.severity === 'creeping').length;
+  const driftingCount = scopeClients.filter(c => c.severity === 'drifting').length;
+  const overallHealth: 'healthy' | 'watch' | 'action_needed' =
+    creepingCount > 0 ? 'action_needed' :
+    driftingCount > 0 ? 'watch' : 'healthy';
+
+  // Summary
+  let summary = 'All clients within expected scope.';
+  if (creepingCount > 0) {
+    summary = `${creepingCount} client${creepingCount > 1 ? 's' : ''} showing scope creep — review needed.`;
+  } else if (driftingCount > 0) {
+    summary = `${driftingCount} client${driftingCount > 1 ? 's' : ''} drifting — keep an eye on workload trends.`;
+  }
+
+  return { clients: scopeClients, overallHealth, summary };
+}
+
 // ━━━ Debrief History ━━━
 export async function getDebriefHistory(): Promise<{ week_start: string; week_label: string; data: WeeklyDebrief }[]> {
   const supabase = await createClient();

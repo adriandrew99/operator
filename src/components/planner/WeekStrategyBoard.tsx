@@ -189,7 +189,7 @@ export function WeekStrategyBoard({
     : null;
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-7xl mx-auto space-y-4">
       {/* Week Header */}
       <WeekHeader
         weekStart={weekStart}
@@ -270,12 +270,12 @@ export function WeekStrategyBoard({
                 key={date}
                 onClick={() => setMobileDayIndex(i)}
                 className={cn(
-                  'flex flex-col items-center px-3 py-1.5 rounded-xl text-[11px] transition-colors shrink-0 cursor-pointer',
-                  isSelected ? 'bg-accent text-white' : date === today ? 'text-accent' : 'text-text-tertiary hover:text-text-secondary'
+                  'flex flex-col items-center px-3 py-1.5 rounded-xl text-xs transition-colors shrink-0 cursor-pointer',
+                  isSelected ? 'bg-text-primary text-background' : date === today ? 'text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
                 )}
               >
                 <span className="font-medium">{dayNames[i]}</span>
-                <span className="text-[9px]">{dateNum}</span>
+                <span className="text-xs">{dateNum}</span>
               </button>
             );
           })}

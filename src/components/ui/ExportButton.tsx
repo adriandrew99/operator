@@ -38,8 +38,8 @@ export function ExportButton({ options, className }: ExportButtonProps) {
       <button
         onClick={options[0].action}
         className={cn(
-          'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium',
-          'text-text-tertiary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer',
+          'flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium',
+          'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer',
           className
         )}
         title={options[0].label}
@@ -55,9 +55,9 @@ export function ExportButton({ options, className }: ExportButtonProps) {
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium',
-          'text-text-tertiary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer',
-          open && 'text-accent bg-accent/10'
+          'flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium',
+          'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer',
+          open && 'text-text-primary bg-surface-tertiary'
         )}
       >
         <DownloadIcon />
@@ -68,16 +68,16 @@ export function ExportButton({ options, className }: ExportButtonProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] card-surface border border-border rounded-xl shadow-lg shadow-black/30 py-1 animate-scale-in">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-surface-secondary border border-border rounded-xl py-1 animate-scale-in">
           {options.map((opt, i) => (
             <button
               key={i}
               onClick={() => { opt.action(); setOpen(false); }}
-              className="w-full text-left px-3 py-2 hover:bg-surface-tertiary/50 transition-colors cursor-pointer"
+              className="w-full text-left px-3 py-2 hover:bg-surface-tertiary transition-colors cursor-pointer"
             >
               <p className="text-xs text-text-primary">{opt.label}</p>
               {opt.description && (
-                <p className="text-[10px] text-text-tertiary mt-0.5">{opt.description}</p>
+                <p className="text-xs text-text-tertiary mt-0.5">{opt.description}</p>
               )}
             </button>
           ))}

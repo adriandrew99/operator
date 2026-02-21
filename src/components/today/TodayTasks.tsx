@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils/cn';
 import { AnimatedCheckbox } from '@/components/ui/AnimatedCheckbox';
 import { completeTask, updateTask, createTask, reactivateTask, deleteTask, getTasksForWeek } from '@/actions/tasks';
 import { updateRecurringTask, deleteRecurringTask, toggleRecurringTaskCompletion } from '@/actions/recurring';
-import { calculateDailyLoad, getLoadLevel, getLoadColor, getLoadBgColor, getOverloadSuggestion, DAILY_CAPACITY, getTaskMLU } from '@/lib/utils/mental-load';
+import { calculateDailyLoad, getLoadLevel, getLoadColor, getLoadBgColor, getOverloadSuggestion, DAILY_CAPACITY, getTaskMLU, getEstimatedMinutes } from '@/lib/utils/mental-load';
 import type { Task, Client } from '@/lib/types/database';
 
 /** Check if a task is a virtual recurring task (synthetic ID from page.tsx) */
@@ -35,7 +35,7 @@ interface TodayTasksProps {
 const WEIGHT_COLORS: Record<string, string> = {
   high: 'bg-red-500/15 text-red-400',
   medium: 'bg-amber-500/15 text-amber-400',
-  low: 'bg-accent/15 text-accent',
+  low: 'bg-text-primary/10 text-text-secondary',
 };
 
 const WEIGHT_DEFAULT_MINUTES: Record<string, number> = {
@@ -50,26 +50,6 @@ const ENERGY_COLORS: Record<string, string> = {
 };
 
 const WEIGHT_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
-const CLIENT_BADGE_COLORS = [
-  'bg-blue-500/15 text-blue-400',
-  'bg-teal-500/15 text-teal-400',
-  'bg-orange-500/15 text-orange-400',
-  'bg-pink-500/15 text-pink-400',
-  'bg-indigo-500/15 text-indigo-400',
-  'bg-lime-500/15 text-lime-400',
-  'bg-rose-500/15 text-rose-400',
-  'bg-sky-500/15 text-sky-400',
-];
-
-function getClientColor(clientId: string): string {
-  let hash = 0;
-  for (let i = 0; i < clientId.length; i++) {
-    hash = ((hash << 5) - hash) + clientId.charCodeAt(i);
-    hash |= 0;
-  }
-  return CLIENT_BADGE_COLORS[Math.abs(hash) % CLIENT_BADGE_COLORS.length];
-}
 
 const DAY_LABELS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -515,10 +495,19 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
     const taskId = e.dataTransfer.getData('text/task-id');
     const sourceWeight = e.dataTransfer.getData('text/source-weight');
     if (!taskId || sourceWeight === targetWeight) return;
+
+    // Always update estimated_minutes to match the new weight's default
+    const WEIGHT_MINUTES: Record<string, number> = { low: 5, medium: 30, high: 60 };
+    const newDefault = WEIGHT_MINUTES[targetWeight] ?? 30;
+    const updates: Record<string, unknown> = {
+      weight: targetWeight,
+      estimated_minutes: newDefault,
+    };
+
     // Route to correct server action based on task type
     const action = isRecurringTask(taskId)
-      ? updateRecurringTask(getRecurringId(taskId), { weight: targetWeight })
-      : updateTask(taskId, { weight: targetWeight });
+      ? updateRecurringTask(getRecurringId(taskId), updates)
+      : updateTask(taskId, updates);
     action.catch(e => console.error(e));
   }
 
@@ -536,8 +525,8 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
           <button
             onClick={() => setSelectedDay(today)}
             className={cn(
-              'text-[10px] font-medium uppercase tracking-widest transition-colors btn-press cursor-pointer min-w-[100px] sm:min-w-[140px] text-center',
-              isToday ? 'text-text-tertiary' : 'text-accent hover:text-accent/80'
+              'text-xs font-medium transition-colors btn-press cursor-pointer min-w-0 sm:min-w-[140px] text-center',
+              isToday ? 'text-text-tertiary' : 'text-text-primary hover:text-text-secondary'
             )}
           >
             {selectedDayLabel}
@@ -560,12 +549,12 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
               capacity={capacity}
             />
           )}
-          <p className="text-[10px] text-text-tertiary whitespace-nowrap">
+          <p className="text-xs text-text-tertiary whitespace-nowrap">
             {completedCount}/{totalTasks}
           </p>
           <button
             onClick={() => setShowAdd(!showAdd)}
-            className="text-[11px] sm:text-[10px] text-accent hover:text-accent/80 font-medium btn-press flex items-center gap-1 transition-colors px-2 py-1.5 sm:py-1 -mr-1 rounded-lg active:scale-95 active:bg-accent/10 flex-shrink-0"
+            className="text-xs sm:text-xs text-text-secondary hover:text-text-primary font-medium btn-press flex items-center gap-1 transition-colors px-2 py-1.5 sm:py-1 -mr-1 rounded-lg active:scale-95 active:bg-text-primary/10 flex-shrink-0"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="sm:w-3 sm:h-3"><path d="M12 5v14M5 12h14" /></svg>
             <span className="hidden sm:inline">Add</span>
@@ -575,7 +564,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
 
       {/* Inline task creation */}
       {showAdd && (
-        <div className="p-3 sm:p-4 rounded-xl bg-surface-tertiary/40 border border-border/50 space-y-3 animate-fade-in">
+        <div className="p-3 sm:p-4 rounded-xl bg-surface-tertiary border border-border space-y-3 animate-fade-in">
           <input
             type="text"
             value={newTitle}
@@ -592,7 +581,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   key={w}
                   onClick={() => setNewWeight(w)}
                   className={cn(
-                    'text-[10px] px-2 py-1 sm:px-2.5 rounded-md font-medium uppercase transition-all active:scale-95',
+                    'text-xs px-2 py-1 sm:px-2.5 rounded-md font-medium uppercase transition-all active:scale-95',
                     newWeight === w ? WEIGHT_COLORS[w] : 'text-text-tertiary/50 hover:text-text-tertiary'
                   )}
                 >
@@ -606,7 +595,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   key={e}
                   onClick={() => setNewEnergy(e)}
                   className={cn(
-                    'text-[10px] px-2 py-1 sm:px-2.5 rounded-md font-medium transition-all active:scale-95',
+                    'text-xs px-2 py-1 sm:px-2.5 rounded-md font-medium transition-all active:scale-95',
                     newEnergy === e ? ENERGY_COLORS[e] : 'text-text-tertiary/50 hover:text-text-tertiary'
                   )}
                 >
@@ -617,7 +606,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
             <button
               onClick={() => setNewUrgent(!newUrgent)}
               className={cn(
-                'flex items-center gap-1 text-[10px] px-2 py-1 sm:px-2.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
+                'flex items-center gap-1 text-xs px-2 py-1 sm:px-2.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
                 newUrgent ? 'bg-amber-500/15 text-amber-400' : 'text-text-tertiary/50 hover:text-amber-400 hover:bg-amber-500/10'
               )}
               title="Mark as Top Priority"
@@ -630,7 +619,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
             <button
               onClick={() => setNewPersonal(!newPersonal)}
               className={cn(
-                'flex items-center gap-1 text-[10px] px-2 py-1 sm:px-2.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
+                'flex items-center gap-1 text-xs px-2 py-1 sm:px-2.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
                 newPersonal ? 'bg-text-tertiary/15 text-text-secondary' : 'text-text-tertiary/50 hover:text-text-secondary hover:bg-text-tertiary/10'
               )}
               title="Mark as Personal"
@@ -645,7 +634,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
               <select
                 value={newClientId}
                 onChange={(e) => setNewClientId(e.target.value)}
-                className="text-[10px] bg-surface-secondary border border-border/40 rounded-lg px-1.5 py-1 sm:px-2.5 text-text-secondary outline-none focus:border-accent/40 transition-colors cursor-pointer max-w-[100px] sm:max-w-none"
+                className="text-xs bg-surface-secondary border border-border rounded-lg px-1.5 py-1 sm:px-2.5 text-text-secondary outline-none focus:border-border transition-colors cursor-pointer max-w-[100px] sm:max-w-none"
               >
                 <option value="">Client</option>
                 {clients.map(c => (
@@ -656,7 +645,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
             <button
               onClick={() => handleAddTask()}
               disabled={isPending || !newTitle.trim()}
-              className="ml-auto text-[10px] text-accent font-medium disabled:opacity-40 disabled:cursor-not-allowed btn-press cursor-pointer px-2.5 py-1 sm:px-3 rounded-lg bg-accent/10 active:scale-95 flex-shrink-0"
+              className="ml-auto text-xs text-text-primary font-medium disabled:opacity-40 disabled:cursor-not-allowed btn-press cursor-pointer px-2.5 py-1 sm:px-3 rounded-lg bg-text-primary/10 active:scale-95 flex-shrink-0"
             >
               {isPending ? '...' : 'Add'}
             </button>
@@ -678,10 +667,10 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <p className={cn('text-[11px] font-semibold', loadColor)}>
+            <p className={cn('text-xs font-semibold', loadColor)}>
               {loadLevel === 'overloaded' ? 'Overloaded' : 'Near Capacity'}
             </p>
-            <p className="text-[10px] text-text-secondary mt-0.5 leading-relaxed">
+            <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
               {overloadSuggestion
                 ? overloadSuggestion
                 : `${Math.round(dailyLoad)} of ${capacity} MLU used (${Math.round((dailyLoad / capacity) * 100)}%). One more heavy task could push you over.`}
@@ -692,8 +681,8 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
 
       {loadingDayTasks && !isCurrentWeek && (
         <div className="flex items-center justify-center py-4">
-          <div className="w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-          <span className="text-[10px] text-text-tertiary ml-2">Loading tasks...</span>
+          <div className="w-4 h-4 border-2 border-text-primary/20 border-t-text-primary/60 rounded-full animate-spin" />
+          <span className="text-xs text-text-tertiary ml-2">Loading tasks...</span>
         </div>
       )}
       {displayTasks.length === 0 && mergedCompleted.length === 0 && !showAdd && !loadingDayTasks && (
@@ -704,20 +693,12 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
 
       {/* ━━━ Top Priority section ━━━ */}
       {priorityTasks.length > 0 && (
-        <div className="space-y-1 rounded-xl bg-gradient-to-b from-amber-500/8 to-transparent border border-amber-500/20 px-3 py-3 -mx-1">
+        <div className="space-y-1 px-2 py-3">
           <div className="flex items-center gap-2 mb-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-400">
-              Top Priority
+            <span className="text-xs font-medium text-text-secondary">
+              Priority
             </span>
-            <span className="text-[10px] text-text-tertiary">{priorityTasks.length}</span>
-            {priorityTasks.length > 0 && (
-              <span className="text-[9px] text-text-tertiary/50 font-mono">
-                {Math.round(calculateDailyLoad(priorityTasks))} MLU
-              </span>
-            )}
+            <span className="text-xs text-text-tertiary">{priorityTasks.length}</span>
           </div>
           {priorityTasks.map((task) => {
             const isEditing = editingTaskId === task.id;
@@ -727,7 +708,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
               <div key={task.id} className="relative">
                 <div
                   className={cn(
-                    'flex items-center gap-3 py-2.5 px-3 rounded-xl task-row group',
+                    'flex items-center gap-2.5 sm:gap-3 py-3 px-3 sm:px-4 rounded-xl task-row group',
                     isDragging && 'opacity-40',
                     isCompleting && 'animate-task-glow'
                   )}
@@ -756,34 +737,24 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                       'text-sm font-medium transition-all duration-300',
                       isCompleting ? 'text-text-tertiary line-through' : 'text-text-primary'
                     )}>{task.title}</p>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-                      {task.weight && (
-                        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', WEIGHT_COLORS[task.weight])}>
-                          {task.weight}
-                        </span>
-                      )}
-                      {task.energy && (
-                        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', ENERGY_COLORS[task.energy] || '')}>
-                          {task.energy}
-                        </span>
-                      )}
-                      {task.client_id && clientMap.has(task.client_id) && (
-                        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', getClientColor(task.client_id))}>
-                          {clientMap.get(task.client_id)}
-                        </span>
-                      )}
-                      {task.deadline && (
-                        <span className="text-[9px] text-text-tertiary">
-                          Due {new Date(task.deadline + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                        </span>
-                      )}
-                    </div>
+                    {(task.client_id || task.deadline) && (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {task.client_id && clientMap.has(task.client_id) && (
+                          <span className="text-xs text-text-tertiary">{clientMap.get(task.client_id)}</span>
+                        )}
+                        {task.deadline && (
+                          <span className="text-xs text-text-tertiary">
+                            Due {new Date(task.deadline + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-0.5 transition-all flex-shrink-0">
+                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all flex-shrink-0">
                     {!isRecurringTask(task.id) && !isToday && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleMoveToToday(task.id); }}
-                        className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                        className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10"
                         title="Move to today"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -794,7 +765,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                     {!isRecurringTask(task.id) && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleMoveToTomorrow(task.id); }}
-                        className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                        className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10"
                         title={isToday ? 'Move to tomorrow' : 'Move to next day'}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -835,8 +806,8 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
           <div
             key={weight}
             className={cn(
-              'space-y-1 rounded-xl transition-all py-1 px-1 -mx-1',
-              isDragOver && 'bg-accent/5 ring-1 ring-accent/30'
+              'space-y-1.5 rounded-xl transition-all py-2 px-2',
+              isDragOver && 'bg-text-primary/5 ring-1 ring-border'
             )}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (dragOverWeight !== weight) setDragOverWeight(weight); }}
             onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverWeight(weight); }}
@@ -844,18 +815,10 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
             onDrop={(e) => handleWeightDrop(e, weight)}
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className={cn(
-                'text-[10px] px-2 py-0.5 rounded-md font-medium uppercase tracking-wider',
-                WEIGHT_COLORS[weight] || WEIGHT_COLORS.medium
-              )}>
+              <span className="text-xs font-medium text-text-secondary">
                 {weightLabels[weight] || weight}
               </span>
-              <span className="text-[10px] text-text-tertiary">{weightTasks.length}</span>
-              {weightTasks.length > 0 && (
-                <span className="text-[9px] text-text-tertiary/50 font-mono">
-                  {Math.round(calculateDailyLoad(weightTasks))} MLU
-                </span>
-              )}
+              <span className="text-xs text-text-tertiary">{weightTasks.length}</span>
               <button
                 onClick={() => {
                   if (showAddForWeight === weight) {
@@ -868,7 +831,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                     setNewWeight(weight as 'low' | 'medium' | 'high');
                   }
                 }}
-                className="text-text-tertiary/40 hover:text-accent transition-colors ml-auto p-0.5 cursor-pointer"
+                className="text-text-tertiary/40 hover:text-text-secondary transition-colors ml-auto p-0.5 cursor-pointer"
                 title={`Add ${weightLabels[weight] || weight} task`}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -876,7 +839,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
             </div>
 
             {showAddForWeight === weight && (
-              <div className="p-3 sm:p-2.5 rounded-xl bg-surface-tertiary/40 border border-border/50 space-y-2.5 sm:space-y-2 mb-2 animate-fade-in">
+              <div className="p-3 sm:p-2.5 rounded-xl bg-surface-tertiary border border-border space-y-2.5 sm:space-y-2 mb-2 animate-fade-in">
                 <input
                   type="text"
                   value={newTitle}
@@ -893,7 +856,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                         key={e}
                         onClick={() => setNewEnergy(e)}
                         className={cn(
-                          'text-[10px] px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-md font-medium transition-all active:scale-95',
+                          'text-xs px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-md font-medium transition-all active:scale-95',
                           newEnergy === e ? ENERGY_COLORS[e] : 'text-text-tertiary/50 hover:text-text-tertiary'
                         )}
                       >
@@ -904,7 +867,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   <button
                     onClick={() => setNewPersonal(!newPersonal)}
                     className={cn(
-                      'flex items-center gap-1 text-[10px] px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
+                      'flex items-center gap-1 text-xs px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-md font-medium transition-all active:scale-95 cursor-pointer',
                       newPersonal ? 'bg-text-tertiary/15 text-text-secondary' : 'text-text-tertiary/50 hover:text-text-secondary hover:bg-text-tertiary/10'
                     )}
                     title="Mark as Personal"
@@ -919,7 +882,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                     <select
                       value={newClientId}
                       onChange={(e) => setNewClientId(e.target.value)}
-                      className="text-[10px] bg-surface-secondary border border-border/40 rounded-lg px-1.5 py-1 sm:px-2.5 sm:py-0.5 text-text-secondary outline-none focus:border-accent/40 transition-colors cursor-pointer max-w-[100px] sm:max-w-none"
+                      className="text-xs bg-surface-secondary border border-border rounded-lg px-1.5 py-1 sm:px-2.5 sm:py-0.5 text-text-secondary outline-none focus:border-border transition-colors cursor-pointer max-w-[100px] sm:max-w-none"
                     >
                       <option value="">Client</option>
                       {clients.map(c => (
@@ -930,13 +893,13 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   <button
                     onClick={() => handleAddTask(weight)}
                     disabled={isPending || !newTitle.trim()}
-                    className="ml-auto text-[10px] text-accent font-medium disabled:opacity-40 disabled:cursor-not-allowed btn-press cursor-pointer px-2.5 py-1 sm:px-3 sm:py-0.5 rounded-lg bg-accent/10 active:scale-95 flex-shrink-0"
+                    className="ml-auto text-xs text-text-primary font-medium disabled:opacity-40 disabled:cursor-not-allowed btn-press cursor-pointer px-2.5 py-1 sm:px-3 sm:py-0.5 rounded-lg bg-text-primary/10 active:scale-95 flex-shrink-0"
                   >
                     {isPending ? '...' : 'Add'}
                   </button>
                   <button
                     onClick={() => { setShowAddForWeight(null); setNewTitle(''); }}
-                    className="text-[10px] text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer px-1.5 py-1 sm:px-2 sm:py-0.5 active:scale-95"
+                    className="text-xs text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer px-1.5 py-1 sm:px-2 sm:py-0.5 active:scale-95"
                   >
                     Cancel
                   </button>
@@ -960,13 +923,13 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                     }}
                     onDragEnd={() => { setDraggingTaskId(null); setDragOverWeight(null); }}
                     className={cn(
-                      'flex items-center gap-3 py-2.5 px-3 rounded-xl task-row group',
+                      'flex items-center gap-2.5 sm:gap-3 py-3 px-3 sm:px-4 rounded-xl task-row group',
                       isDragging && 'opacity-40',
                       isCompleting && 'animate-task-glow'
                     )}
                   >
                     {/* Grip handle */}
-                    <div className="opacity-0 group-hover:opacity-40 cursor-grab active:cursor-grabbing text-text-tertiary flex-shrink-0 -ml-1 mr-0">
+                    <div className="hidden sm:block opacity-0 group-hover:opacity-40 cursor-grab active:cursor-grabbing text-text-tertiary flex-shrink-0 -ml-1 mr-0">
                       <svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor">
                         <circle cx="2" cy="2" r="1.2" /><circle cx="6" cy="2" r="1.2" />
                         <circle cx="2" cy="7" r="1.2" /><circle cx="6" cy="7" r="1.2" />
@@ -987,35 +950,20 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                         'text-sm transition-all duration-300',
                         isCompleting ? 'text-text-tertiary line-through' : 'text-text-primary'
                       )}>{task.title}</p>
-                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-                        {isRecurringTask(task.id) && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-md font-medium bg-cyan-500/15 text-cyan-400">
-                            recurring
-                          </span>
-                        )}
-                        {task.is_personal && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-md font-medium bg-text-tertiary/10 text-text-tertiary">
-                            personal
-                          </span>
-                        )}
-                        {task.energy && (
-                          <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', ENERGY_COLORS[task.energy] || '')}>
-                            {task.energy}
-                          </span>
-                        )}
-                        {task.client_id && clientMap.has(task.client_id) && (
-                          <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', getClientColor(task.client_id))}>
-                            {clientMap.get(task.client_id)}
-                          </span>
-                        )}
-                        {task.estimated_minutes != null && task.estimated_minutes > 0 && (
-                          <span className="text-[10px] text-text-tertiary">
-                            ~{task.estimated_minutes >= 60 ? `${Math.round(task.estimated_minutes / 60)}h` : `${task.estimated_minutes}m`}
-                          </span>
-                        )}
-                      </div>
+                      {(task.client_id || task.estimated_minutes) && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {task.client_id && clientMap.has(task.client_id) && (
+                            <span className="text-xs text-text-tertiary">{clientMap.get(task.client_id)}</span>
+                          )}
+                          {task.estimated_minutes != null && task.estimated_minutes > 0 && (
+                            <span className="text-xs text-text-tertiary">
+                              ~{task.estimated_minutes >= 60 ? `${Math.round(task.estimated_minutes / 60)}h` : `${task.estimated_minutes}m`}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-0.5 transition-all flex-shrink-0">
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all flex-shrink-0">
                       {/* Star / prioritise toggle */}
                       {!isRecurringTask(task.id) && (
                         <button
@@ -1032,7 +980,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                       {!isRecurringTask(task.id) && !isToday && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMoveToToday(task.id); }}
-                          className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                          className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10"
                           title="Move to today"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1044,7 +992,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                       {!isRecurringTask(task.id) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMoveToTomorrow(task.id); }}
-                          className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                          className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10"
                           title={isToday ? 'Move to tomorrow' : 'Move to next day'}
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1058,8 +1006,8 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                           <button
                             onClick={(e) => { e.stopPropagation(); setMovePickerTaskId(movePickerTaskId === task.id ? null : task.id); }}
                             className={cn(
-                              'text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10',
-                              movePickerTaskId === task.id && 'text-accent bg-accent/10'
+                              'text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10',
+                              movePickerTaskId === task.id && 'text-text-primary bg-text-primary/10'
                             )}
                             title="Move to day..."
                           >
@@ -1111,8 +1059,8 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   setNewWeight(weight as 'low' | 'medium' | 'high');
                 }}
                 className={cn(
-                  'w-full py-3 text-center text-[10px] text-text-tertiary/40 rounded-lg border border-dashed border-border/30 transition-all cursor-pointer hover:border-accent/30 hover:text-accent/50',
-                  isDragOver && 'border-accent/40 text-accent/50 bg-accent/5'
+                  'w-full py-3 text-center text-xs text-text-tertiary/40 rounded-lg border border-dashed border-border transition-all cursor-pointer hover:border-border hover:text-text-tertiary',
+                  isDragOver && 'border-border text-text-tertiary bg-text-primary/5'
                 )}
               >
                 {isDragOver ? 'Drop here' : 'Click to add task'}
@@ -1124,10 +1072,10 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
 
       {/* Completed section */}
       {mergedCompleted.length > 0 && (
-        <div className="pt-2 border-t border-border/30">
+        <div className="pt-2 border-t border-border">
           <button
             onClick={() => setShowCompleted(!showCompleted)}
-            className="flex items-center gap-2 text-[10px] font-medium text-text-tertiary uppercase tracking-widest hover:text-text-secondary transition-colors w-full cursor-pointer"
+            className="flex items-center gap-2 text-xs font-medium text-text-tertiary hover:text-text-secondary transition-colors w-full cursor-pointer"
           >
             <svg
               width="10"
@@ -1145,12 +1093,12 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
           </button>
 
           {showCompleted && (
-            <div className="mt-2 space-y-0.5 animate-fade-in">
+            <div className="mt-3 space-y-1.5 animate-fade-in">
               {mergedCompleted.map((task) => (
                 <div
                   key={task.id}
                   className={cn(
-                    'flex items-center gap-3 py-2 px-3 rounded-xl group',
+                    'flex items-center gap-2.5 sm:gap-3 py-2.5 px-3 sm:px-4 rounded-xl group',
                     uncompletingIds.has(task.id) && 'animate-task-uncomplete-glow'
                   )}
                 >
@@ -1161,37 +1109,22 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-text-tertiary line-through">{task.title}</p>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-                      {isRecurringTask(task.id) && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-md font-medium bg-cyan-500/10 text-cyan-400/50">
-                          recurring
-                        </span>
-                      )}
-                      {task.weight && (
-                        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium opacity-50', WEIGHT_COLORS[task.weight])}>
-                          {task.weight}
-                        </span>
-                      )}
-                      {task.energy && (
-                        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium opacity-50', ENERGY_COLORS[task.energy] || '')}>
-                          {task.energy}
-                        </span>
-                      )}
-                      {task.client_id && clientMap.has(task.client_id) && (
-                        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium opacity-50', getClientColor(task.client_id))}>
-                          {clientMap.get(task.client_id)}
-                        </span>
-                      )}
-                      {task.completed_at && (
-                        <span className="text-[9px] text-text-tertiary/40">
-                          {new Date(task.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                    </div>
+                    {(task.client_id || task.completed_at) && (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {task.client_id && clientMap.has(task.client_id) && (
+                          <span className="text-xs text-text-tertiary/50">{clientMap.get(task.client_id)}</span>
+                        )}
+                        {task.completed_at && (
+                          <span className="text-xs text-text-tertiary/40">
+                            {new Date(task.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => handleUncomplete(task.id)}
-                    className="sm:opacity-0 sm:group-hover:opacity-100 text-[10px] text-text-tertiary hover:text-accent transition-all px-2 py-1"
+                    className="opacity-0 group-hover:opacity-100 text-xs text-text-tertiary hover:text-text-primary transition-all px-2 py-1"
                   >
                     Undo
                   </button>
@@ -1253,24 +1186,24 @@ function InlineTaskEditor({
   return (
     <div
       ref={ref}
-      className="ml-2 sm:ml-10 mr-1 sm:mr-3 mt-1 mb-2 p-3 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/20 animate-fade-in space-y-3"
+      className="ml-2 sm:ml-10 mr-1 sm:mr-3 mt-1 mb-2 p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in space-y-3"
     >
       <input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border/40 pb-2"
+        className="w-full text-sm bg-transparent text-text-primary outline-none border-b border-border pb-2"
       />
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Weight:</span>
+          <span className="text-xs text-text-tertiary mr-1">Weight:</span>
           {(['low', 'medium', 'high'] as const).map(w => (
             <button
               key={w}
               onClick={() => setWeight(w)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium uppercase transition-all',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium uppercase transition-all',
                 weight === w ? WEIGHT_COLORS[w] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -1279,13 +1212,13 @@ function InlineTaskEditor({
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-text-tertiary mr-1">Energy:</span>
+          <span className="text-xs text-text-tertiary mr-1">Energy:</span>
           {(['creative', 'admin'] as const).map(e => (
             <button
               key={e}
               onClick={() => setEnergy(e)}
               className={cn(
-                'text-[9px] px-1.5 py-0.5 rounded-md font-medium transition-all',
+                'text-xs px-1.5 py-0.5 rounded-md font-medium transition-all',
                 energy === e ? ENERGY_COLORS[e] : 'text-text-tertiary/50 hover:text-text-tertiary'
               )}
             >
@@ -1297,11 +1230,11 @@ function InlineTaskEditor({
       <div className="flex items-center gap-4 flex-wrap">
         {clients.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-text-tertiary">Client:</span>
+            <span className="text-xs text-text-tertiary">Client:</span>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="text-[10px] bg-surface-tertiary/60 border border-border/40 rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-accent/40 transition-colors"
+              className="text-xs bg-surface-tertiary border border-border rounded-xl px-2 py-1 text-text-secondary outline-none focus:border-border transition-colors"
             >
               <option value="">None</option>
               {clients.map(c => (
@@ -1313,7 +1246,7 @@ function InlineTaskEditor({
         <button
           onClick={() => setIsUrgent(!isUrgent)}
           className={cn(
-            'flex items-center gap-1 text-[9px] px-2 py-1 rounded-md font-medium transition-all cursor-pointer',
+            'flex items-center gap-1 text-xs px-2 py-1 rounded-md font-medium transition-all cursor-pointer',
             isUrgent ? 'bg-amber-500/15 text-amber-400' : 'text-text-tertiary/50 hover:text-amber-400 hover:bg-amber-500/10'
           )}
         >
@@ -1329,12 +1262,12 @@ function InlineTaskEditor({
             onChange={(e) => setIsPersonal(e.target.checked)}
             className="w-3 h-3 rounded accent-text-tertiary"
           />
-          <span className="text-[9px] text-text-tertiary">Personal</span>
+          <span className="text-xs text-text-tertiary">Personal</span>
         </label>
       </div>
       <div className="flex items-center justify-end gap-2">
-        <button onClick={onClose} className="text-[10px] text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1">Cancel</button>
-        <button onClick={handleSave} className="text-[10px] text-accent font-medium hover:text-accent/80 transition-colors px-2 py-1">Save</button>
+        <button onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1">Cancel</button>
+        <button onClick={handleSave} className="text-xs text-text-primary font-medium hover:text-text-secondary transition-colors px-2 py-1">Save</button>
       </div>
     </div>
   );
@@ -1375,54 +1308,54 @@ function LoadBarWithTooltip({
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500',
-            loadLevel === 'light' && 'bg-accent',
-            loadLevel === 'moderate' && 'bg-accent',
+            loadLevel === 'light' && 'bg-text-primary/50',
+            loadLevel === 'moderate' && 'bg-text-primary/60',
             loadLevel === 'heavy' && 'bg-amber-400',
             loadLevel === 'overloaded' && 'bg-red-400',
           )}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className={cn('text-[9px] font-mono font-medium', loadColor)}>
+      <span className={cn('text-xs font-mono font-medium', loadColor)}>
         {Math.round(dailyLoad)}/{capacity}
       </span>
 
       {showTooltip && (
-        <div className="absolute right-0 top-full mt-2 w-52 p-3 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/30 animate-fade-in z-50">
+        <div className="absolute right-0 top-full mt-2 w-52 p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in z-50">
           <div className="flex items-center justify-between mb-2">
-            <span className={cn('text-[11px] font-semibold', loadColor)}>{levelLabel}</span>
-            <span className="text-[10px] text-text-tertiary font-mono">{pct}%</span>
+            <span className={cn('text-xs font-semibold', loadColor)}>{levelLabel}</span>
+            <span className="text-xs text-text-tertiary font-mono">{pct}%</span>
           </div>
 
-          <p className="text-[10px] text-text-tertiary mb-2.5 leading-relaxed">
+          <p className="text-xs text-text-tertiary mb-2.5 leading-relaxed">
             Mental Load Units measure cognitive demand based on task weight and energy type. Daily capacity is {capacity} MLU.
           </p>
 
           {/* Breakdown */}
-          <div className="space-y-1.5 border-t border-border/30 pt-2">
+          <div className="space-y-1.5 border-t border-border pt-2">
             {highCount > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-red-400">{highCount} high</span>
-                <span className="text-[9px] text-text-tertiary font-mono">{Math.round(calculateDailyLoad(allDayTasks.filter(t => t.weight === 'high')))} MLU</span>
+                <span className="text-xs text-red-400">{highCount} high</span>
+                <span className="text-xs text-text-tertiary font-mono">{Math.round(calculateDailyLoad(allDayTasks.filter(t => t.weight === 'high')))} MLU</span>
               </div>
             )}
             {medCount > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-amber-400">{medCount} medium</span>
-                <span className="text-[9px] text-text-tertiary font-mono">{Math.round(calculateDailyLoad(allDayTasks.filter(t => (t.weight || 'medium') === 'medium')))} MLU</span>
+                <span className="text-xs text-amber-400">{medCount} medium</span>
+                <span className="text-xs text-text-tertiary font-mono">{Math.round(calculateDailyLoad(allDayTasks.filter(t => (t.weight || 'medium') === 'medium')))} MLU</span>
               </div>
             )}
             {lowCount > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-accent">{lowCount} low</span>
-                <span className="text-[9px] text-text-tertiary font-mono">{Math.round(calculateDailyLoad(allDayTasks.filter(t => t.weight === 'low')))} MLU</span>
+                <span className="text-xs text-text-secondary">{lowCount} low</span>
+                <span className="text-xs text-text-tertiary font-mono">{Math.round(calculateDailyLoad(allDayTasks.filter(t => t.weight === 'low')))} MLU</span>
               </div>
             )}
           </div>
 
           {/* Scale reference */}
-          <div className="mt-2.5 pt-2 border-t border-border/30">
-            <p className="text-[9px] text-text-tertiary/60 leading-relaxed">
+          <div className="mt-2.5 pt-2 border-t border-border">
+            <p className="text-xs text-text-tertiary/60 leading-relaxed">
               Scale: high-creative = 5 · medium = 2.5 · low-admin = 0.5
             </p>
           </div>
@@ -1504,20 +1437,20 @@ function DateMovePicker({
   return (
     <div
       ref={ref}
-      className="absolute z-50 right-0 top-full mt-1 w-56 p-3 rounded-xl bg-surface-secondary border border-border shadow-lg shadow-black/30 animate-fade-in"
+      className="absolute z-50 right-0 top-full mt-1 w-56 p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Quick shortcuts */}
       <div className="flex gap-1.5 mb-3">
         <button
           onClick={() => onSelect(tomorrowStr)}
-          className="flex-1 text-[9px] font-medium py-1.5 px-2 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-all"
+          className="flex-1 text-xs font-medium py-1.5 px-2 rounded-lg bg-text-primary/10 text-text-primary hover:bg-text-primary/15 transition-all"
         >
           Tomorrow
         </button>
         <button
           onClick={() => onSelect(nextMondayStr)}
-          className="flex-1 text-[9px] font-medium py-1.5 px-2 rounded-lg bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary/80 transition-all"
+          className="flex-1 text-xs font-medium py-1.5 px-2 rounded-lg bg-surface-tertiary text-text-secondary hover:bg-surface-tertiary transition-all"
         >
           Next Mon
         </button>
@@ -1528,7 +1461,7 @@ function DateMovePicker({
         <button onClick={prevMonth} className="text-text-tertiary hover:text-text-primary p-0.5 transition-colors">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <span className="text-[10px] font-medium text-text-secondary">{monthLabel}</span>
+        <span className="text-xs font-medium text-text-secondary">{monthLabel}</span>
         <button onClick={nextMonth} className="text-text-tertiary hover:text-text-primary p-0.5 transition-colors">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
         </button>
@@ -1537,7 +1470,7 @@ function DateMovePicker({
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-0 mb-1">
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-          <span key={i} className="text-[8px] text-text-tertiary/50 text-center font-medium">{d}</span>
+          <span key={i} className="text-xs text-text-tertiary/50 text-center font-medium">{d}</span>
         ))}
       </div>
 
@@ -1554,10 +1487,10 @@ function DateMovePicker({
               onClick={() => selectDay(day)}
               disabled={isPast}
               className={cn(
-                'w-7 h-7 flex items-center justify-center rounded-md text-[10px] transition-all',
-                isToday && 'bg-accent/15 text-accent font-bold',
+                'w-7 h-7 flex items-center justify-center rounded-md text-xs transition-all',
+                isToday && 'bg-text-primary/15 text-text-primary font-bold',
                 isPast && !isToday && 'text-text-tertiary/30 cursor-default',
-                !isPast && !isToday && 'text-text-secondary hover:bg-accent/10 hover:text-accent cursor-pointer'
+                !isPast && !isToday && 'text-text-secondary hover:bg-text-primary/10 hover:text-text-primary cursor-pointer'
               )}
             >
               {day}

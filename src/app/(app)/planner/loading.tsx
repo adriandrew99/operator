@@ -1,43 +1,43 @@
 export default function PlannerLoading() {
   return (
-    <div className="space-y-4 animate-pulse">
+    <div className="space-y-4">
       {/* Header skeleton */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 bg-surface-secondary rounded-lg" />
-          <div className="h-5 w-32 bg-surface-secondary rounded" />
-          <div className="h-7 w-7 bg-surface-secondary rounded-lg" />
+          <div className="skeleton w-7 h-7 rounded-lg" />
+          <div className="skeleton skeleton-text w-32 h-5" />
+          <div className="skeleton w-7 h-7 rounded-lg" />
         </div>
         <div className="flex gap-2">
-          <div className="h-8 w-24 bg-surface-secondary rounded-full" />
-          <div className="h-8 w-16 bg-surface-secondary rounded-lg" />
+          <div className="skeleton w-24 h-8 rounded-full" />
+          <div className="skeleton w-16 h-8 rounded-lg" />
         </div>
       </div>
       {/* Capacity bar skeleton */}
-      <div className="h-1.5 w-full bg-surface-secondary rounded-full" />
+      <div className="skeleton w-full h-1.5 rounded-full" />
       {/* Goals skeleton */}
-      <div className="h-20 bg-surface-secondary/30 border border-border/50 rounded-xl" />
+      <div className="skeleton skeleton-card h-20" />
       {/* Backlog skeleton */}
-      <div className="h-14 bg-surface-secondary/30 border border-border/50 rounded-xl" />
+      <div className="skeleton skeleton-card h-14" />
       {/* Day columns skeleton */}
       <div className="hidden md:grid md:grid-cols-7 gap-1.5">
         {[...Array(7)].map((_, i) => (
-          <div key={i} className="border border-border/50 rounded-xl p-2.5 space-y-2">
+          <div key={i} className="skeleton-card border border-border rounded-xl p-2.5 space-y-2">
             <div className="flex items-center gap-1.5">
-              <div className="h-4 w-8 bg-surface-secondary rounded" />
-              <div className="h-5 w-5 bg-surface-secondary rounded-full" />
+              <div className="skeleton skeleton-text w-8 h-4" />
+              <div className="skeleton w-5 h-5 rounded-full" />
             </div>
-            <div className="h-1 w-full bg-surface-secondary rounded-full" />
+            <div className="skeleton w-full h-1 rounded-full" />
             <div className="space-y-1">
-              <div className="h-3 w-12 bg-surface-secondary/50 rounded" />
-              <div className="h-8 bg-surface-secondary/30 rounded-lg" />
-            </div>
-            <div className="space-y-1">
-              <div className="h-3 w-14 bg-surface-secondary/50 rounded" />
-              <div className="h-8 bg-surface-secondary/30 rounded-lg" />
+              <div className="skeleton skeleton-text w-12 h-3" />
+              <div className="skeleton h-8 rounded-lg" />
             </div>
             <div className="space-y-1">
-              <div className="h-3 w-10 bg-surface-secondary/50 rounded" />
+              <div className="skeleton skeleton-text w-14 h-3" />
+              <div className="skeleton h-8 rounded-lg" />
+            </div>
+            <div className="space-y-1">
+              <div className="skeleton skeleton-text w-10 h-3" />
             </div>
           </div>
         ))}

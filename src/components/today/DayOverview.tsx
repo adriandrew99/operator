@@ -126,7 +126,7 @@ export function DayOverview({
     <section className="space-y-5">
       {/* ━━━ Greeting — open typography, no card ━━━ */}
       <div>
-        <h2 className="text-3xl sm:text-4xl font-semibold text-text-primary tracking-tight">
+        <h2 className="heading-serif text-2xl sm:text-4xl text-text-primary">
           {greeting}{firstName ? `, ${firstName}` : ''}
         </h2>
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -137,8 +137,8 @@ export function DayOverview({
             </span>
           )}
           {streakDays > 0 && (
-            <span className="text-sm text-text-tertiary ml-1">
-              · {streakDays}d streak
+            <span className="inline-flex items-center gap-1 text-xs text-text-secondary font-sans font-medium px-2.5 py-0.5 rounded-full bg-text-primary/8 border border-border">
+              {streakDays}d streak
             </span>
           )}
         </div>
@@ -162,8 +162,8 @@ export function DayOverview({
 
       {/* ━━━ Calendar events ━━━ */}
       {calendarEvents.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-text-tertiary uppercase tracking-wider font-medium font-sans mb-1.5">Schedule</p>
+        <div className="space-y-2">
+          <p className="text-xs text-text-tertiary font-medium font-sans mb-2">Schedule</p>
           {calendarEvents
             .filter(e => e.date === today)
             .sort((a, b) => a.start_time.localeCompare(b.start_time))
@@ -179,11 +179,11 @@ export function DayOverview({
                     className={cn(
                       'w-1.5 h-1.5 rounded-full flex-shrink-0',
                       isCurrent && 'animate-pulse',
-                      !event.color && (isCurrent ? 'bg-accent' : isPast ? 'bg-text-tertiary/30' : 'bg-blue-400')
+                      !event.color && (isCurrent ? 'bg-text-primary' : isPast ? 'bg-text-tertiary/30' : 'bg-text-secondary')
                     )}
                     style={event.color ? { backgroundColor: isPast ? undefined : event.color, opacity: isPast ? 0.3 : undefined } : undefined}
                   />
-                  <span className="text-[10px] text-text-tertiary font-mono w-auto sm:w-[72px] flex-shrink-0 whitespace-nowrap">
+                  <span className="text-xs text-text-tertiary font-mono w-auto sm:w-[72px] flex-shrink-0 whitespace-nowrap">
                     {event.start_time.slice(0, 5)}{event.end_time ? `\u2013${event.end_time.slice(0, 5)}` : ''}
                   </span>
                   <span className={cn(

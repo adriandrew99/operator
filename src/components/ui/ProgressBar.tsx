@@ -17,16 +17,13 @@ export function ProgressBar({ value, max, label, showPercentage = true, classNam
       {(label || showPercentage) && (
         <div className="flex items-center justify-between">
           {label && <span className="text-xs text-text-secondary">{label}</span>}
-          {showPercentage && <span className="text-xs font-medium text-text-primary">{percentage}%</span>}
+          {showPercentage && <span className="text-xs text-text-tertiary">{percentage}%</span>}
         </div>
       )}
-      <div className={cn('w-full bg-surface-tertiary overflow-hidden rounded-full', size === 'sm' ? 'h-1.5' : 'h-2.5')}>
+      <div className={cn('w-full bg-surface-tertiary overflow-hidden rounded-full', size === 'sm' ? 'h-1' : 'h-1.5')}>
         <div
-          className="h-full rounded-full transition-all duration-500 ease-out"
-          style={{
-            width: `${percentage}%`,
-            background: 'linear-gradient(90deg, var(--accent), #4ade80)',
-          }}
+          className="h-full rounded-full progress-fill bg-text-secondary"
+          style={{ width: `${percentage}%` }}
         />
       </div>
     </div>

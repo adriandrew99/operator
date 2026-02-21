@@ -116,27 +116,27 @@ export function DayColumn({
   return (
     <div
       className={cn(
-        'flex flex-col rounded-xl border transition-colors',
-        isToday ? 'border-accent/30 bg-accent/[0.02]' : 'border-border/50',
+        'flex flex-col rounded-2xl border transition-colors',
+        isToday ? 'border-border-light ' : 'border-border',
         isPast && 'opacity-70'
       )}
     >
       {/* Day header */}
-      <div className="px-2.5 pt-2.5 pb-1.5 space-y-1.5">
+      <div className="px-3 pt-3 pb-2 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span
               className={cn(
                 'text-xs font-medium',
-                isToday ? 'text-accent' : 'text-text-primary'
+                isToday ? 'text-text-primary' : 'text-text-primary'
               )}
             >
               {DAY_NAMES[dayIndex]}
             </span>
             <span
               className={cn(
-                'text-[10px] w-5 h-5 rounded-full flex items-center justify-center',
-                isToday ? 'bg-accent text-white' : 'text-text-tertiary'
+                'text-xs w-5 h-5 rounded-full flex items-center justify-center',
+                isToday ? 'bg-text-primary text-background' : 'text-text-tertiary'
               )}
             >
               {dateNum}
@@ -158,7 +158,7 @@ export function DayColumn({
       </div>
 
       {/* Period sections */}
-      <div className="flex-1 px-1 pb-1.5 space-y-0.5">
+      <div className="flex-1 px-1.5 pb-2 space-y-1">
         {PERIODS.map(period => (
           <PeriodSection
             key={period}

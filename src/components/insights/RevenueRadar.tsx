@@ -151,116 +151,82 @@ export function RevenueRadar({ clients }: RevenueRadarProps) {
   }, [clients]);
 
   function getScoreColor(score: number): string {
-    if (score >= 70) return 'text-accent';
-    if (score >= 40) return 'text-amber-400';
-    return 'text-red-400';
+    if (score >= 70) return 'text-text-primary';
+    if (score >= 40) return 'text-text-secondary';
+    return 'text-text-tertiary';
   }
 
   function getBarColor(score: number): string {
-    if (score >= 70) return 'bg-accent';
-    if (score >= 40) return 'bg-amber-400';
-    return 'bg-red-400';
+    if (score >= 70) return 'bg-accent/60';
+    if (score >= 40) return 'bg-text-secondary/40';
+    return 'bg-text-tertiary/40';
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <p className="text-[10px] font-medium text-accent uppercase tracking-widest">
-          Revenue Radar
-        </p>
-        <span
-          className={cn(
-            'text-[9px] px-2 py-0.5 rounded-md font-medium',
-            analysis.stabilityScore >= 70
-              ? 'bg-accent/15 text-accent'
-              : analysis.stabilityScore >= 40
-              ? 'bg-amber-500/15 text-amber-400'
-              : 'bg-red-500/15 text-red-400'
-          )}
-        >
-          {analysis.stabilityScore >= 70
-            ? 'Stable'
-            : analysis.stabilityScore >= 40
-            ? 'Fragile'
-            : 'At Risk'}
-        </span>
+    <div className="space-y-5">
+      {/* Header */}
+      <p className="text-xs font-medium text-text-tertiary">Revenue Radar</p>
+
+      {/* Stability Score + MRR — flat, no card */}
+      <div className="flex items-end justify-between">
+        <div>
+          <span className="text-[11px] uppercase tracking-[0.08em] text-text-tertiary">Stability Score</span>
+          <p
+            className={cn(
+              'display-number-large leading-tight',
+              getScoreColor(analysis.stabilityScore)
+            )}
+          >
+            {analysis.stabilityScore}
+          </p>
+        </div>
+        <div className="text-right">
+          <span className="text-[11px] uppercase tracking-[0.08em] text-text-tertiary">Monthly Recurring</span>
+          <p className="display-number-medium text-text-primary leading-tight">
+            {analysis.totalMRR > 0
+              ? `\u00A3${analysis.totalMRR.toLocaleString()}`
+              : '\u2014'}
+          </p>
+        </div>
       </div>
 
-      {/* Stability Score + MRR */}
-      <div className="rounded-xl bg-surface-tertiary/40 border border-border/50 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <span className="text-xs text-text-secondary">Stability Score</span>
-            <p
-              className={cn(
-                'text-2xl font-mono font-bold',
-                getScoreColor(analysis.stabilityScore)
-              )}
-            >
-              {analysis.stabilityScore}
-            </p>
-          </div>
-          <div className="text-right">
-            <span className="text-xs text-text-secondary">Monthly Recurring</span>
-            <p className="text-lg font-mono font-bold text-text-primary">
-              {analysis.totalMRR > 0
-                ? `\u00A3${analysis.totalMRR.toLocaleString()}`
-                : '\u2014'}
-            </p>
-          </div>
-        </div>
-
-        {/* Radar Metrics */}
-        <div className="space-y-2.5">
-          {analysis.metrics.map((metric) => (
-            <div key={metric.label} className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-text-secondary">{metric.label}</span>
-                <span className="text-[11px] text-text-tertiary">{metric.detail}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-surface-tertiary overflow-hidden rounded-full">
-                  <div
-                    className={cn(
-                      'h-full rounded-full transition-all duration-500',
-                      getBarColor(metric.score)
-                    )}
-                    style={{ width: `${metric.score}%` }}
-                  />
-                </div>
-                <span className={cn('text-[10px] font-mono w-7 text-right', getScoreColor(metric.score))}>
-                  {metric.score}
-                </span>
-              </div>
+      {/* Radar Metrics — simple text lines with thin bars */}
+      <div className="space-y-3">
+        {analysis.metrics.map((metric) => (
+          <div key={metric.label} className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-secondary">{metric.label}</span>
+              <span className="text-xs text-text-tertiary">{metric.detail}</span>
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1 bg-surface-tertiary overflow-hidden rounded-full">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-500',
+                    getBarColor(metric.score)
+                  )}
+                  style={{ width: `${metric.score}%` }}
+                />
+              </div>
+              <span className={cn('text-xs font-mono w-7 text-right', getScoreColor(metric.score))}>
+                {metric.score}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Risk Alerts */}
+      {/* Risk Alerts — left-border accent style */}
       {analysis.alerts.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {analysis.alerts.map((alert, i) => (
             <div
               key={`${alert.type}-${i}`}
-              className={cn(
-                'flex items-start gap-2.5 px-3 py-2.5 rounded-xl text-[11px]',
-                alert.severity === 'danger'
-                  ? 'bg-red-500/5 border border-red-500/15'
-                  : 'bg-amber-500/5 border border-amber-500/15'
-              )}
+              className="border-l-2 border-border pl-3 py-1"
             >
-              <span className="flex-shrink-0 mt-px">
-                {alert.severity === 'danger' ? '!' : '\u26A0'}
-              </span>
-              <span
-                className={cn(
-                  'leading-relaxed',
-                  alert.severity === 'danger' ? 'text-red-400' : 'text-amber-400'
-                )}
-              >
+              <p className="text-xs leading-relaxed text-text-secondary">
                 {alert.message}
-              </span>
+              </p>
             </div>
           ))}
         </div>

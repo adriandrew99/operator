@@ -33,9 +33,9 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
   const filtered = activeTab === 'all' ? entries : entries.filter((e) => e.type === activeTab);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-text-primary">Knowledge Vault</h1>
+        <h1 className="text-page-title text-text-primary">Knowledge Vault</h1>
         <Button size="sm" onClick={() => setShowModal(true)}>+ Add Entry</Button>
       </div>
 
@@ -49,7 +49,7 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
               onClick={() => setActiveTab(tab.value)}
               className={`px-3 py-2 text-xs whitespace-nowrap transition-colors duration-200 border-b-2 -mb-px cursor-pointer ${
                 activeTab === tab.value
-                  ? 'text-accent border-accent'
+                  ? 'text-text-primary border-text-primary'
                   : 'text-text-secondary border-transparent hover:text-text-primary'
               }`}
             >
@@ -61,8 +61,15 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
 
       {/* Entries */}
       {filtered.length === 0 ? (
-        <div className="card-surface border border-border rounded-2xl p-8 text-center">
-          <p className="text-sm text-text-tertiary">No entries yet. Start building your knowledge vault.</p>
+        <div className="card-elevated rounded-2xl p-10">
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <p className="text-sm text-text-tertiary">No entries yet. Start building your knowledge vault.</p>
+          </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -112,7 +119,7 @@ function EntryCard({
     : 'default' as const;
 
   return (
-    <div className="card-surface border border-border rounded-2xl card-hover p-5 space-y-2">
+    <div className="card-elevated rounded-2xl p-5 space-y-2">
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -141,7 +148,7 @@ function EntryCard({
       {/* Takeaways */}
       {(entry.takeaway_1 || entry.takeaway_2 || entry.takeaway_3) && (
         <div className="space-y-1 pt-1">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">Takeaways</p>
+          <p className="text-xs font-medium text-text-tertiary ">Takeaways</p>
           {[entry.takeaway_1, entry.takeaway_2, entry.takeaway_3].filter(Boolean).map((t, i) => (
             <p key={i} className="text-xs text-text-secondary pl-2 border-l border-border">{t}</p>
           ))}
@@ -151,7 +158,7 @@ function EntryCard({
       {entry.tags && entry.tags.length > 0 && (
         <div className="flex gap-1 flex-wrap">
           {entry.tags.map((tag) => (
-            <span key={tag} className="text-[10px] text-text-tertiary bg-surface-tertiary px-1.5 py-0.5">{tag}</span>
+            <span key={tag} className="text-xs text-text-tertiary bg-surface-tertiary px-1.5 py-0.5">{tag}</span>
           ))}
         </div>
       )}
@@ -251,7 +258,7 @@ function EntryFormModal({
         <Input label="Source" value={source} onChange={(e) => setSource(e.target.value)} placeholder="Book, article, person..." />
 
         <div className="space-y-2">
-          <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">Takeaways</p>
+          <p className="text-xs font-medium text-text-secondary ">Takeaways</p>
           <Input placeholder="Takeaway 1" value={takeaway1} onChange={(e) => setTakeaway1(e.target.value)} />
           <Input placeholder="Takeaway 2" value={takeaway2} onChange={(e) => setTakeaway2(e.target.value)} />
           <Input placeholder="Takeaway 3" value={takeaway3} onChange={(e) => setTakeaway3(e.target.value)} />

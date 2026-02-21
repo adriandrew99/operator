@@ -8,7 +8,7 @@ export default function NotFound() {
         <p className="text-sm text-text-secondary">Page not found.</p>
         <Link
           href="/today"
-          className="inline-block text-sm text-accent hover:underline"
+          className="inline-block text-sm text-text-primary hover:underline"
         >
           Back to Command Deck
         </Link>

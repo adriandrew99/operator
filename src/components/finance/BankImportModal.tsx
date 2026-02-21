@@ -179,7 +179,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
 
             <div
               onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-border/60 rounded-xl p-8 text-center cursor-pointer hover:border-accent/40 transition-colors"
+              className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-border-light transition-colors"
             >
               <svg className="w-8 h-8 mx-auto text-text-tertiary mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -187,7 +187,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
               <p className="text-sm text-text-secondary font-medium">Click to upload CSV</p>
-              <p className="text-[10px] text-text-tertiary mt-1">Supports Tide P/L reports, bank statements, and most UK bank CSV formats</p>
+              <p className="text-xs text-text-tertiary mt-1">Supports Tide P/L reports, bank statements, and most UK bank CSV formats</p>
             </div>
 
             <input
@@ -198,7 +198,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
               className="hidden"
             />
 
-            <div className="text-[10px] text-text-tertiary space-y-1">
+            <div className="text-xs text-text-tertiary space-y-1">
               <p><strong>How to export:</strong></p>
               <p>Tide: Accounting → Reports → P/L → Export CSV. Or Banking → Transactions → Download. Monzo: Statements → CSV.</p>
             </div>
@@ -213,29 +213,29 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                 {transactions.length} transactions found. Review and confirm.
               </p>
               <div className="flex gap-2">
-                <button onClick={() => toggleAll(true)} className="text-[10px] text-accent cursor-pointer">Select All</button>
-                <button onClick={() => toggleAll(false)} className="text-[10px] text-text-tertiary cursor-pointer">Deselect All</button>
+                <button onClick={() => toggleAll(true)} className="text-xs text-text-primary cursor-pointer">Select All</button>
+                <button onClick={() => toggleAll(false)} className="text-xs text-text-tertiary cursor-pointer">Deselect All</button>
               </div>
             </div>
 
             {/* Summary bar */}
             <div className="flex gap-2">
-              <div className="flex-1 rounded-lg bg-accent/10 border border-accent/20 px-3 py-2 text-center">
-                <p className="text-[9px] text-accent uppercase">Income ({includedIncome.length})</p>
-                <p className="text-sm font-bold text-accent">{'\u00A3'}{totalIncome.toFixed(2)}</p>
+              <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+                <p className="text-xs text-text-tertiary uppercase">Income ({includedIncome.length})</p>
+                <p className="text-sm font-bold text-text-primary">{'\u00A3'}{totalIncome.toFixed(2)}</p>
               </div>
-              <div className="flex-1 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-center">
-                <p className="text-[9px] text-red-400 uppercase">Expenses ({includedExpenses.length})</p>
-                <p className="text-sm font-bold text-red-400">{'\u00A3'}{totalExpenses.toFixed(2)}</p>
+              <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+                <p className="text-xs text-text-tertiary uppercase">Expenses ({includedExpenses.length})</p>
+                <p className="text-sm font-bold text-text-primary">{'\u00A3'}{totalExpenses.toFixed(2)}</p>
               </div>
             </div>
 
             {/* Month reset toggle */}
-            <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-2.5">
+            <div className="rounded-lg bg-surface-tertiary border border-border px-3 py-2.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-text-primary">Reset existing data before import</p>
-                  <p className="text-[9px] text-text-tertiary mt-0.5">
+                  <p className="text-xs font-medium text-text-primary">Reset existing data before import</p>
+                  <p className="text-xs text-text-tertiary mt-0.5">
                     Clears expenses & snapshots for {affectedMonths.length === 1
                       ? formatMonthLabel(affectedMonths[0])
                       : `${affectedMonths.length} months (${affectedMonths.map(formatMonthLabel).join(', ')})`
@@ -246,7 +246,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                   onClick={() => setResetMonths(!resetMonths)}
                   className={cn(
                     'w-10 h-5.5 rounded-full flex-shrink-0 relative transition-colors cursor-pointer',
-                    resetMonths ? 'bg-accent' : 'bg-border/60'
+                    resetMonths ? 'bg-text-primary' : 'bg-border/60'
                   )}
                 >
                   <div className={cn(
@@ -264,14 +264,14 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                   key={i}
                   className={cn(
                     'flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all',
-                    t.include ? 'bg-surface-tertiary/40' : 'opacity-40'
+                    t.include ? 'bg-surface-tertiary' : 'opacity-40'
                   )}
                 >
                   <button
                     onClick={() => toggleTransaction(i)}
                     className={cn(
                       'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all',
-                      t.include ? 'bg-accent border-accent text-white' : 'border-border'
+                      t.include ? 'bg-text-primary border-text-primary text-background' : 'border-border'
                     )}
                   >
                     {t.include && (
@@ -281,14 +281,14 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                     )}
                   </button>
 
-                  <span className="text-[10px] text-text-tertiary font-mono flex-shrink-0 w-16">{formatDateLabel(t.date)}</span>
+                  <span className="text-xs text-text-tertiary font-mono flex-shrink-0 w-16">{formatDateLabel(t.date)}</span>
                   <span className="text-text-primary truncate flex-1 min-w-0">{t.description}</span>
 
                   {t.type === 'expense' && t.include && (
                     <select
                       value={t.category}
                       onChange={(e) => updateCategory(i, e.target.value)}
-                      className="text-[9px] bg-surface-secondary border border-border/40 rounded px-1.5 py-0.5 text-text-secondary cursor-pointer flex-shrink-0"
+                      className="text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-text-secondary cursor-pointer flex-shrink-0"
                     >
                       {EXPENSE_CATEGORIES.map(c => (
                         <option key={c.value} value={c.value}>{c.label}</option>
@@ -300,8 +300,8 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                     <button
                       onClick={() => updateExpenseType(i, t.expenseType === 'business' ? 'personal' : 'business')}
                       className={cn(
-                        'text-[8px] px-1.5 py-0.5 rounded font-semibold flex-shrink-0 cursor-pointer',
-                        t.expenseType === 'business' ? 'bg-accent/20 text-accent' : 'bg-purple-500/20 text-purple-400'
+                        'text-xs px-1.5 py-0.5 rounded font-semibold flex-shrink-0 cursor-pointer',
+                        t.expenseType === 'business' ? 'bg-surface-tertiary text-text-primary' : 'bg-surface-tertiary text-text-secondary'
                       )}
                     >
                       {t.expenseType === 'business' ? 'BIZ' : 'PERS'}
@@ -310,7 +310,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
 
                   <span className={cn(
                     'font-mono font-medium flex-shrink-0 text-right w-16',
-                    t.type === 'income' ? 'text-accent' : 'text-red-400'
+                    t.type === 'income' ? 'text-text-primary' : 'text-text-secondary'
                   )}>
                     {t.type === 'income' ? '+' : '-'}{'\u00A3'}{t.amount.toFixed(2)}
                   </span>
@@ -318,7 +318,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-border/30">
+            <div className="flex items-center justify-between pt-2 border-t border-border">
               <button onClick={handleReset} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
                 ← Start over
               </button>
@@ -332,7 +332,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
         {/* STEP 3: Importing */}
         {step === 'importing' && (
           <div className="text-center py-8">
-            <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-8 h-8 border-2 border-text-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-sm text-text-secondary">{importProgress || `Importing ${includedCount} transactions...`}</p>
           </div>
         )}
@@ -340,8 +340,8 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
         {/* STEP 4: Done */}
         {step === 'done' && result && (
           <div className="text-center py-6 space-y-3">
-            <div className="w-12 h-12 rounded-full bg-accent/15 flex items-center justify-center mx-auto">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+            <div className="w-12 h-12 rounded-full bg-surface-tertiary flex items-center justify-center mx-auto">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>

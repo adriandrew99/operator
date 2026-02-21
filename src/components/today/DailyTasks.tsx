@@ -26,18 +26,6 @@ const FREQUENCY_OPTIONS = [
   { value: 'custom', label: 'Custom Days' },
 ];
 
-const WEIGHT_COLORS: Record<string, string> = {
-  low: 'bg-accent/15 text-accent',
-  medium: 'bg-amber-500/10 text-amber-400/70',
-  high: 'bg-red-500/15 text-red-400',
-};
-
-const ENERGY_COLORS: Record<string, string> = {
-  deep: 'bg-blue-500/15 text-blue-400',
-  admin: 'bg-surface-tertiary text-text-secondary',
-  creative: 'bg-purple-500/15 text-purple-400',
-};
-
 function formatTime12h(time24: string): string {
   const [h, m] = time24.split(':');
   const hour = parseInt(h, 10);
@@ -305,9 +293,9 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
                     type="button"
                     onClick={() => handleDayToggle(i)}
                     className={cn(
-                      'w-9 h-9 sm:w-10 sm:h-8 text-[10px] font-medium border transition-colors rounded-md',
+                      'w-9 h-9 sm:w-10 sm:h-8 text-xs font-medium border transition-colors rounded-md',
                       selectedDays.includes(i)
-                        ? 'bg-accent text-black border-accent'
+                        ? 'bg-text-primary text-background border-text-primary'
                         : 'bg-surface-secondary text-text-secondary border-border hover:border-text-tertiary'
                     )}
                   >
@@ -320,7 +308,7 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
 
           {formError && (
             <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20">
-              <p className="text-[11px] text-red-400">{formError}</p>
+              <p className="text-xs text-red-400">{formError}</p>
             </div>
           )}
 
@@ -339,7 +327,7 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+          <p className="text-xs font-medium text-text-tertiary">
             Recurring Tasks
           </p>
           <Button size="sm" variant="ghost" onClick={() => setShowForm(true)}>
@@ -363,17 +351,17 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
               <button
                 onClick={() => setActiveTab('today')}
                 className={cn(
-                  'text-[10px] font-medium uppercase tracking-widest transition-colors cursor-pointer',
+                  'text-xs font-medium transition-colors cursor-pointer',
                   activeTab === 'today' ? 'text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
                 )}
               >
                 Today
               </button>
-              <span className="text-text-tertiary/30 text-[10px]">|</span>
+              <span className="text-text-tertiary/30 text-xs">|</span>
               <button
                 onClick={() => setActiveTab('all')}
                 className={cn(
-                  'text-[10px] font-medium uppercase tracking-widest transition-colors cursor-pointer',
+                  'text-xs font-medium transition-colors cursor-pointer',
                   activeTab === 'all' ? 'text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
                 )}
               >
@@ -381,20 +369,20 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
               </button>
             </>
           ) : (
-            <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
+            <p className="text-xs font-medium text-text-tertiary">
               Recurring Tasks
             </p>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-text-tertiary">{completedCount}/{todayItems.length}</span>
+          <span className="text-xs text-text-tertiary">{completedCount}/{todayItems.length}</span>
           <Button size="sm" variant="ghost" onClick={() => setShowForm(true)}>
             Add
           </Button>
         </div>
       </div>
 
-      <div className="space-y-0.5">
+      <div className="space-y-1.5">
         {items.map((task) => {
           const isDueToday = todayItems.some(t => t.id === task.id);
           return (
@@ -408,7 +396,7 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
                 className={cn(
                   'w-4 h-4 border flex-shrink-0 flex items-center justify-center transition-all cursor-pointer',
                   task.completedToday
-                    ? 'bg-accent border-accent'
+                    ? 'bg-text-primary border-text-primary'
                     : 'border-border-light hover:border-text-secondary'
                 )}
               >
@@ -419,40 +407,25 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
                 )}
               </button>
             ) : (
-              <div className="w-4 h-4 border border-border/30 flex-shrink-0" title="Not due today" />
+              <div className="w-4 h-4 border border-border flex-shrink-0" title="Not due today" />
             )}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span className={cn(
                   'text-sm transition-colors',
                   task.completedToday ? 'text-text-tertiary line-through' : 'text-text-secondary'
                 )}>
                   {task.title}
                 </span>
-                {(streaks[task.id] ?? 0) >= 2 && (
-                  <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-amber-400/80 bg-amber-500/10 px-1.5 py-0.5 rounded-md" title={`${streaks[task.id]}-day streak`}>
-                    🔥 {streaks[task.id]}
-                  </span>
-                )}
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-                {task.energy && (
-                  <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', ENERGY_COLORS[task.energy] || '')}>
-                    {task.energy}
-                  </span>
-                )}
-                {task.weight && (
-                  <span className={cn('text-[9px] px-1.5 py-0.5 rounded-md font-medium', WEIGHT_COLORS[task.weight] || 'bg-amber-500/15 text-amber-400')}>
-                    {task.weight}
-                  </span>
-                )}
+              <div className="flex items-center gap-2 sm:gap-2.5 mt-1 flex-wrap">
                 {(task.weight || task.energy) && (
-                  <span className="text-[9px] text-text-tertiary/60">
+                  <span className="text-xs text-text-tertiary">
                     {getTaskMLU({ weight: task.weight as 'low' | 'medium' | 'high', energy: task.energy as 'admin' | 'creative' })} MLU
                   </span>
                 )}
                 {task.client_id && clientMap.has(task.client_id) && (
-                  <span className="text-[10px] text-accent/70">
+                  <span className="text-xs text-text-tertiary">
                     {clientMap.get(task.client_id)}
                   </span>
                 )}
@@ -460,20 +433,20 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
             </div>
             <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
               {task.scheduled_time && (
-                <span className="text-[10px] text-accent/70 font-medium">
+                <span className="text-xs text-text-tertiary">
                   {formatTime12h(task.scheduled_time)}
                 </span>
               )}
               {task.frequency === 'custom' && task.days_of_week && (
-                <span className="text-[10px] text-text-tertiary">
+                <span className="text-xs text-text-tertiary">
                   {task.days_of_week.map(d => DAY_NAMES[d]).join(', ')}
                 </span>
               )}
               {task.frequency !== 'custom' && (
-                <span className="text-[10px] text-text-tertiary">{task.frequency}</span>
+                <span className="text-xs text-text-tertiary">{task.frequency}</span>
               )}
             </div>
-            <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               {isDueToday && !task.completedToday && (
                 <button
                   onClick={() => handleSkip(task)}
@@ -488,7 +461,7 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
               )}
               <button
                 onClick={() => openEdit(task)}
-                className="text-text-tertiary hover:text-accent transition-all p-1 rounded-lg hover:bg-accent/10"
+                className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-text-primary/10"
                 title="Edit task"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

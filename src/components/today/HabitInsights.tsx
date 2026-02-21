@@ -149,16 +149,16 @@ export function HabitInsights({
             key={insight.id}
             className={cn(
               'flex items-start gap-3 px-4 py-3 rounded-xl text-xs transition-all',
-              insight.type === 'celebration' && 'bg-accent/5 border border-accent/15',
-              insight.type === 'suggestion' && 'bg-surface-tertiary/50 border border-border/50',
-              insight.type === 'warning' && 'bg-warning/5 border border-warning/15'
+              insight.type === 'celebration' && 'bg-text-primary/5 border border-border',
+              insight.type === 'suggestion' && 'bg-surface-tertiary border border-border',
+              insight.type === 'warning' && 'bg-text-primary/5 border border-border'
             )}
           >
             <span className="text-base flex-shrink-0 mt-0.5">{insight.icon}</span>
             <p className={cn(
               'leading-relaxed',
-              insight.type === 'celebration' ? 'text-accent' :
-              insight.type === 'warning' ? 'text-warning' :
+              insight.type === 'celebration' ? 'text-text-primary' :
+              insight.type === 'warning' ? 'text-text-secondary' :
               'text-text-secondary'
             )}>
               {insight.message}

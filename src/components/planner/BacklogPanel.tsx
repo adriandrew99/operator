@@ -14,9 +14,9 @@ interface BacklogPanelProps {
 }
 
 const WEIGHT_DOT: Record<string, string> = {
-  high: 'bg-red-400',
-  medium: 'bg-amber-400',
-  low: 'bg-accent',
+  high: 'bg-text-primary',
+  medium: 'bg-text-secondary',
+  low: 'bg-text-tertiary',
 };
 
 export function BacklogPanel({
@@ -54,17 +54,17 @@ export function BacklogPanel({
   if (tasks.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-surface-secondary/30">
+    <div className="rounded-2xl border border-border bg-surface-secondary/30">
       {/* Header */}
       <button
         onClick={toggleCollapsed}
         className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase tracking-wider text-text-tertiary font-medium">
+          <span className="text-xs text-text-tertiary font-medium">
             Backlog
           </span>
-          <span className="text-[9px] text-text-tertiary">
+          <span className="text-xs text-text-tertiary">
             {tasks.length} tasks · {Math.round(totalMLU)} MLU
           </span>
         </div>
@@ -84,7 +84,7 @@ export function BacklogPanel({
           {/* Creative tasks */}
           {grouped.creative.length > 0 && (
             <div className="mb-2">
-              <div className="text-[9px] uppercase tracking-wider text-purple-400/70 font-medium mb-1">
+              <div className="text-xs text-text-secondary font-medium mb-1">
                 Creative ({grouped.creative.length})
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -105,7 +105,7 @@ export function BacklogPanel({
           {/* Admin tasks */}
           {grouped.admin.length > 0 && (
             <div>
-              <div className="text-[9px] uppercase tracking-wider text-text-tertiary/70 font-medium mb-1">
+              <div className="text-xs text-text-tertiary/70 font-medium mb-1">
                 Admin ({grouped.admin.length})
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -153,15 +153,15 @@ function BacklogChip({
       }}
       onDragEnd={onDragEnd}
       className={cn(
-        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/40 bg-surface-secondary cursor-grab active:cursor-grabbing transition-all text-[11px]',
+        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-tertiary cursor-grab active:cursor-grabbing transition-all text-xs',
         isDragging && 'opacity-40',
-        'hover:border-border/60 hover:bg-surface-tertiary'
+        'hover:brightness-110'
       )}
     >
       <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', WEIGHT_DOT[weight])} />
       <span className="text-text-primary truncate max-w-[120px]">{task.title}</span>
-      {clientName && <span className="text-[9px] text-text-tertiary truncate max-w-[60px]">{clientName}</span>}
-      {task.is_urgent && <span className="text-[8px] text-red-400 font-medium">!</span>}
+      {clientName && <span className="text-xs text-text-tertiary truncate max-w-[60px]">{clientName}</span>}
+      {task.is_urgent && <span className="text-xs text-text-primary font-medium">!</span>}
     </div>
   );
 }

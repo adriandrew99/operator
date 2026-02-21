@@ -1,12 +1,12 @@
 export default function KnowledgeLoading() {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="h-6 w-28 bg-surface-secondary rounded" />
-        <div className="h-8 w-28 bg-surface-secondary rounded" />
+        <div className="skeleton skeleton-heading w-28 h-6" />
+        <div className="skeleton w-28 h-8 rounded" />
       </div>
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-20 bg-surface-secondary border border-border rounded-2xl" />
+        <div key={i} className="skeleton skeleton-card h-20" />
       ))}
     </div>
   );

@@ -28,7 +28,7 @@ export function FundamentalsTracker({ fundamentals, completions }: FundamentalsT
       {/* Progress bar */}
       <div className="h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
         <div
-          className="h-full rounded-full bg-accent transition-all duration-700 ease-out"
+          className="h-full rounded-full bg-text-primary/60 transition-all duration-700 ease-out"
           style={{ width: `${progressPct}%` }}
         />
       </div>
@@ -48,7 +48,7 @@ export function FundamentalsTracker({ fundamentals, completions }: FundamentalsT
                   'flex items-center gap-3 py-3 px-3.5 rounded-xl transition-colors duration-150',
                   checked
                     ? 'bg-surface-tertiary'
-                    : 'hover:bg-surface-tertiary/60'
+                    : 'hover:bg-surface-tertiary'
                 )}
               >
                 <AnimatedCheckbox
