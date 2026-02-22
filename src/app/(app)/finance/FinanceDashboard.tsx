@@ -487,7 +487,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* Month Picker Dropdown */}
             {showMonthPicker && (
-              <div className="absolute top-full right-0 mt-2 z-50 w-56 p-3 rounded-2xl border border-border-light" style={{ background: 'rgba(10, 10, 10, 0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+              <div className="absolute top-full right-0 mt-2 z-50 w-56 p-3 tooltip-glass rounded-2xl">
                 {(() => {
                   const now = new Date();
                   const currentYear = now.getFullYear();
@@ -2343,7 +2343,7 @@ function ForecastTab({
                       {formatCurrency(row.confirmed + row.likely + row.possible)}
                     </span>
                     {/* Hover tooltip */}
-                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/bar:block w-56 p-3 rounded-2xl bg-surface-primary border border-border">
+                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/bar:block w-56 p-3 tooltip-glass rounded-2xl">
                       <p className="text-xs font-semibold text-text-primary mb-2">{row.month} Breakdown</p>
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs">
@@ -2420,7 +2420,7 @@ function ForecastTab({
                       {formatCurrency(row.cumulative)}
                     </span>
                     {/* Hover tooltip */}
-                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/cum:block w-52 p-3 rounded-2xl bg-surface-primary border border-border">
+                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/cum:block w-52 p-3 tooltip-glass rounded-2xl">
                       <p className="text-xs font-semibold text-text-primary mb-2">{row.month} Cash Position</p>
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs">

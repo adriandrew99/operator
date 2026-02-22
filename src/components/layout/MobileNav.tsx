@@ -60,14 +60,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-3 right-3 animate-slide-up">
             <div
-              className="rounded-2xl p-1.5"
-              style={{
-                background: 'rgba(10, 10, 10, 0.95)',
-                border: '1px solid var(--border-light)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-              }}
+              className="rounded-2xl p-1.5 tooltip-glass"
             >
               {MORE_ITEMS.map((item) => {
                 const isActive = pathname.startsWith(item.href);
@@ -80,7 +73,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
                       isActive ? 'text-text-primary' : 'text-text-secondary active:bg-surface-tertiary'
                     )}
                     style={isActive ? {
-                      background: 'linear-gradient(90deg, rgba(139, 115, 255, 0.12), rgba(139, 115, 255, 0.03))',
+                      background: 'linear-gradient(90deg, rgba(216, 136, 91, 0.12), rgba(216, 136, 91, 0.03))',
                     } : undefined}
                   >
                     <svg

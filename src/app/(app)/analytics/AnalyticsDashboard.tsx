@@ -65,13 +65,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">
-      <p className="chart-tooltip-label">{label}</p>
-      {payload.map((entry: any, i: number) => (
-        <div key={i} className="chart-tooltip-value" style={{ color: entry.color }}>
-          <span>{entry.name}</span>
-          <span>{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}</span>
-        </div>
-      ))}
+      {label && <p className="chart-tooltip-label">{label}</p>}
+      <div className="space-y-1.5">
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
+              <span className="text-[11px] text-text-secondary">{entry.name}</span>
+            </div>
+            <span className="chart-tooltip-value">
+              {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -508,12 +515,18 @@ export function AnalyticsDashboard({
                 if (!active || !payload?.length) return null;
                 return (
                   <div className="chart-tooltip">
-                    <p className="text-xs text-text-tertiary mb-1">{label}</p>
-                    {payload.map((entry: any, i: number) => (
-                      <p key={i} className="text-xs text-text-primary">
-                        <span style={{ color: entry.color }}>{entry.name}:</span> £{entry.value.toLocaleString()}
-                      </p>
-                    ))}
+                    <p className="chart-tooltip-label">{label}</p>
+                    <div className="space-y-1.5">
+                      {payload.map((entry: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between gap-6">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
+                            <span className="text-[11px] text-text-secondary">{entry.name}</span>
+                          </div>
+                          <span className="chart-tooltip-value">£{entry.value.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               }} />
@@ -533,7 +546,7 @@ export function AnalyticsDashboard({
             <h3 className="text-section-heading text-text-primary">Weekly Energy Investment</h3>
           </div>
           <p className="text-xs text-text-tertiary">
-            Weekly mental energy split by type. Creative (purple) demands more focus, admin (gray) is lightweight.
+            Weekly mental energy split by type. Creative tasks demand more focus, admin is lightweight.
           </p>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={energyTrends} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
@@ -545,19 +558,26 @@ export function AnalyticsDashboard({
                 const total = payload.reduce((s: number, p: any) => s + (p.value || 0), 0);
                 return (
                   <div className="chart-tooltip">
-                    <p className="text-xs text-text-tertiary mb-1">{label}</p>
-                    {payload.map((entry: any, i: number) => (
-                      <p key={i} className="text-xs text-text-primary">
-                        <span style={{ color: entry.color }}>{entry.name}:</span> {entry.value.toFixed(1)} MLU
-                      </p>
-                    ))}
-                    <p className="text-xs text-text-primary font-medium border-t border-border mt-1 pt-1">
-                      Total: {total.toFixed(1)} MLU
-                    </p>
+                    <p className="chart-tooltip-label">{label}</p>
+                    <div className="space-y-1.5">
+                      {payload.map((entry: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between gap-6">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
+                            <span className="text-[11px] text-text-secondary">{entry.name}</span>
+                          </div>
+                          <span className="chart-tooltip-value">{entry.value.toFixed(1)} MLU</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-border/30 mt-2 pt-2 flex justify-between">
+                      <span className="text-[11px] text-text-secondary">Total</span>
+                      <span className="chart-tooltip-value">{total.toFixed(1)} MLU</span>
+                    </div>
                   </div>
                 );
               }} />
-              <Bar dataKey="creativeMLU" name="Creative" stackId="a" fill="#a78bfa" radius={[0, 0, 0, 0]} animationBegin={200} animationDuration={800} animationEasing="ease-out" />
+              <Bar dataKey="creativeMLU" name="Creative" stackId="a" fill="var(--accent)" radius={[0, 0, 0, 0]} animationBegin={200} animationDuration={800} animationEasing="ease-out" />
               <Bar dataKey="adminMLU" name="Admin" stackId="a" fill="#6b7280" radius={[4, 4, 0, 0]} animationBegin={400} animationDuration={800} animationEasing="ease-out" />
             </BarChart>
           </ResponsiveContainer>

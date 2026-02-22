@@ -41,16 +41,11 @@ function SidebarTooltip({ label }: { label: string }) {
       <div ref={ref} className="hidden" />
       {mounted && pos && createPortal(
         <div
-          className="fixed px-3 py-1.5 rounded-lg text-xs font-medium text-text-primary pointer-events-none whitespace-nowrap z-[9999]"
+          className="fixed tooltip-glass px-3 py-1.5 text-xs font-medium text-text-primary pointer-events-none whitespace-nowrap z-[9999]"
           style={{
             top: pos.top,
             left: pos.left,
             transform: 'translateY(-50%)',
-            background: 'rgba(10, 10, 10, 0.95)',
-            border: '1px solid var(--border-light)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
           }}
         >
           {label}
@@ -63,7 +58,7 @@ function SidebarTooltip({ label }: { label: string }) {
               height: 0,
               borderTop: '4px solid transparent',
               borderBottom: '4px solid transparent',
-              borderRight: '4px solid rgba(10, 10, 10, 0.95)',
+              borderRight: '4px solid rgba(18, 18, 18, 0.92)',
             }}
           />
         </div>,
@@ -210,7 +205,7 @@ export function Sidebar({ debriefReady }: SidebarProps) {
                         : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary'
                     )}
                     style={isActive ? {
-                      background: 'linear-gradient(90deg, rgba(139, 115, 255, 0.12), rgba(139, 115, 255, 0.03))',
+                      background: 'linear-gradient(90deg, rgba(216, 136, 91, 0.12), rgba(216, 136, 91, 0.03))',
                     } : undefined}
                     title={item.label}
                   >

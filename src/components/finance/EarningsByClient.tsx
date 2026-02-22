@@ -13,13 +13,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">
-      <p className="chart-tooltip-label">{label}</p>
-      {payload.map((entry: any, i: number) => (
-        <div key={i} className="chart-tooltip-value">
-          <span>Revenue</span>
-          <span>£{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}/mo</span>
-        </div>
-      ))}
+      {label && <p className="chart-tooltip-label">{label}</p>}
+      <div className="space-y-1.5">
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full flex-shrink-0 bg-accent" />
+              <span className="text-[11px] text-text-secondary">Revenue</span>
+            </div>
+            <span className="chart-tooltip-value">£{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}/mo</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

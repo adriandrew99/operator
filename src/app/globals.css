@@ -19,7 +19,7 @@
   /* ━━━ BORDERS ━━━ */
   --border-color: rgba(255, 255, 255, 0.06);
   --border-light: rgba(255, 255, 255, 0.10);
-  --border-accent: rgba(139, 115, 255, 0.20);
+  --border-accent: rgba(216, 136, 91, 0.20);
 
   /* ━━━ TEXT ━━━ */
   --text-primary: #ffffff;
@@ -27,10 +27,10 @@
   --text-tertiary: rgba(255, 255, 255, 0.35);
 
   /* ━━━ ACCENTS ━━━ */
-  --accent: #8b73ff;
-  --accent-bright: #a78bff;
-  --accent-muted: rgba(139, 115, 255, 0.10);
-  --accent-glow: rgba(139, 115, 255, 0.25);
+  --accent: #D8885B;
+  --accent-bright: #E4A07A;
+  --accent-muted: rgba(216, 136, 91, 0.10);
+  --accent-glow: rgba(216, 136, 91, 0.25);
   --accent-green: #4ade80;
   --accent-blue: #60a5fa;
 
@@ -40,13 +40,13 @@
   --success: #4ade80;
 
   /* ━━━ CHARTS ━━━ */
-  --chart-1: #8b73ff;
+  --chart-1: #D8885B;
   --chart-2: #60a5fa;
   --chart-3: #4ade80;
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
-  --chart-gradient-start: rgba(139, 115, 255, 0.4);
-  --chart-gradient-end: rgba(139, 115, 255, 0.0);
+  --chart-gradient-start: rgba(216, 136, 91, 0.4);
+  --chart-gradient-end: rgba(216, 136, 91, 0.0);
 
   /* ━━━ GLASS ━━━ */
   --glass-bg: rgba(10, 10, 10, 0.7);
@@ -70,26 +70,26 @@
   --surface-inset: #f4f4f4;
   --border-color: rgba(0, 0, 0, 0.08);
   --border-light: rgba(0, 0, 0, 0.12);
-  --border-accent: rgba(107, 107, 223, 0.20);
+  --border-accent: rgba(192, 108, 60, 0.20);
   --text-primary: #0a0a0a;
   --text-secondary: rgba(0, 0, 0, 0.55);
   --text-tertiary: rgba(0, 0, 0, 0.30);
-  --accent: #6b6bdf;
-  --accent-bright: #8080ef;
-  --accent-muted: rgba(107, 107, 223, 0.06);
-  --accent-glow: rgba(107, 107, 223, 0.15);
+  --accent: #C06C3C;
+  --accent-bright: #D8885B;
+  --accent-muted: rgba(192, 108, 60, 0.06);
+  --accent-glow: rgba(192, 108, 60, 0.15);
   --accent-green: #22c55e;
   --accent-blue: #3b82f6;
   --danger: #dc2626;
   --warning: #d97706;
   --success: #16a34a;
-  --chart-1: #6b6bdf;
+  --chart-1: #C06C3C;
   --chart-2: #3b82f6;
   --chart-3: #22c55e;
   --chart-4: #d97706;
   --chart-5: #dc2626;
-  --chart-gradient-start: rgba(107, 107, 223, 0.3);
-  --chart-gradient-end: rgba(107, 107, 223, 0.0);
+  --chart-gradient-start: rgba(192, 108, 60, 0.3);
+  --chart-gradient-end: rgba(192, 108, 60, 0.0);
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(0, 0, 0, 0.06);
   --card-bg: #f8f8f8;
@@ -200,8 +200,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); }
 
 .card-accent {
   background: linear-gradient(135deg,
-    rgba(139, 115, 255, 0.08) 0%,
-    rgba(139, 115, 255, 0.02) 100%);
+    rgba(216, 136, 91, 0.08) 0%,
+    rgba(216, 136, 91, 0.02) 100%);
   border: 1px solid var(--border-accent);
   border-radius: 16px;
   position: relative;
@@ -214,8 +214,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); }
   border-radius: 16px;
   padding: 1px;
   background: linear-gradient(135deg,
-    rgba(139, 115, 255, 0.25),
-    rgba(139, 115, 255, 0.0));
+    rgba(216, 136, 91, 0.25),
+    rgba(216, 136, 91, 0.0));
   -webkit-mask: linear-gradient(#fff 0 0) content-box,
                 linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box,
@@ -493,8 +493,8 @@ button:disabled { cursor: not-allowed; }
 
 /* ━━━ SCORE GLOW ━━━ */
 @keyframes scoreGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(139, 115, 255, 0.2); }
-  50% { box-shadow: 0 0 40px rgba(139, 115, 255, 0.4); }
+  0%, 100% { box-shadow: 0 0 20px rgba(216, 136, 91, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(216, 136, 91, 0.4); }
 }
 .score-glow { animation: scoreGlow 3s ease-in-out infinite; }
 
@@ -639,21 +639,23 @@ button:disabled { cursor: not-allowed; }
 }
 
 .chart-tooltip {
-  background: rgba(10, 10, 10, 0.95);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(18, 18, 18, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .chart-tooltip-label {
   font-size: 11px;
   color: var(--text-tertiary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .chart-tooltip-value {
@@ -661,6 +663,17 @@ button:disabled { cursor: not-allowed; }
   font-weight: 600;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+}
+
+/* ━━━ GENERIC TOOLTIP (hover reveals) ━━━ */
+.tooltip-glass {
+  background: rgba(18, 18, 18, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -65,7 +65,7 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (emoji: str
         </button>
       </div>
       {open && (
-        <div className="absolute z-50 top-full mt-2 left-0 w-72 max-w-[calc(100vw-2rem)] p-3 rounded-xl bg-surface-secondary border border-border  animate-fade-in max-h-64 overflow-y-auto">
+        <div className="absolute z-50 top-full mt-2 left-0 w-72 max-w-[calc(100vw-2rem)] p-3 tooltip-glass rounded-xl animate-fade-in max-h-64 overflow-y-auto">
           {EMOJI_CATEGORIES.map((cat) => (
             <div key={cat.label} className="mb-3 last:mb-0">
               <p className="text-xs font-medium text-text-tertiary  mb-1.5">{cat.label}</p>

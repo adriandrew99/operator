@@ -35,8 +35,8 @@ export function InfoBox({ title, children, className }: InfoBoxProps) {
         ?
       </div>
       {open && (
-        <div className="absolute z-50 top-6 left-0 w-64 p-3 rounded-xl bg-surface-secondary border border-border animate-fade-in">
-          <p className="text-xs font-medium text-text-tertiary mb-1.5">{title}</p>
+        <div className="absolute z-50 top-6 left-0 w-64 p-3.5 rounded-xl tooltip-glass animate-fade-in">
+          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.02em] mb-1.5">{title}</p>
           <div className="text-xs text-text-secondary leading-relaxed space-y-1">
             {children}
           </div>

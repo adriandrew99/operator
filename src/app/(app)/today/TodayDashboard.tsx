@@ -114,35 +114,34 @@ export function TodayDashboard({
           />
         </BentoItem>
 
-        {/* ━━━ 2. TODAY'S PLAN + ENERGY ROUTER (side-by-side) ━━━ */}
+        {/* ━━━ 2. TODAY'S PLAN (full width) ━━━ */}
         <BentoItem span="full" delay={60}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Today's Plan — takes 2/3 */}
-            <section className="card-elevated rounded-2xl p-6 lg:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-section-heading text-text-primary">Today&apos;s Plan</h2>
-                <InfoBox title="Today's Plan">
-                  <p>Tasks flagged for today or with today&apos;s deadline. Add tasks inline with weight + client assignment.</p>
-                </InfoBox>
-              </div>
-              <TodayTasks tasks={todayTasks} clients={clients} completedTodayTasks={completedTodayTasks} weekTasks={weekTasks} todayStr={today} onTaskCompleted={onTaskCompleted} onTaskUncompleted={onTaskUncompleted} dailyCapacity={dailyCapacity} pushUndo={pushUndo} externalUncompletedIds={externalUncompletedIds} />
-            </section>
+          <section className="card-elevated rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-section-heading text-text-primary">Today&apos;s Plan</h2>
+              <InfoBox title="Today's Plan">
+                <p>Tasks flagged for today or with today&apos;s deadline. Add tasks inline with weight + client assignment.</p>
+              </InfoBox>
+            </div>
+            <TodayTasks tasks={todayTasks} clients={clients} completedTodayTasks={completedTodayTasks} weekTasks={weekTasks} todayStr={today} onTaskCompleted={onTaskCompleted} onTaskUncompleted={onTaskUncompleted} dailyCapacity={dailyCapacity} pushUndo={pushUndo} externalUncompletedIds={externalUncompletedIds} />
+          </section>
+        </BentoItem>
 
-            {/* Energy Router — takes 1/3 */}
-            <section className="card-elevated rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-section-heading text-text-primary">Do Next</h2>
-                <InfoBox title="Energy Router">
-                  <p>Recommends your next task based on current energy level, time of day, and task demands.</p>
-                </InfoBox>
-              </div>
-              <EnergyRouter
-                todayTasks={todayTasks}
-                fundamentalsCompleted={fundamentalsHitCount}
-                fundamentalsTotal={fundamentalsTotal}
-              />
-            </section>
-          </div>
+        {/* ━━━ 2b. ENERGY ROUTER (half width alongside fundamentals) ━━━ */}
+        <BentoItem delay={90}>
+          <section className="card-elevated rounded-2xl p-6 h-full">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-section-heading text-text-primary">Do Next</h2>
+              <InfoBox title="Energy Router">
+                <p>Recommends your next task based on current energy level, time of day, and task demands.</p>
+              </InfoBox>
+            </div>
+            <EnergyRouter
+              todayTasks={todayTasks}
+              fundamentalsCompleted={fundamentalsHitCount}
+              fundamentalsTotal={fundamentalsTotal}
+            />
+          </section>
         </BentoItem>
 
         {/* ━━━ 3. FUNDAMENTALS + RECURRING (side-by-side) ━━━ */}
