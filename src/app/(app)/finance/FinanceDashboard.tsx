@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useTransition } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -14,7 +14,7 @@ import { createClientAction, updateClient, deleteClient } from '@/actions/financ
 import { createExpense, updateExpense, deleteExpense } from '@/actions/finance';
 import { upsertFinancialSnapshot, updateFinancialSnapshot, deleteFinancialSnapshot } from '@/actions/finance';
 import { createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '@/actions/finance';
-import { upsertClientOverride, deleteClientOverride, getClientOverridesForClient } from '@/actions/finance';
+import { upsertClientOverride, deleteClientOverride, getClientOverridesForClient, createOneoffPayment, deleteOneoffPayment } from '@/actions/finance';
 import { updateFinanceSettings } from '@/actions/settings';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -25,8 +25,10 @@ import { InfoTip } from '@/components/ui/InfoTip';
 const BankImportModal = dynamic(() => import('@/components/finance/BankImportModal').then(m => ({ default: m.BankImportModal })), { ssr: false });
 const IncomeChart = dynamic(() => import('@/components/finance/IncomeChart').then(m => ({ default: m.IncomeChart })), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center text-xs text-text-tertiary">Loading chart...</div> });
 const EarningsByClient = dynamic(() => import('@/components/finance/EarningsByClient').then(m => ({ default: m.EarningsByClient })), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center text-xs text-text-tertiary">Loading chart...</div> });
-import type { Client, Expense, FinancialSnapshot, PipelineLead, SavingsGoal, ClientMonthlyOverride } from '@/lib/types/database';
+const BankingTab = dynamic(() => import('@/components/finance/BankingTab').then(m => ({ default: m.BankingTab })), { ssr: false });
+import type { Client, Expense, FinancialSnapshot, PipelineLead, SavingsGoal, ClientMonthlyOverride, OneoffPayment, StaffMember, BankConnection, BankTransaction } from '@/lib/types/database';
 import type { ClientEnergyProfile, RevenueInsight } from '@/actions/insights';
+import { createStaffMember, updateStaffMember, deleteStaffMember } from '@/actions/staff';
 
 interface FinanceDashboardProps {
   clients: Client[];
@@ -41,6 +43,10 @@ interface FinanceDashboardProps {
   insights?: RevenueInsight[];
   monthlySalary?: number;
   staffCost?: number;
+  staffMembers?: StaffMember[];
+  bankConnections?: BankConnection[];
+  bankTransactions?: BankTransaction[];
+  oneoffPayments?: OneoffPayment[];
 }
 
 function getMonthLabel(monthStr: string): string {
@@ -79,8 +85,8 @@ function shiftMonth(monthStr: string, delta: number): string {
   return formatLocalMonth(d);
 }
 
-export function FinanceDashboard({ clients, expenses, snapshot, history, pipelineLeads, savingsGoals, currentMonth, clientOverrides = [], clientEnergyProfiles = [], insights = [], monthlySalary = 0, staffCost = 0 }: FinanceDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'expenses' | 'forecast' | 'personal' | 'year'>('overview');
+export function FinanceDashboard({ clients, expenses, snapshot, history, pipelineLeads, savingsGoals, currentMonth, clientOverrides = [], clientEnergyProfiles = [], insights = [], monthlySalary = 0, staffCost = 0, staffMembers = [], bankConnections = [], bankTransactions = [], oneoffPayments = [] }: FinanceDashboardProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'expenses' | 'forecast' | 'personal' | 'year' | 'banking'>('overview');
   const [showClientModal, setShowClientModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -167,7 +173,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
     return client.retainer_amount || 0;
   }
 
-  const liveRevenue = activeClients.reduce((sum, c) => sum + getClientMonthlyAmount(c), 0);
+  const currentMonthKey = currentMonth.slice(0, 7);
+  const oneoffTotal = oneoffPayments
+    .filter(p => p.month === currentMonthKey)
+    .reduce((sum, p) => sum + p.amount, 0);
+  const liveRevenue = activeClients.reduce((sum, c) => sum + getClientMonthlyAmount(c), 0) + oneoffTotal;
   const businessExpensesList = expenses.filter(e => (e.expense_type || 'business') === 'business');
   const personalExpensesList = expenses.filter(e => e.expense_type === 'personal');
   const liveBusinessExpenses = businessExpensesList.reduce((sum, e) => sum + e.amount, 0);
@@ -272,6 +282,14 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
       }
     }
 
+    // One-off payments for this month
+    const futureMonthKey = currentMonth.slice(0, 7);
+    const monthOneoffs = oneoffPayments.filter(p => p.month === futureMonthKey);
+    for (const p of monthOneoffs) {
+      confirmed += p.amount;
+      confirmedBreakdown.push({ name: p.description, amount: p.amount, note: 'one-off' });
+    }
+
     // Pipeline leads split by probability
     const activeLeads = pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed');
     let likely = 0;
@@ -302,7 +320,60 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
       lostClients,
       upcomingClients,
     };
-  }, [isFuture, currentMonth, allActiveClients, pipelineLeads, overrideMap]);
+  }, [isFuture, currentMonth, allActiveClients, pipelineLeads, overrideMap, oneoffPayments]);
+
+  // ━━━ Projected income for IncomeChart (up to 12 months from today) ━━━
+  const projectedIncome = useMemo(() => {
+    const now = new Date();
+    const startFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+    const activeLeads = pipelineLeads.filter(l => l.stage !== 'lost' && l.stage !== 'closed');
+    const rows: { month: string; confirmed: number; likely: number; possible: number }[] = [];
+
+    for (let i = 1; i <= 12; i++) {
+      const futureDate = new Date(startFrom);
+      futureDate.setMonth(startFrom.getMonth() + i);
+      const targetMonth = new Date(futureDate.getFullYear(), futureDate.getMonth(), 1);
+
+      let confirmed = 0;
+      for (const c of allActiveClients) {
+        const retainer = c.retainer_amount || 0;
+        if (retainer === 0) continue;
+        const contractStart = c.contract_start ? new Date(c.contract_start + 'T00:00:00') : null;
+        const contractEnd = c.contract_end ? new Date(c.contract_end + 'T00:00:00') : null;
+        const termDate = c.termination_date ? new Date(c.termination_date + 'T00:00:00') : null;
+        if (contractStart && contractStart > targetMonth) continue;
+        if (termDate && termDate < targetMonth) continue;
+        if (c.is_ending && !termDate) {
+          confirmed += retainer * ((c.renewal_probability ?? 20) / 100);
+          continue;
+        }
+        if (contractEnd && contractEnd < targetMonth) {
+          confirmed += retainer * ((c.renewal_probability ?? 50) / 100);
+        } else {
+          confirmed += retainer;
+        }
+      }
+
+      // One-off payments for this projected month
+      const projMonthKey = `${futureDate.getFullYear()}-${String(futureDate.getMonth() + 1).padStart(2, '0')}`;
+      for (const p of oneoffPayments) {
+        if (p.month === projMonthKey) confirmed += p.amount;
+      }
+
+      let likely = 0;
+      let possible = 0;
+      for (const l of activeLeads) {
+        const prob = l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0;
+        const value = l.estimated_value || 0;
+        if (prob >= 60) likely += value;
+        else if (prob > 0) possible += value;
+      }
+
+      const label = futureDate.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+      rows.push({ month: label, confirmed, likely, possible });
+    }
+    return rows;
+  }, [allActiveClients, pipelineLeads, oneoffPayments]);
 
   // For future months, use projected confirmed revenue; for past/current, use normal logic
   const effectiveRevenue = isFuture && futureProjection ? futureProjection.confirmed : monthlyRevenue;
@@ -437,6 +508,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
     { key: 'clients' as const, label: `Clients (${activeClients.length})` },
     { key: 'expenses' as const, label: 'Expenses' },
     { key: 'personal' as const, label: 'Personal' },
+    { key: 'banking' as const, label: 'Banking' },
   ];
 
   return (
@@ -1379,11 +1451,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 <div className="w-1 h-5 rounded-full bg-text-secondary" />
                 <h2 className="text-section-heading text-text-primary">Income Over Time</h2>
                 <InfoBox title="Income Over Time">
-                  <p>Historical monthly revenue and expenses from your financial snapshots.</p>
-                  <p className="mt-1">Add monthly records via the Forecast tab to build this history.</p>
+                  <p>Historical monthly revenue and expenses, plus 6-month projected income from active clients and pipeline.</p>
+                  <p className="mt-1">Confirmed = contracted retainers. Likely = pipeline ≥60%. Possible = pipeline &lt;60%.</p>
                 </InfoBox>
               </div>
-              <IncomeChart snapshots={history} currentMonthRevenue={isCurrent ? liveRevenue : undefined} currentMonthExpenses={isCurrent ? liveExpenses : undefined} />
+              <IncomeChart snapshots={history} currentMonthRevenue={isCurrent ? liveRevenue : undefined} currentMonthExpenses={isCurrent ? liveExpenses : undefined} projectedIncome={projectedIncome} />
             </section>
             <section className="card-elevated rounded-2xl p-5">
               <div className="flex items-center gap-3 mb-4">
@@ -1497,6 +1569,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           overrideMap={overrideMap}
           liveExpenses={liveExpenses}
           currentMonth={currentMonth}
+          oneoffPayments={oneoffPayments}
         />
       )}
 
@@ -1527,6 +1600,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           }}
           monthlySalary={monthlySalary}
           staffCost={staffCost}
+          staffMembers={staffMembers}
         />
       )}
 
@@ -2118,6 +2192,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         );
       })()}
 
+      {/* Banking Tab */}
+      {activeTab === 'banking' && (
+        <BankingTab connections={bankConnections} transactions={bankTransactions} />
+      )}
+
       {/* Modals */}
       <ClientFormModal open={showClientModal} onClose={() => setShowClientModal(false)} />
       <ExpenseFormModal
@@ -2133,22 +2212,42 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
 // ━━━ FORECAST TAB ━━━
 function ForecastTab({
-  monthlyRevenue, monthlyExpenses, leftInCompany, pipelineRevenue, pipelineLeads, history, activeClients, snapshot, overrideMap = {}, liveExpenses = 0, currentMonth,
+  monthlyRevenue, monthlyExpenses, leftInCompany, pipelineRevenue, pipelineLeads, history, activeClients, snapshot, overrideMap = {}, liveExpenses = 0, currentMonth, oneoffPayments = [],
 }: {
   monthlyRevenue: number; monthlyExpenses: number; leftInCompany: number; pipelineRevenue: number;
   pipelineLeads: PipelineLead[]; history: FinancialSnapshot[]; activeClients: Client[];
-  snapshot: FinancialSnapshot | null; overrideMap?: Record<string, number>; liveExpenses?: number; currentMonth: string;
+  snapshot: FinancialSnapshot | null; overrideMap?: Record<string, number>; liveExpenses?: number; currentMonth: string; oneoffPayments?: OneoffPayment[];
 }) {
   const [forecastMonths, setForecastMonths] = useState(6);
   const [startingBalance, setStartingBalance] = useState(String(Number(snapshot?.starting_balance) || 0));
   const [editingStartBalance, setEditingStartBalance] = useState(false);
   const [editingSnapshot, setEditingSnapshot] = useState<FinancialSnapshot | null>(null);
+  // One-off payment inline form
+  const [oneoffDesc, setOneoffDesc] = useState('');
+  const [oneoffAmount, setOneoffAmount] = useState('');
+  const [oneoffMonth, setOneoffMonth] = useState('');
+  const [oneoffError, setOneoffError] = useState<string | null>(null);
+  const [isPendingOneoff, startOneoffTransition] = useTransition();
   // Sync starting balance when snapshot data changes from server
   useEffect(() => {
     setStartingBalance(String(Number(snapshot?.starting_balance) || 0));
   }, [snapshot?.starting_balance]);
 
   const startBal = Number(startingBalance) || 0;
+
+  // Generate month options for the one-off form (current + next 12 months)
+  const oneoffMonthOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [];
+    const start = new Date(currentMonth + 'T00:00:00');
+    for (let i = 0; i <= 12; i++) {
+      const d = new Date(start);
+      d.setMonth(start.getMonth() + i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+      opts.push({ value: key, label });
+    }
+    return opts;
+  }, [currentMonth]);
 
   // ━━━ Tiered projection data ━━━
   const projectionData = useMemo(() => {
@@ -2190,6 +2289,12 @@ function ForecastTab({
         }
       }
 
+      // One-off payments for this projected month
+      const projMonthKey = `${futureDate.getFullYear()}-${String(futureDate.getMonth() + 1).padStart(2, '0')}`;
+      for (const p of oneoffPayments) {
+        if (p.month === projMonthKey) confirmed += p.amount;
+      }
+
       // Pipeline likely (≥60%) and possible (<60%) — full value, probability is binary likelihood
       let likely = 0;
       let possible = 0;
@@ -2219,7 +2324,7 @@ function ForecastTab({
       });
     }
     return rows;
-  }, [activeClients, pipelineLeads, liveExpenses, forecastMonths, startBal, currentMonth]);
+  }, [activeClients, pipelineLeads, liveExpenses, forecastMonths, startBal, currentMonth, oneoffPayments]);
 
   const maxRevenue = projectionData.length > 0
     ? Math.max(...projectionData.map(r => r.confirmed + r.likely + r.possible), 1)
@@ -2477,6 +2582,102 @@ function ForecastTab({
                 </div>
               );
             })}
+          </div>
+
+          {/* One-off payments */}
+          <div className="mt-3 pt-3 border-t border-border space-y-2">
+            <p className="text-xs font-medium text-text-tertiary">One-off Income</p>
+            {oneoffPayments.filter(p => {
+              // Show all one-offs across forecast range
+              const pDate = new Date(p.month + '-01T00:00:00');
+              const startDate = new Date(currentMonth + 'T00:00:00');
+              const endDate = new Date(startDate);
+              endDate.setMonth(endDate.getMonth() + forecastMonths);
+              return pDate >= startDate && pDate <= endDate;
+            }).map(p => (
+              <div key={p.id} className="flex items-center justify-between py-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-secondary">{p.description}</span>
+                  <span className="text-xs px-1 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
+                    {new Date(p.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-text-primary">{formatCurrency(p.amount)}</span>
+                  <button
+                    onClick={() => startOneoffTransition(async () => {
+                      const result = await deleteOneoffPayment(p.id);
+                      if (!result.success) setOneoffError(result.error || 'Failed to delete');
+                    })}
+                    className="text-text-tertiary hover:text-danger transition-colors cursor-pointer"
+                    title="Remove"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Inline add form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const amount = Number(oneoffAmount);
+                const month = oneoffMonth || oneoffMonthOptions[0]?.value;
+                if (!oneoffDesc.trim() || !amount || !month) return;
+                setOneoffError(null);
+                startOneoffTransition(async () => {
+                  const result = await createOneoffPayment({ description: oneoffDesc.trim(), amount, month });
+                  if (result.success) {
+                    setOneoffDesc('');
+                    setOneoffAmount('');
+                    setOneoffMonth('');
+                  } else {
+                    setOneoffError(result.error || 'Failed to add payment');
+                  }
+                });
+              }}
+              className="flex items-center gap-1.5 mt-1"
+            >
+              <input
+                type="text"
+                value={oneoffDesc}
+                onChange={e => setOneoffDesc(e.target.value)}
+                placeholder="Name"
+                className="flex-1 min-w-0 px-2 py-1.5 rounded-md bg-surface-tertiary border border-border text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/40"
+              />
+              <div className="relative">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-tertiary">£</span>
+                <input
+                  type="number"
+                  value={oneoffAmount}
+                  onChange={e => setOneoffAmount(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="any"
+                  className="w-20 pl-5 pr-2 py-1.5 rounded-md bg-surface-tertiary border border-border text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/40"
+                />
+              </div>
+              <select
+                value={oneoffMonth || oneoffMonthOptions[0]?.value}
+                onChange={e => setOneoffMonth(e.target.value)}
+                className="px-2 py-1.5 rounded-md bg-surface-tertiary border border-border text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-accent/40 cursor-pointer"
+              >
+                {oneoffMonthOptions.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={isPendingOneoff || !oneoffDesc.trim() || !oneoffAmount}
+                className="px-2 py-1.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                +
+              </button>
+            </form>
+            {oneoffError && (
+              <p className="text-xs text-danger mt-1">{oneoffError}</p>
+            )}
           </div>
         </section>
 
@@ -3351,20 +3552,26 @@ function InsightCards({ insights }: { insights: RevenueInsight[] }) {
 
 // ━━━ EXPENSES TAB ━━━
 function ExpensesTab({
-  expenses, monthLabel, isCurrent, onAddExpense, onEditExpense, onDeleteExpense, monthlySalary = 0, staffCost = 0,
+  expenses, monthLabel, isCurrent, onAddExpense, onEditExpense, onDeleteExpense, monthlySalary = 0, staffCost = 0, staffMembers = [],
 }: {
   expenses: Expense[]; monthLabel: string; isCurrent: boolean; onAddExpense: () => void; onEditExpense: (expense: Expense) => void; onDeleteExpense: (id: string) => void;
-  monthlySalary?: number; staffCost?: number;
+  monthlySalary?: number; staffCost?: number; staffMembers?: StaffMember[];
 }) {
   const [editingSalary, setEditingSalary] = useState(false);
-  const [editingStaff, setEditingStaff] = useState(false);
   const [salaryInput, setSalaryInput] = useState(String(monthlySalary));
-  const [staffInput, setStaffInput] = useState(String(staffCost));
   const [savingField, setSavingField] = useState<string | null>(null);
+  // Staff member add/edit
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [staffName, setStaffName] = useState('');
+  const [staffRole, setStaffRole] = useState('');
+  const [staffMonthlyCost, setStaffMonthlyCost] = useState('');
+  const [staffStartDate, setStaffStartDate] = useState('');
+  const [staffNotes, setStaffNotes] = useState('');
+  const [staffSaving, setStaffSaving] = useState(false);
 
   // Sync inputs when server data changes
   useEffect(() => { setSalaryInput(String(monthlySalary)); }, [monthlySalary]);
-  useEffect(() => { setStaffInput(String(staffCost)); }, [staffCost]);
 
   function handleSaveSalary() {
     const val = Number(salaryInput) || 0;
@@ -3374,13 +3581,77 @@ function ExpensesTab({
       .finally(() => { setSavingField(null); setEditingSalary(false); });
   }
 
-  function handleSaveStaff() {
-    const val = Number(staffInput) || 0;
-    setSavingField('staff');
-    updateFinanceSettings({ staff_cost: val })
-      .catch(err => console.error('Failed to update staff cost:', err))
-      .finally(() => { setSavingField(null); setEditingStaff(false); });
+  function resetStaffForm() {
+    setStaffName('');
+    setStaffRole('');
+    setStaffMonthlyCost('');
+    setStaffStartDate('');
+    setStaffNotes('');
+    setShowAddStaff(false);
+    setEditingStaffId(null);
   }
+
+  function startEditStaff(member: StaffMember) {
+    setEditingStaffId(member.id);
+    setStaffName(member.name);
+    setStaffRole(member.role || '');
+    setStaffMonthlyCost(String(member.monthly_cost));
+    setStaffStartDate(member.start_date || '');
+    setStaffNotes(member.notes || '');
+    setShowAddStaff(true);
+  }
+
+  async function handleSaveStaffMember(e: React.FormEvent) {
+    e.preventDefault();
+    if (!staffName || !staffMonthlyCost) return;
+    setStaffSaving(true);
+    try {
+      if (editingStaffId) {
+        await updateStaffMember(editingStaffId, {
+          name: staffName,
+          role: staffRole || null,
+          monthly_cost: Number(staffMonthlyCost),
+          start_date: staffStartDate || null,
+          notes: staffNotes || null,
+        });
+      } else {
+        await createStaffMember({
+          name: staffName,
+          role: staffRole || undefined,
+          monthly_cost: Number(staffMonthlyCost),
+          start_date: staffStartDate || undefined,
+          notes: staffNotes || undefined,
+        });
+      }
+      resetStaffForm();
+    } catch (err) {
+      console.error('Failed to save staff member:', err);
+    } finally {
+      setStaffSaving(false);
+    }
+  }
+
+  async function handleToggleStaffActive(member: StaffMember) {
+    try {
+      await updateStaffMember(member.id, { is_active: !member.is_active });
+    } catch (err) {
+      console.error('Failed to toggle staff member:', err);
+    }
+  }
+
+  async function handleDeleteStaffMember(id: string) {
+    try {
+      await deleteStaffMember(id);
+    } catch (err) {
+      console.error('Failed to delete staff member:', err);
+    }
+  }
+
+  const activeStaff = staffMembers.filter(m => m.is_active);
+  const inactiveStaff = staffMembers.filter(m => !m.is_active);
+  const totalStaffCost = activeStaff.reduce((sum, m) => sum + (m.monthly_cost || 0), 0);
+  // Use the computed total from staff_members table if available, otherwise fallback to legacy
+  const effectiveStaffCost = staffMembers.length > 0 ? totalStaffCost : staffCost;
 
   const businessExpenses = expenses.filter(e => (e.expense_type || 'business') === 'business');
   const personalExpenses = expenses.filter(e => e.expense_type === 'personal');
@@ -3420,15 +3691,15 @@ function ExpensesTab({
     <div className="space-y-6 stagger-in">
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-secondary">
-          {monthLabel}: <span className="text-text-primary font-semibold">{formatCurrency(businessTotal + personalTotal + staffCost)}</span>
+          {monthLabel}: <span className="text-text-primary font-semibold">{formatCurrency(businessTotal + personalTotal + effectiveStaffCost)}</span>
           {!isCurrent && <span className="text-text-tertiary text-xs ml-2">(viewing past month)</span>}
         </p>
         <Button size="sm" onClick={onAddExpense}>+ Add Expense</Button>
       </div>
 
-      {/* Salary & Contractor Costs */}
+      {/* Salary & Staff Costs */}
       <div className="card-elevated rounded-2xl p-5 sm:p-6 space-y-4">
-        <h4 className="text-xs  text-text-tertiary font-medium">Salary & Staff Costs</h4>
+        <h4 className="text-xs text-text-tertiary font-medium">Salary & Staff Costs</h4>
 
         {/* Personal Salary */}
         <div className="flex items-center justify-between group">
@@ -3463,56 +3734,163 @@ function ExpensesTab({
           )}
         </div>
 
-        {/* Contractor / Staff Cost */}
-        <div className="flex items-center justify-between group border-t border-border pt-4">
-          <div className="space-y-1.5">
-            <p className="text-sm text-text-primary">Staff / Contractor Costs</p>
-            <p className="text-xs text-text-tertiary">Monthly staff costs — deducted from business profit before corp tax</p>
-          </div>
-          {editingStaff ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={staffInput}
-                onChange={(e) => setStaffInput(e.target.value)}
-                className="w-24 bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary text-right font-mono focus:outline-none focus:border-border-light"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveStaff(); if (e.key === 'Escape') { setEditingStaff(false); setStaffInput(String(staffCost)); } }}
-              />
-              <button onClick={handleSaveStaff} disabled={savingField === 'staff'} className="text-xs text-text-primary hover:text-text-primary/80 cursor-pointer">
-                {savingField === 'staff' ? '...' : 'Save'}
-              </button>
-              <button onClick={() => { setEditingStaff(false); setStaffInput(String(staffCost)); }} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
-                Cancel
-              </button>
-            </div>
-          ) : (
+        {/* Staff Members List */}
+        <div className="border-t border-border pt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text-primary">Team / Contractors</p>
             <button
-              onClick={() => setEditingStaff(true)}
-              className="text-sm font-semibold text-text-primary hover:text-text-primary transition-colors cursor-pointer group-hover:underline decoration-dotted underline-offset-2"
+              onClick={() => { resetStaffForm(); setShowAddStaff(true); }}
+              className="text-xs text-accent hover:text-accent-bright cursor-pointer transition-colors"
             >
-              {formatCurrency(staffCost)}/mo
+              + Add person
             </button>
+          </div>
+
+          {activeStaff.length === 0 && !showAddStaff && (
+            <p className="text-xs text-text-tertiary py-2">No staff members added yet. Add team members to track costs.</p>
           )}
+
+          {activeStaff.map((member) => (
+            <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-surface-tertiary/50 transition-colors group">
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-text-primary font-medium">{member.name}</span>
+                  {member.role && <Badge variant="default">{member.role}</Badge>}
+                </div>
+                {member.notes && <p className="text-xs text-text-tertiary truncate">{member.notes}</p>}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-mono text-text-primary">{formatCurrency(member.monthly_cost)}/mo</span>
+                <button onClick={() => startEditStaff(member)} className="text-text-tertiary hover:text-text-primary transition-colors text-xs cursor-pointer opacity-0 group-hover:opacity-100">Edit</button>
+                <button onClick={() => handleToggleStaffActive(member)} className="text-text-tertiary hover:text-warning transition-colors text-xs cursor-pointer opacity-0 group-hover:opacity-100" title="Deactivate">Pause</button>
+                <button onClick={() => handleDeleteStaffMember(member.id)} className="text-text-tertiary hover:text-danger transition-colors text-xs cursor-pointer opacity-0 group-hover:opacity-100">Remove</button>
+              </div>
+            </div>
+          ))}
+
+          {/* Inactive staff */}
+          {inactiveStaff.length > 0 && (
+            <div className="pt-2 space-y-1">
+              <p className="text-[10px] text-text-tertiary font-medium uppercase tracking-wide">Paused</p>
+              {inactiveStaff.map((member) => (
+                <div key={member.id} className="flex items-center justify-between py-1.5 px-3 rounded-xl opacity-50 hover:opacity-80 transition-opacity group">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-secondary">{member.name}</span>
+                    {member.role && <span className="text-[10px] text-text-tertiary">({member.role})</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-text-tertiary">{formatCurrency(member.monthly_cost)}/mo</span>
+                    <button onClick={() => handleToggleStaffActive(member)} className="text-xs text-accent hover:text-accent-bright cursor-pointer">Reactivate</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add/Edit Staff Form */}
+          {showAddStaff && (
+            <form onSubmit={handleSaveStaffMember} className="card-inset rounded-xl p-4 space-y-3 animate-fade-in">
+              <p className="text-xs font-medium text-text-secondary">{editingStaffId ? 'Edit' : 'Add'} Team Member</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-text-tertiary block mb-1">Name *</label>
+                  <input
+                    type="text"
+                    value={staffName}
+                    onChange={(e) => setStaffName(e.target.value)}
+                    placeholder="e.g. Mum"
+                    className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-border-light"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-tertiary block mb-1">Role</label>
+                  <input
+                    type="text"
+                    value={staffRole}
+                    onChange={(e) => setStaffRole(e.target.value)}
+                    placeholder="e.g. Admin, Outbound"
+                    className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-border-light"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-tertiary block mb-1">Monthly Cost (£) *</label>
+                  <input
+                    type="number"
+                    value={staffMonthlyCost}
+                    onChange={(e) => setStaffMonthlyCost(e.target.value)}
+                    placeholder="1000"
+                    className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary font-mono focus:outline-none focus:border-border-light"
+                    required
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-tertiary block mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={staffStartDate}
+                    onChange={(e) => setStaffStartDate(e.target.value)}
+                    className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-border-light"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-text-tertiary block mb-1">Notes</label>
+                <input
+                  type="text"
+                  value={staffNotes}
+                  onChange={(e) => setStaffNotes(e.target.value)}
+                  placeholder="e.g. Handles admin tasks, invoicing"
+                  className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-border-light"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" type="submit" disabled={staffSaving || !staffName || !staffMonthlyCost}>
+                  {staffSaving ? 'Saving...' : editingStaffId ? 'Update' : 'Add'}
+                </Button>
+                <button type="button" onClick={resetStaffForm} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Staff Total */}
+          <div className="border-t border-border pt-3 flex justify-between text-xs text-text-tertiary">
+            <span>Staff costs ({activeStaff.length} active)</span>
+            <span className="font-mono text-text-secondary">{formatCurrency(effectiveStaffCost)}/mo</span>
+          </div>
         </div>
 
-        {/* Summary */}
-        <div className="border-t border-border pt-3 flex justify-between text-xs text-text-tertiary">
-          <span>Total fixed costs (salary + staff)</span>
-          <span className="font-mono text-text-secondary">{formatCurrency(monthlySalary + staffCost)}/mo</span>
+        {/* Grand Total */}
+        <div className="border-t border-border pt-3 flex justify-between text-xs">
+          <span className="text-text-secondary font-medium">Total fixed costs (salary + staff)</span>
+          <span className="font-mono text-text-primary font-semibold">{formatCurrency(monthlySalary + effectiveStaffCost)}/mo</span>
         </div>
+
+        {/* Corp tax savings callout */}
+        {effectiveStaffCost > 0 && (
+          <div className="bg-accent/5 border border-accent/10 rounded-xl p-3 space-y-1">
+            <p className="text-xs text-accent font-medium">💡 Corp Tax Savings</p>
+            <p className="text-[11px] text-text-secondary leading-relaxed">
+              Your {formatCurrency(effectiveStaffCost)}/mo staff costs reduce taxable profit by {formatCurrency(effectiveStaffCost * 12)}/yr, saving approximately <span className="text-text-primary font-semibold">{formatCurrency(effectiveStaffCost * 12 * 0.19)}/yr</span> in corporation tax.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Business Expenses */}
       <div className="space-y-2">
-        <h4 className="text-xs  text-text-tertiary font-medium">Business Expenses — {formatCurrency(businessTotal)}</h4>
+        <h4 className="text-xs text-text-tertiary font-medium">Business Expenses — {formatCurrency(businessTotal)}</h4>
         {renderExpenseList(businessExpenses)}
       </div>
 
       {/* Personal Expenses */}
       {personalExpenses.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs  text-text-primary font-medium">Personal — {formatCurrency(personalTotal)}</h4>
+          <h4 className="text-xs text-text-primary font-medium">Personal — {formatCurrency(personalTotal)}</h4>
           {renderExpenseList(personalExpenses)}
         </div>
       )}

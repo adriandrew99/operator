@@ -348,6 +348,75 @@ export async function deleteClientOverride(id: string) {
   revalidatePath('/finance');
 }
 
+// ━━━ ONE-OFF PAYMENTS ━━━
+
+export async function getAllOneoffPayments() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data, error } = await supabase
+    .from('oneoff_payments')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('month', { ascending: true });
+
+  if (error) {
+    console.warn('oneoff_payments query failed (migration 00024 may not be run):', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createOneoffPayment(paymentData: {
+  description: string;
+  amount: number;
+  month: string;
+  notes?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Not authenticated' };
+
+  const monthKey = paymentData.month.slice(0, 7);
+
+  const { error } = await supabase
+    .from('oneoff_payments')
+    .insert({
+      user_id: user.id,
+      description: paymentData.description,
+      amount: paymentData.amount,
+      month: monthKey,
+      notes: paymentData.notes || null,
+    });
+
+  if (error) {
+    console.warn('createOneoffPayment failed:', error.message);
+    return { success: false, error: error.message?.includes('relation') ? 'Run migration 00024 first' : error.message };
+  }
+  revalidatePath('/finance');
+  return { success: true };
+}
+
+export async function deleteOneoffPayment(id: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('oneoff_payments')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.warn('deleteOneoffPayment failed:', error.message);
+    return { success: false, error: error.message };
+  }
+  revalidatePath('/finance');
+  return { success: true };
+}
+
 // ━━━ SAVINGS GOALS ━━━
 
 export async function getSavingsGoals() {
