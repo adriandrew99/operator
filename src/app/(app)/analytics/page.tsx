@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { getProjectEnergyBreakdown, getClientEfficiency, getWeeklyCompletionTrend } from '@/actions/analytics';
 import { getClientsWithOverrides } from '@/actions/finance';
-import { getClientEnergyProfiles, getRevenueTrends, getEnergyTrends, generateAnalyticsInsights, getWeeklyDebrief, detectPatterns, getMonthlyTrends, getClientHealthScores, getScopeCreepAnalysis } from '@/actions/insights';
+import { getClientEnergyProfiles, getRevenueTrends, getEnergyTrends, generateAnalyticsInsights, getWeeklyDebrief, detectPatterns, getMonthlyTrends, getClientHealthScores, getScopeCreepAnalysis, getDebriefHistory } from '@/actions/insights';
 import type { DashboardLayoutPreferences } from '@/lib/types/dashboard-layout';
 import { DEFAULT_DASHBOARD_LAYOUT } from '@/lib/types/dashboard-layout';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -27,6 +27,7 @@ export default async function AnalyticsPage() {
     clientHealthScores,
     profileRes,
     scopeCreepAnalysis,
+    debriefHistory,
   ] = await Promise.all([
     getProjectEnergyBreakdown().catch((e) => { console.error('[Analytics] projectEnergy failed:', e.message); return []; }),
     getClientEfficiency().catch((e) => { console.error('[Analytics] clientEfficiency failed:', e.message); return []; }),
@@ -42,6 +43,7 @@ export default async function AnalyticsPage() {
     getClientHealthScores().catch((e) => { console.error('[Analytics] clientHealthScores failed:', e.message); return []; }),
     user ? Promise.resolve(supabase.from('profiles').select('daily_mlu_capacity').eq('id', user.id).single()).catch(() => ({ data: null })) : Promise.resolve({ data: null }),
     getScopeCreepAnalysis().catch((e) => { console.error('[Analytics] scopeCreepAnalysis failed:', e.message); return null; }),
+    getDebriefHistory().catch((e) => { console.error('[Analytics] debriefHistory failed:', e.message); return []; }),
   ]);
 
   // Read dashboard layout from user metadata (no extra DB call)
@@ -72,6 +74,7 @@ export default async function AnalyticsPage() {
         dailyCapacity={profileRes?.data?.daily_mlu_capacity ?? undefined}
         dashboardLayout={dashboardLayout}
         scopeCreepAnalysis={scopeCreepAnalysis}
+        debriefHistory={debriefHistory || []}
       />
     </div>
   );

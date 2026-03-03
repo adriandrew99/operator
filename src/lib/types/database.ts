@@ -245,6 +245,56 @@ export interface ClientMonthlyOverride {
   updated_at: string;
 }
 
+export interface OneoffPayment {
+  id: string;
+  user_id: string;
+  description: string;
+  amount: number;
+  month: string; // 'YYYY-MM' format
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ExpenseMonthlyOverride {
+  id: string;
+  user_id: string;
+  month: string; // 'YYYY-MM' format
+  staff_cost: number | null; // null = use profile default
+  salary: number | null; // null = use profile default
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PushSubscriptionRecord {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  keys_p256dh: string;
+  keys_auth: string;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Reminder {
+  id: string;
+  user_id: string;
+  client_id: string | null;
+  title: string;
+  body: string | null;
+  url: string;
+  tag: string;
+  hours: number[];
+  days_of_week: number[];
+  timezone: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined from clients table
+  client_name?: string;
+}
+
 export interface PipelineLead {
   id: string;
   user_id: string;
@@ -391,4 +441,60 @@ export interface OutboundCampaignWithEntries extends OutboundCampaign {
     calls_booked: number;
     closes: number;
   };
+}
+
+export interface PinnedNote {
+  id: string;
+  user_id: string;
+  content: string;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StaffMember {
+  id: string;
+  user_id: string;
+  name: string;
+  role: string | null;
+  monthly_cost: number;
+  is_active: boolean;
+  start_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankConnection {
+  id: string;
+  user_id: string;
+  institution_id: string;
+  institution_name: string;
+  institution_logo: string | null;
+  requisition_id: string;
+  account_id: string;
+  account_name: string | null;
+  status: 'active' | 'expired' | 'error';
+  last_synced_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankTransaction {
+  id: string;
+  user_id: string;
+  connection_id: string;
+  external_id: string;
+  date: string;
+  description: string;
+  amount: number;
+  currency: string;
+  category: string | null;
+  is_recurring: boolean;
+  recurring_group: string | null;
+  merchant_name: string | null;
+  balance_after: number | null;
+  raw_data: any;
+  created_at: string;
 }

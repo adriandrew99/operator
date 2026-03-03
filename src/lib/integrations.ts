@@ -10,7 +10,7 @@
  * so you can plug in credentials and go.
  */
 
-export type IntegrationId = 'slack' | 'clickup' | 'gmail' | 'plaid' | 'whoop';
+export type IntegrationId = 'slack' | 'clickup' | 'gmail' | 'gocardless' | 'whoop';
 
 export interface Integration {
   id: IntegrationId;
@@ -44,11 +44,12 @@ export const INTEGRATIONS: Integration[] = [
     status: 'coming_soon',
   },
   {
-    id: 'plaid',
-    name: 'Plaid (Banking)',
-    description: 'Connect bank accounts to auto-import transactions and track revenue in real-time.',
+    id: 'gocardless',
+    name: 'GoCardless (Open Banking)',
+    description: 'Connect Tide, Starling & other UK banks via Open Banking. Auto-import transactions and detect recurring payments.',
     icon: '🏦',
-    status: 'coming_soon',
+    status: 'available',
+    setupUrl: '/finance?tab=banking',
   },
   {
     id: 'whoop',
@@ -143,43 +144,19 @@ export function clickUpTaskToOperatorTask(task: ClickUpTask) {
 }
 
 /**
- * Plaid Integration Scaffold (Banking)
- * 
+ * GoCardless Open Banking Integration (Live)
+ *
+ * Implementation: src/lib/gocardless.ts + src/actions/banking.ts
+ *
  * Setup:
- * 1. Sign up at plaid.com, get client_id and secret
- * 2. Use Plaid Link to connect bank account
- * 3. Store access_token in integrations table (encrypted)
- * 
+ * 1. Sign up at https://bankaccountdata.gocardless.com
+ * 2. Add GOCARDLESS_SECRET_ID and GOCARDLESS_SECRET_KEY to env vars
+ * 3. Users connect banks via Finance > Banking tab
+ *
  * Data flow:
- * - Nightly sync pulls transactions
- * - Revenue transactions auto-update financial snapshot
- * - Expenses auto-categorize into expense tracker
- * 
- * Note: For UK banks, TrueLayer is an alternative to Plaid
+ * - User authenticates with bank via GoCardless consent page
+ * - Cron job syncs transactions every 6 hours (/api/banking/sync)
+ * - Auto-categorisation reuses CATEGORY_KEYWORDS from bank-import.ts
+ * - Recurring payment detection groups similar transactions
+ * - Bank access expires after 90 days, user re-consents via UI
  */
-export interface PlaidTransaction {
-  transaction_id: string;
-  amount: number;
-  name: string;
-  date: string;
-  category: string[];
-  merchant_name: string | null;
-}
-
-export function plaidTransactionToExpense(tx: PlaidTransaction) {
-  const categoryMap: Record<string, string> = {
-    'Software': 'software',
-    'Travel': 'travel',
-    'Food and Drink': 'other',
-    'Transfer': 'other',
-    'Payment': 'other',
-  };
-
-  return {
-    description: tx.merchant_name || tx.name,
-    amount: Math.abs(tx.amount),
-    category: categoryMap[tx.category?.[0]] || 'other',
-    date: tx.date,
-    is_recurring: false,
-  };
-}

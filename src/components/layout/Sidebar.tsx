@@ -58,7 +58,7 @@ function SidebarTooltip({ label }: { label: string }) {
               height: 0,
               borderTop: '4px solid transparent',
               borderBottom: '4px solid transparent',
-              borderRight: '4px solid rgba(18, 18, 18, 0.92)',
+              borderRight: '4px solid var(--tooltip-bg)',
             }}
           />
         </div>,

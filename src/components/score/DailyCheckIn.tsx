@@ -10,6 +10,7 @@ interface DailyCheckInProps {
   existingCheckIn: CheckInRatings | null;
   existingNotes: string | null;
   onSaved: (score: OperatorScore) => void;
+  variant?: 'standalone' | 'inline';
 }
 
 const DIMENSIONS = [
@@ -45,7 +46,8 @@ const DIMENSIONS = [
   },
 ];
 
-export function DailyCheckIn({ existingCheckIn, existingNotes, onSaved }: DailyCheckInProps) {
+export function DailyCheckIn({ existingCheckIn, existingNotes, onSaved, variant = 'standalone' }: DailyCheckInProps) {
+  const isInline = variant === 'inline';
   const hasExisting = existingCheckIn !== null;
   const [isEditing, setIsEditing] = useState(!hasExisting);
   const [ratings, setRatings] = useState<CheckInRatings>(
@@ -74,10 +76,13 @@ export function DailyCheckIn({ existingCheckIn, existingNotes, onSaved }: DailyC
 
   // Compact summary when already checked in and not editing
   if (hasExisting && !isEditing) {
+    const Wrapper = isInline ? 'div' : 'section';
     return (
-      <section className="card-elevated rounded-2xl p-6">
+      <Wrapper className={isInline ? 'pt-4 border-t border-border' : 'card-elevated rounded-2xl p-6'}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-section-heading text-text-primary">Daily Check-In</h2>
+          <h2 className={isInline ? 'text-xs font-medium text-text-secondary' : 'text-section-heading text-text-primary'}>
+            {isInline ? 'Check-In' : 'Daily Check-In'}
+          </h2>
           <div className="flex items-center gap-2">
             {saved && (
               <span className="text-xs text-text-primary animate-fade-in">Saved</span>
@@ -115,20 +120,22 @@ export function DailyCheckIn({ existingCheckIn, existingNotes, onSaved }: DailyC
         {existingNotes && (
           <p className="text-xs text-text-tertiary mt-2 italic">&ldquo;{existingNotes}&rdquo;</p>
         )}
-      </section>
+      </Wrapper>
     );
   }
 
   return (
     <section className={cn(
-      'rounded-xl p-5 sm:p-6 transition-all',
-      hasExisting
-        ? 'bg-surface-secondary'
-        : 'bg-surface-secondary border-2 border-border'
+      'transition-all',
+      isInline
+        ? 'pt-4 border-t border-border'
+        : cn('rounded-xl p-5 sm:p-6', hasExisting ? 'bg-surface-secondary' : 'bg-surface-secondary border-2 border-border')
     )}>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-section-heading text-text-primary">Daily Check-In</h2>
+          <h2 className={isInline ? 'text-xs font-medium text-text-secondary' : 'text-section-heading text-text-primary'}>
+            {isInline ? 'How did today feel?' : 'Daily Check-In'}
+          </h2>
           <p className="text-xs text-text-tertiary mt-0.5">Rate your day across five dimensions. Takes 30 seconds.</p>
         </div>
         {hasExisting && (

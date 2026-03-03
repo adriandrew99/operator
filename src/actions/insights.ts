@@ -1765,6 +1765,9 @@ export async function getDebriefHistory(): Promise<{ week_start: string; week_la
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // First, backfill any missing weeks
+  await backfillDebriefHistory().catch(() => {});
+
   const res = await Promise.resolve(
     supabase.from('weekly_debrief_history')
       .select('week_start, week_label, data')
@@ -1775,4 +1778,185 @@ export async function getDebriefHistory(): Promise<{ week_start: string; week_la
 
   if (!res || (res as { error: unknown }).error || !res.data) return [];
   return res.data as { week_start: string; week_label: string; data: WeeklyDebrief }[];
+}
+
+// ━━━ Backfill Missing Debrief Weeks ━━━
+// Generates debriefs for past weeks that have completed tasks but no saved debrief
+async function backfillDebriefHistory(): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Find the earliest completed task date (up to 12 weeks back max)
+  const twelveWeeksAgo = new Date();
+  twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84);
+  const cutoff = twelveWeeksAgo.toISOString();
+
+  // Get existing debrief week_starts
+  const existingRes = await Promise.resolve(
+    supabase.from('weekly_debrief_history')
+      .select('week_start')
+      .eq('user_id', user.id)
+  ).catch(() => ({ data: null }));
+  const existingWeeks = new Set((existingRes?.data || []).map((r: any) => r.week_start));
+
+  // Get all weeks that have completed tasks
+  const tasksRes = await supabase
+    .from('tasks')
+    .select('completed_at')
+    .eq('user_id', user.id)
+    .eq('status', 'completed')
+    .gte('completed_at', cutoff)
+    .order('completed_at', { ascending: true })
+    .limit(1);
+
+  if (!tasksRes.data || tasksRes.data.length === 0) return;
+
+  // Generate week starts from the earliest task to now
+  const now = new Date();
+  const currentDayOfWeek = now.getDay();
+  // Current week's Monday
+  const currentMonday = new Date(now);
+  currentMonday.setDate(now.getDate() - (currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1));
+  currentMonday.setHours(0, 0, 0, 0);
+
+  const earliestDate = new Date(tasksRes.data[0].completed_at);
+  const earliestMonday = new Date(earliestDate);
+  const edow = earliestMonday.getDay();
+  earliestMonday.setDate(earliestDate.getDate() - (edow === 0 ? 6 : edow - 1));
+  earliestMonday.setHours(0, 0, 0, 0);
+
+  // Iterate week by week, skip current week (that's handled by getWeeklyDebrief)
+  const weeksToBackfill: Date[] = [];
+  const iterDate = new Date(earliestMonday);
+  while (iterDate < currentMonday) {
+    const weekStr = iterDate.toISOString().split('T')[0];
+    if (!existingWeeks.has(weekStr)) {
+      weeksToBackfill.push(new Date(iterDate));
+    }
+    iterDate.setDate(iterDate.getDate() + 7);
+  }
+
+  if (weeksToBackfill.length === 0) return;
+
+  // Get all data needed in one go
+  const [allTasksRes, clientsRes, overridesRes] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('client_id, weight, energy, estimated_minutes, completed_at')
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .gte('completed_at', cutoff),
+    supabase
+      .from('clients')
+      .select('id, name, retainer_amount, is_active')
+      .eq('user_id', user.id),
+    Promise.resolve(
+      supabase.from('client_monthly_overrides').select('client_id, amount, month').eq('user_id', user.id)
+    ).then(res => res.error ? { data: [] } : res).catch(() => ({ data: [] })),
+  ]);
+
+  const allTasks = allTasksRes.data || [];
+  const clientsData = clientsRes.data || [];
+  const clientMap = new Map(clientsData.map(c => [c.id, c]));
+  const allOverrides = (overridesRes as { data: any[] }).data || [];
+
+  // Process each missing week
+  for (const weekMon of weeksToBackfill) {
+    const weekEnd = new Date(weekMon);
+    weekEnd.setDate(weekMon.getDate() + 7);
+    const weekStartStr = weekMon.toISOString().split('T')[0];
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    const weekLabel = `${weekMon.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${new Date(weekEnd.getTime() - 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+
+    // Filter tasks for this week
+    const weekTasks = allTasks.filter(t => {
+      if (!t.completed_at) return false;
+      const d = t.completed_at.split('T')[0];
+      return d >= weekStartStr && d < weekEndStr;
+    });
+
+    if (weekTasks.length === 0) continue;
+
+    // Build override map for the month this week falls in
+    const monthKey = `${weekMon.getFullYear()}-${String(weekMon.getMonth() + 1).padStart(2, '0')}`;
+    const overrideMap = new Map<string, number>();
+    for (const o of allOverrides) {
+      if (o.month === monthKey) overrideMap.set(o.client_id, Number(o.amount));
+    }
+
+    function getRetainer(clientId: string): number {
+      return overrideMap.has(clientId) ? overrideMap.get(clientId)! : (clientMap.get(clientId)?.retainer_amount || 0);
+    }
+
+    // Aggregate
+    const clientAgg: Record<string, { taskCount: number; totalMLU: number; estimatedMinutes: number }> = {};
+    let internalMLU = 0;
+    let internalTasks = 0;
+    let totalMLU = 0;
+    let totalMinutes = 0;
+
+    for (const task of weekTasks) {
+      const mlu = getTaskMLU({ weight: task.weight, energy: task.energy });
+      const mins = task.estimated_minutes || 30;
+      totalMLU += mlu;
+      totalMinutes += mins;
+
+      if (task.client_id) {
+        if (!clientAgg[task.client_id]) clientAgg[task.client_id] = { taskCount: 0, totalMLU: 0, estimatedMinutes: 0 };
+        clientAgg[task.client_id].taskCount += 1;
+        clientAgg[task.client_id].totalMLU += mlu;
+        clientAgg[task.client_id].estimatedMinutes += mins;
+      } else {
+        internalMLU += mlu;
+        internalTasks += 1;
+      }
+    }
+
+    // Build client breakdowns
+    const clientBreakdowns: WeeklyClientBreakdown[] = Object.entries(clientAgg)
+      .map(([clientId, agg]) => {
+        const retainer = getRetainer(clientId);
+        const weeklyPay = Math.round((retainer / 4.3) * 100) / 100;
+        const hours = agg.estimatedMinutes / 60;
+        return {
+          clientId,
+          name: clientMap.get(clientId)?.name || 'Unknown',
+          taskCount: agg.taskCount,
+          totalMLU: Math.round(agg.totalMLU * 10) / 10,
+          estimatedMinutes: agg.estimatedMinutes,
+          weeklyPay: Math.round(weeklyPay),
+          perHour: hours > 0 ? Math.round(weeklyPay / hours) : 0,
+          perMLU: agg.totalMLU > 0 ? Math.round((weeklyPay / agg.totalMLU) * 100) / 100 : 0,
+          energyShare: totalMLU > 0 ? Math.round((agg.totalMLU / totalMLU) * 100) : 0,
+        };
+      })
+      .sort((a, b) => b.totalMLU - a.totalMLU);
+
+    const topClientShare = clientBreakdowns.length > 0 ? clientBreakdowns[0].energyShare : 0;
+
+    const result: WeeklyDebrief = {
+      weekLabel,
+      totalTasks: weekTasks.length,
+      totalMLU: Math.round(totalMLU * 10) / 10,
+      totalMinutes,
+      internalMLU: Math.round(internalMLU * 10) / 10,
+      internalTasks,
+      clients: clientBreakdowns,
+      topClientShare,
+      comparisons: [],
+      suggestions: [],
+      headlines: [],
+    };
+
+    // Save to history
+    await Promise.resolve(
+      supabase.from('weekly_debrief_history').upsert({
+        user_id: user.id,
+        week_start: weekStartStr,
+        week_label: weekLabel,
+        data: result,
+      }, { onConflict: 'user_id,week_start' })
+    ).catch(() => {});
+  }
 }

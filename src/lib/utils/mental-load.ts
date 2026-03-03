@@ -114,24 +114,32 @@ export function getOverloadSuggestion(tasks: Pick<Task, 'weight' | 'energy' | 'i
 }
 
 /**
- * Suggest a daily MLU capacity based on historical task completion data.
- * Uses the 80th percentile of daily completed MLU as the recommended capacity.
- * Returns null if fewer than 7 days of data.
+ * Suggest a daily MLU capacity based on historical planned/scheduled load per day.
+ *
+ * Filters out light days (< 5 MLU) which are likely off days, weekends, or days
+ * the user barely used the system — these would skew the suggestion downward.
+ *
+ * Uses the 75th percentile of qualifying working days as the recommendation.
+ * This represents the user's "cruising speed" on a solid working day —
+ * not the lightest days, not the absolute max, but where they typically operate.
+ *
+ * Returns null if fewer than 5 qualifying working days.
  */
 export function suggestCapacityFromHistory(
   completedDays: { date: string; totalMLU: number }[]
 ): number | null {
-  if (completedDays.length < 7) return null;
-
-  const sorted = completedDays
+  // Filter out light days — off days or barely-used days that would skew low
+  const workingDays = completedDays
+    .filter(d => d.totalMLU >= 5)
     .map(d => d.totalMLU)
     .sort((a, b) => a - b);
 
-  // 80th percentile
-  const idx = Math.floor(sorted.length * 0.8);
-  const suggested = sorted[Math.min(idx, sorted.length - 1)];
+  if (workingDays.length < 5) return null;
 
-  // Round to nearest whole number
+  // 75th percentile — represents a solid working day, not the max
+  const idx = Math.floor(workingDays.length * 0.75);
+  const suggested = workingDays[Math.min(idx, workingDays.length - 1)];
+
   return Math.round(suggested);
 }
 

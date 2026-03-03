@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
+import { cn } from '@/lib/utils/cn';
 import { KNOWLEDGE_TYPES } from '@/lib/constants';
 import { createKnowledgeEntry, updateKnowledgeEntry, deleteKnowledgeEntry } from '@/actions/knowledge';
 import type { KnowledgeEntry, KnowledgeEntryType } from '@/lib/types/database';
@@ -27,16 +28,79 @@ const TAB_TYPES: { value: KnowledgeEntryType | 'all'; label: string }[] = [
 
 export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
   const [activeTab, setActiveTab] = useState<KnowledgeEntryType | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<KnowledgeEntry | null>(null);
   const [isPending, setIsPending] = useState(false);
 
-  const filtered = activeTab === 'all' ? entries : entries.filter((e) => e.type === activeTab);
+  // Stats
+  const stats = useMemo(() => {
+    const readings = entries.filter(e => e.type === 'reading');
+    const completed = readings.filter(e => e.reading_status === 'completed').length;
+    const applied = entries.filter(e => e.applied).length;
+    const withTakeaways = entries.filter(e => e.takeaway_1 || e.takeaway_2 || e.takeaway_3).length;
+    return { total: entries.length, readings: readings.length, completed, applied, withTakeaways };
+  }, [entries]);
+
+  const filtered = useMemo(() => {
+    let result = activeTab === 'all' ? entries : entries.filter((e) => e.type === activeTab);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(e =>
+        e.title.toLowerCase().includes(q) ||
+        e.content?.toLowerCase().includes(q) ||
+        e.takeaway_1?.toLowerCase().includes(q) ||
+        e.takeaway_2?.toLowerCase().includes(q) ||
+        e.takeaway_3?.toLowerCase().includes(q) ||
+        e.source?.toLowerCase().includes(q) ||
+        e.tags?.some(t => t.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [entries, activeTab, searchQuery]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-page-title text-text-primary">Knowledge Vault</h1>
-        <Button size="sm" onClick={() => setShowModal(true)}>+ Add Entry</Button>
+        <Button size="sm" onClick={() => { setEditingEntry(null); setShowModal(true); }}>+ Add Entry</Button>
+      </div>
+
+      {/* Stats */}
+      {entries.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {[
+            { label: 'Entries', value: stats.total, color: 'text-text-primary' },
+            { label: 'Readings', value: stats.readings, color: 'text-text-secondary' },
+            { label: 'Completed', value: stats.completed, color: stats.completed > 0 ? 'text-accent' : 'text-text-tertiary' },
+            { label: 'Applied', value: stats.applied, color: stats.applied > 0 ? 'text-accent-green' : 'text-text-tertiary' },
+            { label: 'With Takeaways', value: stats.withTakeaways, color: 'text-text-tertiary' },
+          ].map(s => (
+            <div key={s.label} className="bg-surface-secondary border border-border rounded-xl px-3 py-2.5 text-center">
+              <p className={cn('text-lg font-bold', s.color)}>{s.value}</p>
+              <p className="text-xs text-text-tertiary">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+        </svg>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search entries, takeaways, tags..."
+          className="w-full text-sm bg-surface-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-light transition-colors"
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          </button>
+        )}
       </div>
 
       {/* Type Tabs */}
@@ -68,7 +132,9 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
                 <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
-            <p className="text-sm text-text-tertiary">No entries yet. Start building your knowledge vault.</p>
+            <p className="text-sm text-text-tertiary">
+              {searchQuery ? `No entries matching "${searchQuery}"` : 'No entries yet. Start building your knowledge vault.'}
+            </p>
           </div>
         </div>
       ) : (
@@ -77,6 +143,7 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
             <EntryCard
               key={entry.id}
               entry={entry}
+              onEdit={() => { setEditingEntry(entry); setShowModal(true); }}
               onToggleApplied={() => {
                 updateKnowledgeEntry(entry.id, { applied: !entry.applied }).catch(e => console.error(e));
               }}
@@ -90,13 +157,18 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
 
       <EntryFormModal
         open={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => { setShowModal(false); setEditingEntry(null); }}
         isPending={isPending}
+        entry={editingEntry}
         defaultType={activeTab === 'all' ? 'reading' : activeTab}
         onSubmit={(data) => {
           setIsPending(true);
           setShowModal(false);
-          createKnowledgeEntry(data).catch(e => console.error(e)).finally(() => setIsPending(false));
+          if (editingEntry) {
+            updateKnowledgeEntry(editingEntry.id, data).catch(e => console.error(e)).finally(() => { setIsPending(false); setEditingEntry(null); });
+          } else {
+            createKnowledgeEntry(data).catch(e => console.error(e)).finally(() => setIsPending(false));
+          }
         }}
       />
     </div>
@@ -105,10 +177,12 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
 
 function EntryCard({
   entry,
+  onEdit,
   onToggleApplied,
   onDelete,
 }: {
   entry: KnowledgeEntry;
+  onEdit: () => void;
   onToggleApplied: () => void;
   onDelete: () => void;
 }) {
@@ -170,8 +244,15 @@ function EntryCard({
           </Button>
         )}
         <button
+          onClick={onEdit}
+          className="text-xs text-text-tertiary hover:text-text-primary transition-colors duration-200 ml-auto cursor-pointer"
+          title="Edit entry"
+        >
+          Edit
+        </button>
+        <button
           onClick={onDelete}
-          className="text-xs text-text-tertiary hover:text-danger transition-colors duration-200 ml-auto cursor-pointer"
+          className="text-xs text-text-tertiary hover:text-danger transition-colors duration-200 cursor-pointer"
           title="Delete entry"
         >
           Delete
@@ -185,24 +266,40 @@ function EntryFormModal({
   open,
   onClose,
   isPending,
+  entry,
   defaultType,
   onSubmit,
 }: {
   open: boolean;
   onClose: () => void;
   isPending: boolean;
+  entry: KnowledgeEntry | null;
   defaultType: KnowledgeEntryType;
   onSubmit: (data: { type: string; title: string; content?: string; reading_status?: string; takeaway_1?: string; takeaway_2?: string; takeaway_3?: string; source?: string; hook_platform?: string }) => void;
 }) {
-  const [type, setType] = useState<string>(defaultType);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [readingStatus, setReadingStatus] = useState('to_read');
-  const [takeaway1, setTakeaway1] = useState('');
-  const [takeaway2, setTakeaway2] = useState('');
-  const [takeaway3, setTakeaway3] = useState('');
-  const [source, setSource] = useState('');
-  const [hookPlatform, setHookPlatform] = useState('');
+  const [type, setType] = useState<string>(entry?.type || defaultType);
+  const [title, setTitle] = useState(entry?.title || '');
+  const [content, setContent] = useState(entry?.content || '');
+  const [readingStatus, setReadingStatus] = useState<string>(entry?.reading_status || 'to_read');
+  const [takeaway1, setTakeaway1] = useState(entry?.takeaway_1 || '');
+  const [takeaway2, setTakeaway2] = useState(entry?.takeaway_2 || '');
+  const [takeaway3, setTakeaway3] = useState(entry?.takeaway_3 || '');
+  const [source, setSource] = useState(entry?.source || '');
+  const [hookPlatform, setHookPlatform] = useState(entry?.hook_platform || '');
+
+  // Reset form when entry changes
+  const entryId = entry?.id;
+  useState(() => {
+    setType(entry?.type || defaultType);
+    setTitle(entry?.title || '');
+    setContent(entry?.content || '');
+    setReadingStatus(entry?.reading_status || 'to_read');
+    setTakeaway1(entry?.takeaway_1 || '');
+    setTakeaway2(entry?.takeaway_2 || '');
+    setTakeaway3(entry?.takeaway_3 || '');
+    setSource(entry?.source || '');
+    setHookPlatform(entry?.hook_platform || '');
+  });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -217,17 +314,19 @@ function EntryFormModal({
       source: source || undefined,
       hook_platform: type === 'content_hook' ? hookPlatform || undefined : undefined,
     });
-    setTitle('');
-    setContent('');
-    setTakeaway1('');
-    setTakeaway2('');
-    setTakeaway3('');
-    setSource('');
-    setHookPlatform('');
+    if (!entry) {
+      setTitle('');
+      setContent('');
+      setTakeaway1('');
+      setTakeaway2('');
+      setTakeaway3('');
+      setSource('');
+      setHookPlatform('');
+    }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Knowledge Entry">
+    <Modal open={open} onClose={onClose} title={entry ? 'Edit Entry' : 'Add Knowledge Entry'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Select
           label="Type"
@@ -266,7 +365,7 @@ function EntryFormModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={isPending || !title}>{isPending ? 'Adding...' : 'Add Entry'}</Button>
+          <Button type="submit" disabled={isPending || !title}>{isPending ? 'Saving...' : entry ? 'Update' : 'Add Entry'}</Button>
         </div>
       </form>
     </Modal>

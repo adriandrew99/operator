@@ -25,6 +25,7 @@ interface TasksDashboardProps {
 type ViewTab = 'active' | 'completed' | 'archived';
 type FilterCategory = 'all' | 'strategy' | 'clients' | 'content' | 'personal' | 'admin';
 type QuickFilter = 'none' | 'high' | 'medium' | 'low';
+type SortOption = 'default' | 'deadline' | 'weight' | 'category' | 'client' | 'newest';
 
 const ENERGY_COLORS: Record<string, string> = {
   deep: 'bg-surface-tertiary text-text-secondary',
@@ -88,6 +89,8 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
   const [viewTab, setViewTab] = useState<ViewTab>('active');
   const [category, setCategory] = useState<FilterCategory>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('none');
+  const [sortBy, setSortBy] = useState<SortOption>('default');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
@@ -106,16 +109,59 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
     admin: tasks.filter(t => t.energy === 'admin'),
   }), [tasks]);
 
+  // Stats
+  const stats = useMemo(() => {
+    const overdue = tasks.filter(t => t.deadline && isOverdue(t.deadline)).length;
+    const dueToday = tasks.filter(t => t.deadline && isDueToday(t.deadline)).length;
+    const flaggedToday = tasks.filter(t => t.flagged_for_today).length;
+    const urgent = tasks.filter(t => t.is_urgent).length;
+    const withClient = tasks.filter(t => t.client_id).length;
+    return { overdue, dueToday, flaggedToday, urgent, withClient };
+  }, [tasks]);
+
   const filtered = useMemo(() => {
     let result = tasks;
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        t.project?.toLowerCase().includes(q)
+      );
+    }
     if (category !== 'all') {
       result = result.filter((t) => t.category === category);
     }
     if (quickFilter !== 'none') {
       result = result.filter((t) => t.weight === quickFilter);
     }
+    // Sorting
+    if (sortBy !== 'default') {
+      result = [...result].sort((a, b) => {
+        switch (sortBy) {
+          case 'deadline':
+            if (!a.deadline && !b.deadline) return 0;
+            if (!a.deadline) return 1;
+            if (!b.deadline) return -1;
+            return a.deadline.localeCompare(b.deadline);
+          case 'weight': {
+            const order = { high: 0, medium: 1, low: 2 };
+            return (order[a.weight as keyof typeof order] ?? 2) - (order[b.weight as keyof typeof order] ?? 2);
+          }
+          case 'category':
+            return (a.category || '').localeCompare(b.category || '');
+          case 'client':
+            return (a.client_id || 'zzz').localeCompare(b.client_id || 'zzz');
+          case 'newest':
+            return (b.created_at || '').localeCompare(a.created_at || '');
+          default:
+            return 0;
+        }
+      });
+    }
     return result;
-  }, [tasks, category, quickFilter]);
+  }, [tasks, category, quickFilter, searchQuery, sortBy]);
 
   // Group by category
   const grouped = useMemo(() => {
@@ -185,6 +231,22 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {[
+          { label: 'Active', value: tasks.length, color: 'text-text-primary' },
+          { label: 'Flagged Today', value: stats.flaggedToday, color: stats.flaggedToday > 0 ? 'text-accent' : 'text-text-tertiary' },
+          { label: 'Urgent', value: stats.urgent, color: stats.urgent > 0 ? 'text-red-400' : 'text-text-tertiary' },
+          { label: 'Overdue', value: stats.overdue, color: stats.overdue > 0 ? 'text-red-400' : 'text-text-tertiary' },
+          { label: 'Completed', value: completedTasks.length, color: 'text-text-tertiary' },
+        ].map(stat => (
+          <div key={stat.label} className="bg-surface-secondary border border-border rounded-xl px-3 py-2.5 text-center">
+            <p className={cn('text-lg font-bold', stat.color)}>{stat.value}</p>
+            <p className="text-xs text-text-tertiary">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
       {/* View Tabs */}
       <div className="flex items-center gap-1 bg-surface-tertiary p-1 rounded-xl w-fit">
         {([
@@ -215,6 +277,45 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
               Low sleep detected. Consider admin tasks today.
             </div>
           )}
+
+          {/* Search + Sort + Add */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative flex-1">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search tasks..."
+                className="w-full text-sm bg-surface-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-light transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                </button>
+              )}
+            </div>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as SortOption)}
+              className="text-xs bg-surface-secondary border border-border rounded-xl px-3 py-2 text-text-secondary outline-none focus:border-border-light transition-colors cursor-pointer"
+            >
+              <option value="default">Sort: Default</option>
+              <option value="deadline">Sort: Deadline</option>
+              <option value="weight">Sort: Energy (High first)</option>
+              <option value="category">Sort: Category</option>
+              <option value="client">Sort: Client</option>
+              <option value="newest">Sort: Newest</option>
+            </select>
+            <Button size="sm" onClick={() => { setEditingTask(null); setShowForm(true); }}>
+              + Add Task
+            </Button>
+          </div>
 
           {/* Category Filters */}
           <div className="flex flex-wrap gap-2">
@@ -257,17 +358,10 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
             ))}
           </div>
 
-          {/* Add Task */}
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => { setEditingTask(null); setShowForm(true); }}>
-              Add Task
-            </Button>
-          </div>
-
           {/* Task Groups */}
           {filtered.length === 0 ? (
             <p className="text-center text-sm text-text-tertiary py-12">
-              No tasks. Add one to get started.
+              {searchQuery ? `No tasks matching "${searchQuery}"` : 'No tasks. Add one to get started.'}
             </p>
           ) : (
             Object.entries(grouped).map(([cat, catTasks]) => {

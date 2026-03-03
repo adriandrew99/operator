@@ -14,7 +14,7 @@ import { createClientAction, updateClient, deleteClient } from '@/actions/financ
 import { createExpense, updateExpense, deleteExpense } from '@/actions/finance';
 import { upsertFinancialSnapshot, updateFinancialSnapshot, deleteFinancialSnapshot } from '@/actions/finance';
 import { createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '@/actions/finance';
-import { upsertClientOverride, deleteClientOverride, getClientOverridesForClient, createOneoffPayment, deleteOneoffPayment } from '@/actions/finance';
+import { upsertClientOverride, deleteClientOverride, getClientOverridesForClient, createOneoffPayment, deleteOneoffPayment, upsertExpenseOverride, deleteExpenseOverride } from '@/actions/finance';
 import { updateFinanceSettings } from '@/actions/settings';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -26,7 +26,7 @@ const BankImportModal = dynamic(() => import('@/components/finance/BankImportMod
 const IncomeChart = dynamic(() => import('@/components/finance/IncomeChart').then(m => ({ default: m.IncomeChart })), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center text-xs text-text-tertiary">Loading chart...</div> });
 const EarningsByClient = dynamic(() => import('@/components/finance/EarningsByClient').then(m => ({ default: m.EarningsByClient })), { ssr: false, loading: () => <div className="h-48 flex items-center justify-center text-xs text-text-tertiary">Loading chart...</div> });
 const BankingTab = dynamic(() => import('@/components/finance/BankingTab').then(m => ({ default: m.BankingTab })), { ssr: false });
-import type { Client, Expense, FinancialSnapshot, PipelineLead, SavingsGoal, ClientMonthlyOverride, OneoffPayment, StaffMember, BankConnection, BankTransaction } from '@/lib/types/database';
+import type { Client, Expense, FinancialSnapshot, PipelineLead, SavingsGoal, ClientMonthlyOverride, OneoffPayment, ExpenseMonthlyOverride, StaffMember, BankConnection, BankTransaction } from '@/lib/types/database';
 import type { ClientEnergyProfile, RevenueInsight } from '@/actions/insights';
 import { createStaffMember, updateStaffMember, deleteStaffMember } from '@/actions/staff';
 
@@ -47,6 +47,8 @@ interface FinanceDashboardProps {
   bankConnections?: BankConnection[];
   bankTransactions?: BankTransaction[];
   oneoffPayments?: OneoffPayment[];
+  expenseOverrides?: ExpenseMonthlyOverride[];
+  allClientOverrides?: ClientMonthlyOverride[];
 }
 
 function getMonthLabel(monthStr: string): string {
@@ -85,13 +87,14 @@ function shiftMonth(monthStr: string, delta: number): string {
   return formatLocalMonth(d);
 }
 
-export function FinanceDashboard({ clients, expenses, snapshot, history, pipelineLeads, savingsGoals, currentMonth, clientOverrides = [], clientEnergyProfiles = [], insights = [], monthlySalary = 0, staffCost = 0, staffMembers = [], bankConnections = [], bankTransactions = [], oneoffPayments = [] }: FinanceDashboardProps) {
+export function FinanceDashboard({ clients, expenses, snapshot, history, pipelineLeads, savingsGoals, currentMonth, clientOverrides = [], clientEnergyProfiles = [], insights = [], monthlySalary = 0, staffCost = 0, staffMembers = [], bankConnections = [], bankTransactions = [], oneoffPayments = [], expenseOverrides = [], allClientOverrides = [] }: FinanceDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'expenses' | 'forecast' | 'personal' | 'year' | 'banking'>('overview');
   const [showClientModal, setShowClientModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [showSnapshotModal, setShowSnapshotModal] = useState(false);
   const [showBankImport, setShowBankImport] = useState(false);
+  const [showRevenueRecords, setShowRevenueRecords] = useState(false);
   const [expandedBox, setExpandedBox] = useState<'revenue' | 'expenses' | 'net' | 'possible' | null>(null);
   const [editingOverrideClientId, setEditingOverrideClientId] = useState<string | null>(null);
   const [overrideEditAmount, setOverrideEditAmount] = useState('');
@@ -173,21 +176,49 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
     return client.retainer_amount || 0;
   }
 
+  // Build expense override map: month (YYYY-MM) -> { staff_cost, salary, id }
+  const expenseOverrideMap = useMemo(() => {
+    const map: Record<string, { staff_cost: number | null; salary: number | null; id: string }> = {};
+    for (const o of expenseOverrides) {
+      map[o.month] = {
+        staff_cost: o.staff_cost !== null ? Number(o.staff_cost) : null,
+        salary: o.salary !== null ? Number(o.salary) : null,
+        id: o.id,
+      };
+    }
+    return map;
+  }, [expenseOverrides]);
+
   const currentMonthKey = currentMonth.slice(0, 7);
   const oneoffTotal = oneoffPayments
     .filter(p => p.month === currentMonthKey)
     .reduce((sum, p) => sum + p.amount, 0);
+  // Confirmed MRR = base retainers only (no overrides, no one-offs)
+  const confirmedMRR = activeClients.reduce((sum, c) => sum + (c.retainer_amount || 0), 0);
+  // This month's actual revenue = overrides applied + one-off payments
   const liveRevenue = activeClients.reduce((sum, c) => sum + getClientMonthlyAmount(c), 0) + oneoffTotal;
+  const hasOverrides = Object.keys(overrideMap).length > 0 || oneoffTotal > 0;
   const businessExpensesList = expenses.filter(e => (e.expense_type || 'business') === 'business');
   const personalExpensesList = expenses.filter(e => e.expense_type === 'personal');
   const liveBusinessExpenses = businessExpensesList.reduce((sum, e) => sum + e.amount, 0);
   const livePersonalExpenses = personalExpensesList.reduce((sum, e) => sum + e.amount, 0);
-  const totalBusinessCosts = liveBusinessExpenses + staffCost + monthlySalary;
+
+  // Get effective expenses for any month (applies overrides to staff_cost + salary)
+  function getMonthExpenses(monthKey: string): number {
+    const ov = expenseOverrideMap[monthKey];
+    const sc = ov?.staff_cost ?? staffCost;
+    const sal = ov?.salary ?? monthlySalary;
+    return liveBusinessExpenses + sc + sal;
+  }
+
+  const totalBusinessCosts = getMonthExpenses(currentMonthKey);
   const liveExpenses = totalBusinessCosts;
 
-  // For past months, prefer snapshot data (which captures historical reality) over live client calculations
-  const monthlyRevenue = (!isCurrent && snapshot?.total_revenue) ? Number(snapshot.total_revenue) : liveRevenue;
-  const monthlyExpenses = (!isCurrent && snapshot?.total_expenses != null) ? Number(snapshot.total_expenses) : totalBusinessCosts;
+  // Always use live client-based revenue — activeClients already filters by termination_date
+  // and contract_start relative to the viewed month, so this is accurate for any month.
+  // Bank imports may have tainted snapshot total_revenue, so never rely on it for revenue display.
+  const monthlyRevenue = liveRevenue;
+  const monthlyExpenses = totalBusinessCosts;
   const taxableProfit = Math.max(0, monthlyRevenue - monthlyExpenses);
   const taxReserve = taxableProfit * UK_CORP_TAX_RATE;
   const leftInCompany = taxableProfit; // revenue - expenses (tax shown separately, paid at year end)
@@ -199,6 +230,52 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
   // All active clients (including future-start) for forecast projections
   const allActiveClients = useMemo(() => clients.filter(c => c.is_active), [clients]);
+
+  // Build per-month override lookup: { 'YYYY-MM': { clientId: amount } }
+  const allOverridesByMonth = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    allClientOverrides.forEach(o => {
+      if (!map[o.month]) map[o.month] = {};
+      map[o.month][o.client_id] = o.amount;
+    });
+    return map;
+  }, [allClientOverrides]);
+
+  // Patch history snapshots: replace total_revenue with override-based or live-calculated revenue.
+  // For months with client overrides (from bank import), use override amounts as source of truth.
+  // For months without, fall back to current retainer_amount (best approximation).
+  const patchedHistory = useMemo(() => {
+    return history.map(snap => {
+      const snapMonth = new Date(String(snap.month).slice(0, 7) + '-01T12:00:00');
+      const monthKey = String(snap.month).slice(0, 7);
+      const monthOverrides = allOverridesByMonth[monthKey] || {};
+
+      // Start with all override amounts (hard records, regardless of client active status)
+      let revenue = Object.values(monthOverrides).reduce((sum, amt) => sum + amt, 0);
+
+      // Add retainer amounts for active clients WITHOUT overrides in this month
+      const activeWithoutOverride = clients.filter(c => {
+        if (monthOverrides[c.id] !== undefined) return false; // already counted via override
+        if (!c.is_active) return false;
+        if (c.termination_date) {
+          const termDate = new Date(c.termination_date + 'T12:00:00');
+          if (termDate < snapMonth) return false;
+        }
+        if (c.contract_start) {
+          const startDate = new Date(c.contract_start + 'T12:00:00');
+          if (startDate > snapMonth) return false;
+        }
+        return true;
+      });
+      revenue += activeWithoutOverride.reduce((sum, c) => sum + (c.retainer_amount || 0), 0);
+
+      // Add one-off payments
+      const monthOneoffs = oneoffPayments.filter(p => p.month === monthKey).reduce((sum, p) => sum + p.amount, 0);
+      revenue += monthOneoffs;
+
+      return { ...snap, total_revenue: revenue };
+    });
+  }, [history, clients, oneoffPayments, allOverridesByMonth]);
 
   // ━━━ Future month projection tiers ━━━
   const futureProjection = useMemo(() => {
@@ -377,7 +454,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
   // For future months, use projected confirmed revenue; for past/current, use normal logic
   const effectiveRevenue = isFuture && futureProjection ? futureProjection.confirmed : monthlyRevenue;
-  const effectiveExpenses = isFuture ? totalBusinessCosts : monthlyExpenses; // carry forward current biz expenses + staff
+  const effectiveExpenses = isFuture ? getMonthExpenses(currentMonthKey) : monthlyExpenses; // month-aware expenses
   const effectiveTaxableProfit = Math.max(0, effectiveRevenue - effectiveExpenses);
   const effectiveTaxReserve = effectiveTaxableProfit * UK_CORP_TAX_RATE;
   const effectiveLeftInCompany = effectiveTaxableProfit; // revenue - expenses (tax shown separately)
@@ -629,6 +706,9 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             </span>
           </button>
           <Button size="sm" variant="secondary" onClick={() => setShowSnapshotModal(true)} className="hidden sm:inline-flex">+ Monthly Record</Button>
+          <Button size="sm" variant="ghost" onClick={() => setShowRevenueRecords(true)} className="hidden sm:inline-flex">
+            Revenue Records
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setShowBankImport(true)} className="hidden sm:inline-flex">
             <span className="flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -675,7 +755,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                 label: 'Export Monthly History (CSV)',
                 description: 'All financial snapshots',
                 action: () => {
-                  const csv = toCSV(history.map(s => ({
+                  const csv = toCSV(patchedHistory.map(s => ({
                     Month: s.month,
                     Revenue: s.total_revenue || 0,
                     Expenses: s.total_expenses || 0,
@@ -908,6 +988,9 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         <button onClick={() => setShowSnapshotModal(true)} className="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-surface-tertiary text-text-secondary border border-border cursor-pointer">
           + Record
         </button>
+        <button onClick={() => setShowRevenueRecords(true)} className="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-surface-tertiary text-text-secondary border border-border cursor-pointer">
+          Revenue
+        </button>
         <button onClick={() => setShowBankImport(true)} className="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-surface-tertiary text-text-secondary border border-border cursor-pointer">
           CSV
         </button>
@@ -982,9 +1065,13 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           ) : (
             <div className="grid grid-cols-3 gap-3">
               <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'ring-1 ring-accent/20' : '')}>
-                <p className="text-xs font-semibold text-text-tertiary mb-1 flex items-center gap-1">Revenue <InfoTip text="Total monthly income from all active client retainers. Tap for breakdown." position="bottom" /></p>
+                <p className="text-xs font-semibold text-text-tertiary mb-1 flex items-center gap-1">Revenue <InfoTip text="Total monthly income from all active client retainers plus any one-off payments. Tap for breakdown." position="bottom" /></p>
                 <p className="text-xl sm:text-2xl font-bold text-text-primary display-number">{formatCurrency(monthlyRevenue)}</p>
-                <p className="text-xs text-text-tertiary mt-1">{activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
+                {hasOverrides && monthlyRevenue !== confirmedMRR ? (
+                  <p className="text-xs text-text-tertiary mt-1">{formatCurrency(confirmedMRR)} MRR · {activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
+                ) : (
+                  <p className="text-xs text-text-tertiary mt-1">{activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
+                )}
               </button>
               <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'ring-1 ring-accent/20' : '')}>
                 <p className="text-xs font-semibold text-text-tertiary mb-1 flex items-center gap-1">Expenses <InfoTip text="All business costs: your expenses, director salary, and staff costs. Tap for breakdown." position="bottom" /></p>
@@ -1232,9 +1319,25 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                       );
                     })
                   )}
-                  {!isCurrent && !isFuture && snapshot?.total_revenue ? (
-                    <p className="text-xs text-text-tertiary mt-2 pt-2 border-t border-border">Using recorded snapshot data for this month</p>
-                  ) : null}
+                  {/* Summary totals */}
+                  <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-text-tertiary">Confirmed MRR</span>
+                      <span className="text-xs font-mono text-text-secondary">{formatCurrency(confirmedMRR)}</span>
+                    </div>
+                    {oneoffTotal > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-text-tertiary">One-off payments</span>
+                        <span className="text-xs font-mono text-text-secondary">+{formatCurrency(oneoffTotal)}</span>
+                      </div>
+                    )}
+                    {hasOverrides && monthlyRevenue !== confirmedMRR && (
+                      <div className="flex items-center justify-between pt-1.5 border-t border-border">
+                        <span className="text-xs font-medium text-text-primary">This month total</span>
+                        <span className="text-xs font-mono font-medium text-text-primary">{formatCurrency(monthlyRevenue)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {expandedBox === 'expenses' && isFuture && futureProjection ? (
@@ -1455,7 +1558,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
                   <p className="mt-1">Confirmed = contracted retainers. Likely = pipeline ≥60%. Possible = pipeline &lt;60%.</p>
                 </InfoBox>
               </div>
-              <IncomeChart snapshots={history} currentMonthRevenue={isCurrent ? liveRevenue : undefined} currentMonthExpenses={isCurrent ? liveExpenses : undefined} projectedIncome={projectedIncome} />
+              <IncomeChart snapshots={patchedHistory} currentMonthRevenue={liveRevenue} currentMonthExpenses={liveExpenses} viewedMonth={currentMonth} projectedIncome={projectedIncome} />
             </section>
             <section className="card-elevated rounded-2xl p-5">
               <div className="flex items-center gap-3 mb-4">
@@ -1563,13 +1666,17 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           leftInCompany={leftInCompany}
           pipelineRevenue={pipelineRevenue}
           pipelineLeads={pipelineLeads}
-          history={history}
+          history={patchedHistory}
           activeClients={allActiveClients}
           snapshot={snapshot}
           overrideMap={overrideMap}
           liveExpenses={liveExpenses}
           currentMonth={currentMonth}
           oneoffPayments={oneoffPayments}
+          expenseOverrideMap={expenseOverrideMap}
+          defaultStaffCost={staffCost}
+          defaultMonthlySalary={monthlySalary}
+          liveBusinessExpenses={liveBusinessExpenses}
         />
       )}
 
@@ -1620,7 +1727,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         const viewedMonthKey = currentMonth.slice(0, 7);
 
         // Get all FY snapshots BEFORE the viewed month (for cumulative totals)
-        const priorSnapshots = history
+        const priorSnapshots = patchedHistory
           .filter(s => s.month >= fyStart && s.month.slice(0, 7) < viewedMonthKey)
           .sort((a, b) => a.month.localeCompare(b.month));
 
@@ -1935,15 +2042,13 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         const fyEnd = `${fyStartYear + 1}-03-31`;
         const fyLabel = `${fyStartYear}/${String(fyStartYear + 1).slice(-2)}`;
 
-        // Build monthly data from history snapshots within this FY
-        const fySnapshots = history
+        // Build monthly data from patched history (live revenue) within this FY
+        const fySnapshots = patchedHistory
           .filter(s => s.month >= fyStart && s.month <= fyEnd)
           .sort((a, b) => a.month.localeCompare(b.month));
 
-        // If current month is in FY and no snapshot, use live data
-        const currentMonthKey = currentMonth.slice(0, 7);
-        const fyCurrentKey = formatLocalMonth(now).slice(0, 7);
-        const hasCurrentSnap = fySnapshots.some(s => s.month.slice(0, 7) === fyCurrentKey);
+        // The viewed month key — always use live client-based revenue for this month
+        const viewedMonthKey = currentMonth.slice(0, 7);
 
         const allMonths: { month: string; label: string; revenue: number; expenses: number; tax: number; net: number; isLive: boolean; hasOverride: boolean }[] = [];
 
@@ -1955,10 +2060,12 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           const monthKey = formatLocalMonth(cursor);
           const monthKeyShort = monthKey.slice(0, 7);
           const snap = fySnapshots.find(s => s.month.slice(0, 7) === monthKeyShort);
-          const isCurrentLive = monthKeyShort === currentMonthKey.slice(0, 7) && !hasCurrentSnap;
+          const isViewedMonth = monthKeyShort === viewedMonthKey;
 
-          const baseRev = isCurrentLive ? monthlyRevenue : (Number(snap?.total_revenue) || 0);
-          const baseExp = isCurrentLive ? monthlyExpenses : (Number(snap?.total_expenses) || 0);
+          // For the viewed month, always use live client-based revenue (accurate for any month)
+          // For other months, use snapshot data (historical records)
+          const baseRev = isViewedMonth ? monthlyRevenue : (Number(snap?.total_revenue) || 0);
+          const baseExp = isViewedMonth ? monthlyExpenses : (Number(snap?.total_expenses) || 0);
 
           // Apply FY overrides if set
           const override = fyOverrides[monthKeyShort];
@@ -1974,7 +2081,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             expenses: exp,
             tax: tax,
             net: Math.max(0, rev - exp), // left in company (before tax)
-            isLive: isCurrentLive,
+            isLive: isViewedMonth,
             hasOverride,
           });
 
@@ -2205,7 +2312,142 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
         expense={editingExpense}
       />
       <SnapshotFormModal open={showSnapshotModal} onClose={() => setShowSnapshotModal(false)} />
-      <BankImportModal open={showBankImport} onClose={() => setShowBankImport(false)} />
+      <BankImportModal open={showBankImport} onClose={() => setShowBankImport(false)} clients={clients} />
+
+      {/* Revenue Records Modal */}
+      <Modal open={showRevenueRecords} onClose={() => setShowRevenueRecords(false)} title="Revenue Records" className="max-w-lg">
+        <RevenueRecordsContent
+          allClientOverrides={allClientOverrides}
+          clients={clients}
+          oneoffPayments={oneoffPayments}
+          onDeleteOverride={async (id: string) => {
+            await deleteClientOverride(id);
+          }}
+          onDeleteOneoff={async (id: string) => {
+            await deleteOneoffPayment(id);
+          }}
+        />
+      </Modal>
+    </div>
+  );
+}
+
+// ━━━ REVENUE RECORDS ━━━
+function RevenueRecordsContent({
+  allClientOverrides,
+  clients,
+  oneoffPayments,
+  onDeleteOverride,
+  onDeleteOneoff,
+}: {
+  allClientOverrides: ClientMonthlyOverride[];
+  clients: Client[];
+  oneoffPayments: OneoffPayment[];
+  onDeleteOverride: (id: string) => Promise<void>;
+  onDeleteOneoff: (id: string) => Promise<void>;
+}) {
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Group overrides by month
+  const byMonth = new Map<string, { overrides: ClientMonthlyOverride[]; oneoffs: OneoffPayment[] }>();
+
+  allClientOverrides.forEach(o => {
+    if (!byMonth.has(o.month)) byMonth.set(o.month, { overrides: [], oneoffs: [] });
+    byMonth.get(o.month)!.overrides.push(o);
+  });
+
+  oneoffPayments.forEach(p => {
+    if (!byMonth.has(p.month)) byMonth.set(p.month, { overrides: [], oneoffs: [] });
+    byMonth.get(p.month)!.oneoffs.push(p);
+  });
+
+  const sortedMonths = Array.from(byMonth.keys()).sort().reverse();
+
+  const clientMap = new Map(clients.map(c => [c.id, c]));
+
+  const formatMonth = (m: string) => {
+    const [year, month] = m.split('-');
+    const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${names[Number(month) - 1]} ${year}`;
+  };
+
+  async function handleDelete(id: string, type: 'override' | 'oneoff') {
+    setDeleting(id);
+    try {
+      if (type === 'override') await onDeleteOverride(id);
+      else await onDeleteOneoff(id);
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  if (sortedMonths.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-sm text-text-secondary">No revenue records yet.</p>
+        <p className="text-xs text-text-tertiary mt-1">Import a bank statement to create per-client monthly revenue records.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+      <p className="text-xs text-text-tertiary">
+        Per-client revenue records from bank imports. These override retainer amounts for historical months in charts and the FY tab.
+      </p>
+      {sortedMonths.map(month => {
+        const data = byMonth.get(month)!;
+        const total = data.overrides.reduce((s, o) => s + o.amount, 0) + data.oneoffs.reduce((s, p) => s + p.amount, 0);
+        return (
+          <div key={month} className="rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 bg-surface-tertiary border-b border-border">
+              <span className="text-xs font-medium text-text-primary">{formatMonth(month)}</span>
+              <span className="text-xs font-mono text-text-primary">{'\u00A3'}{total.toFixed(2)}</span>
+            </div>
+            <div className="divide-y divide-border">
+              {data.overrides.map(o => {
+                const client = clientMap.get(o.client_id);
+                return (
+                  <div key={o.id} className="flex items-center justify-between px-3 py-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-text-primary truncate">{client?.name || 'Unknown client'}</span>
+                      {o.notes && <span className="text-text-tertiary truncate">({o.notes})</span>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="font-mono text-text-primary">{'\u00A3'}{o.amount.toFixed(2)}</span>
+                      <button
+                        onClick={() => handleDelete(o.id, 'override')}
+                        disabled={deleting === o.id}
+                        className="text-text-tertiary hover:text-danger cursor-pointer transition-colors"
+                      >
+                        {deleting === o.id ? '...' : '×'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {data.oneoffs.map(p => (
+                <div key={p.id} className="flex items-center justify-between px-3 py-2 text-xs">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-text-primary truncate">{p.description}</span>
+                    <span className="text-text-tertiary flex-shrink-0">(one-off)</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-mono text-text-primary">{'\u00A3'}{p.amount.toFixed(2)}</span>
+                    <button
+                      onClick={() => handleDelete(p.id, 'oneoff')}
+                      disabled={deleting === p.id}
+                      className="text-text-tertiary hover:text-danger cursor-pointer transition-colors"
+                    >
+                      {deleting === p.id ? '...' : '×'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -2213,10 +2455,13 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 // ━━━ FORECAST TAB ━━━
 function ForecastTab({
   monthlyRevenue, monthlyExpenses, leftInCompany, pipelineRevenue, pipelineLeads, history, activeClients, snapshot, overrideMap = {}, liveExpenses = 0, currentMonth, oneoffPayments = [],
+  expenseOverrideMap = {}, defaultStaffCost = 0, defaultMonthlySalary = 0, liveBusinessExpenses = 0,
 }: {
   monthlyRevenue: number; monthlyExpenses: number; leftInCompany: number; pipelineRevenue: number;
   pipelineLeads: PipelineLead[]; history: FinancialSnapshot[]; activeClients: Client[];
   snapshot: FinancialSnapshot | null; overrideMap?: Record<string, number>; liveExpenses?: number; currentMonth: string; oneoffPayments?: OneoffPayment[];
+  expenseOverrideMap?: Record<string, { staff_cost: number | null; salary: number | null; id: string }>;
+  defaultStaffCost?: number; defaultMonthlySalary?: number; liveBusinessExpenses?: number;
 }) {
   const [forecastMonths, setForecastMonths] = useState(6);
   const [startingBalance, setStartingBalance] = useState(String(Number(snapshot?.starting_balance) || 0));
@@ -2228,6 +2473,12 @@ function ForecastTab({
   const [oneoffMonth, setOneoffMonth] = useState('');
   const [oneoffError, setOneoffError] = useState<string | null>(null);
   const [isPendingOneoff, startOneoffTransition] = useTransition();
+  // Expense override inline form
+  const [expOverrideMonth, setExpOverrideMonth] = useState('');
+  const [expOverrideStaffCost, setExpOverrideStaffCost] = useState('');
+  const [expOverrideSalary, setExpOverrideSalary] = useState('');
+  const [expOverrideError, setExpOverrideError] = useState<string | null>(null);
+  const [isPendingExpOverride, startExpOverrideTransition] = useTransition();
   // Sync starting balance when snapshot data changes from server
   useEffect(() => {
     setStartingBalance(String(Number(snapshot?.starting_balance) || 0));
@@ -2252,7 +2503,7 @@ function ForecastTab({
   // ━━━ Tiered projection data ━━━
   const projectionData = useMemo(() => {
     const startFrom = new Date(currentMonth + 'T00:00:00');
-    const rows: { month: string; confirmed: number; likely: number; possible: number; cumulative: number; cumulativeOptimistic: number }[] = [];
+    const rows: { month: string; confirmed: number; likely: number; possible: number; cumulative: number; cumulativeOptimistic: number; expenses: number; hasExpenseOverride: boolean }[] = [];
     let cumulativeCash = startBal;
     let cumulativeOptimistic = startBal;
 
@@ -2305,7 +2556,12 @@ function ForecastTab({
         else if (prob > 0) possible += value;
       }
 
-      const expenses = liveExpenses;
+      // Month-specific expenses (respects overrides for staff_cost + salary)
+      const ov = expenseOverrideMap[projMonthKey];
+      const effectiveStaff = ov?.staff_cost ?? defaultStaffCost;
+      const effectiveSalary = ov?.salary ?? defaultMonthlySalary;
+      const expenses = liveBusinessExpenses + effectiveStaff + effectiveSalary;
+      const hasExpenseOverride = !!ov;
       const monthNet = Math.max(0, confirmed - expenses); // left in company = revenue - expenses (tax paid year-end)
       const monthNetOptimistic = Math.max(0, (confirmed + likely + possible) - expenses);
 
@@ -2321,10 +2577,12 @@ function ForecastTab({
         possible,
         cumulative: cumulativeCash,
         cumulativeOptimistic,
+        expenses,
+        hasExpenseOverride,
       });
     }
     return rows;
-  }, [activeClients, pipelineLeads, liveExpenses, forecastMonths, startBal, currentMonth, oneoffPayments]);
+  }, [activeClients, pipelineLeads, forecastMonths, startBal, currentMonth, oneoffPayments, expenseOverrideMap, defaultStaffCost, defaultMonthlySalary, liveBusinessExpenses]);
 
   const maxRevenue = projectionData.length > 0
     ? Math.max(...projectionData.map(r => r.confirmed + r.likely + r.possible), 1)
@@ -2434,8 +2692,7 @@ function ForecastTab({
                 const confirmedPct = maxRevenue > 0 ? (row.confirmed / maxRevenue) * 100 : 0;
                 const likelyPct = maxRevenue > 0 ? (row.likely / maxRevenue) * 100 : 0;
                 const possiblePct = maxRevenue > 0 ? (row.possible / maxRevenue) * 100 : 0;
-                const expenses = liveExpenses;
-                const net = Math.max(0, row.confirmed - expenses);
+                const net = Math.max(0, row.confirmed - row.expenses);
                 return (
                   <div key={i} className="group/bar relative flex items-center gap-3">
                     <span className="text-xs text-text-tertiary w-14 text-right font-mono">{row.month}</span>
@@ -2469,8 +2726,11 @@ function ForecastTab({
                         )}
                         <div className="border-t border-border pt-1 mt-1">
                           <div className="flex justify-between text-xs">
-                            <span className="text-text-tertiary">− Expenses</span>
-                            <span className="font-mono text-red-400">{formatCurrency(expenses)}</span>
+                            <span className="text-text-tertiary">
+                              − Expenses
+                              {row.hasExpenseOverride && <span className="ml-1 text-amber-400">(override)</span>}
+                            </span>
+                            <span className="font-mono text-red-400">{formatCurrency(row.expenses)}</span>
                           </div>
                           <div className="flex justify-between text-xs font-semibold pt-1">
                             <span className={net >= 0 ? 'text-text-primary' : 'text-red-400'}>Left in co.</span>
@@ -2743,6 +3003,118 @@ function ForecastTab({
           </div>
         </section>
       </div>
+
+      {/* Expense Overrides */}
+      <section className="card-elevated rounded-2xl border border-red-500/20 card-hover p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-1 h-5 rounded-full bg-red-500" />
+          <h2 className="text-section-heading text-red-400">Expense Overrides</h2>
+          <InfoBox title="Expense Overrides">
+            <p>Override staff costs or salary for specific months. Blank = use default.</p>
+            <p className="mt-1">Business expenses are already tracked by date and don&apos;t need overrides.</p>
+          </InfoBox>
+        </div>
+        <p className="text-xs text-text-tertiary mb-3">
+          Defaults — Staff: {formatCurrency(defaultStaffCost)}/mo · Salary: {formatCurrency(defaultMonthlySalary)}/mo
+        </p>
+        <div className="space-y-2">
+          {/* Existing overrides */}
+          {Object.entries(expenseOverrideMap)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, ov]) => (
+            <div key={ov.id} className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 font-mono">
+                  {new Date(month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}
+                </span>
+                {ov.staff_cost !== null && (
+                  <span className="text-xs text-text-secondary">Staff: {formatCurrency(ov.staff_cost)}</span>
+                )}
+                {ov.salary !== null && (
+                  <span className="text-xs text-text-secondary">Salary: {formatCurrency(ov.salary)}</span>
+                )}
+              </div>
+              <button
+                onClick={() => startExpOverrideTransition(async () => {
+                  const result = await deleteExpenseOverride(ov.id);
+                  if (!result.success) setExpOverrideError(result.error || 'Failed to delete');
+                })}
+                className="text-text-tertiary hover:text-danger transition-colors cursor-pointer"
+                title="Remove override"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+          ))}
+
+          {/* Inline add form */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const month = expOverrideMonth || oneoffMonthOptions[0]?.value;
+              const staffVal = expOverrideStaffCost.trim() !== '' ? Number(expOverrideStaffCost) : null;
+              const salaryVal = expOverrideSalary.trim() !== '' ? Number(expOverrideSalary) : null;
+              if (staffVal === null && salaryVal === null) return;
+              setExpOverrideError(null);
+              startExpOverrideTransition(async () => {
+                const result = await upsertExpenseOverride(month, staffVal, salaryVal);
+                if (result.success) {
+                  setExpOverrideStaffCost('');
+                  setExpOverrideSalary('');
+                  setExpOverrideMonth('');
+                } else {
+                  setExpOverrideError(result.error || 'Failed to save override');
+                }
+              });
+            }}
+            className="flex items-center gap-1.5 mt-2"
+          >
+            <select
+              value={expOverrideMonth || oneoffMonthOptions[0]?.value}
+              onChange={e => setExpOverrideMonth(e.target.value)}
+              className="px-2 py-1.5 rounded-md bg-surface-tertiary border border-border text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-accent/40 cursor-pointer"
+            >
+              {oneoffMonthOptions.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <div className="relative">
+              <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-text-tertiary">Staff £</span>
+              <input
+                type="number"
+                value={expOverrideStaffCost}
+                onChange={e => setExpOverrideStaffCost(e.target.value)}
+                placeholder={String(defaultStaffCost)}
+                min="0"
+                step="any"
+                className="w-24 pl-12 pr-2 py-1.5 rounded-md bg-surface-tertiary border border-border text-xs text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:ring-1 focus:ring-accent/40"
+              />
+            </div>
+            <div className="relative">
+              <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-text-tertiary">Sal £</span>
+              <input
+                type="number"
+                value={expOverrideSalary}
+                onChange={e => setExpOverrideSalary(e.target.value)}
+                placeholder={String(defaultMonthlySalary)}
+                min="0"
+                step="any"
+                className="w-24 pl-10 pr-2 py-1.5 rounded-md bg-surface-tertiary border border-border text-xs text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:ring-1 focus:ring-accent/40"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isPendingExpOverride || (expOverrideStaffCost.trim() === '' && expOverrideSalary.trim() === '')}
+              className="px-2 py-1.5 rounded-md bg-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              +
+            </button>
+          </form>
+          {expOverrideError && (
+            <p className="text-xs text-danger mt-1">{expOverrideError}</p>
+          )}
+        </div>
+      </section>
 
       {/* Monthly P&L */}
       <section className="card-elevated rounded-2xl p-5">

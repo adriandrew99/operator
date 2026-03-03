@@ -4,8 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { AnimatedCheckbox } from '@/components/ui/AnimatedCheckbox';
 import { completeTask, updateTask, createTask, reactivateTask, deleteTask, getTasksForWeek } from '@/actions/tasks';
-import { updateRecurringTask, deleteRecurringTask, toggleRecurringTaskCompletion } from '@/actions/recurring';
+import { updateRecurringTask, deleteRecurringTask, toggleRecurringTaskCompletion, getRecurringTasksForDate } from '@/actions/recurring';
 import { calculateDailyLoad, getLoadLevel, getLoadColor, getLoadBgColor, getOverloadSuggestion, DAILY_CAPACITY, getTaskMLU, getEstimatedMinutes } from '@/lib/utils/mental-load';
+import { playCompleteSound, playUndoSound } from '@/lib/utils/sounds';
 import type { Task, Client } from '@/lib/types/database';
 
 /** Check if a task is a virtual recurring task (synthetic ID from page.tsx) */
@@ -30,6 +31,10 @@ interface TodayTasksProps {
   pushUndo?: (entry: import('@/hooks/useUndoStack').UndoEntry) => void;
   /** IDs of tasks that were undone externally (e.g. Cmd+Z from parent) — clear optimistic completion state */
   externalUncompletedIds?: Set<string>;
+  /** Reports computed daily load (MLU) to parent for shared display (e.g. FocusBlock) */
+  onDailyLoadChange?: (load: number) => void;
+  /** Reports task counts to parent for shared display (e.g. FocusBlock header) */
+  onTaskCountsChange?: (completed: number, total: number) => void;
 }
 
 const WEIGHT_COLORS: Record<string, string> = {
@@ -66,7 +71,7 @@ function getWeekDates(todayStr: string): string[] {
   });
 }
 
-export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks = [], todayStr, onTaskCompleted, onTaskUncompleted, dailyCapacity, pushUndo, externalUncompletedIds }: TodayTasksProps) {
+export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks = [], todayStr, onTaskCompleted, onTaskUncompleted, dailyCapacity, pushUndo, externalUncompletedIds, onDailyLoadChange, onTaskCountsChange }: TodayTasksProps) {
   const today = todayStr || new Date().toISOString().split('T')[0];
   const [selectedDay, setSelectedDay] = useState<string>(today);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
@@ -98,6 +103,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   const weekDates = selectedWeekDates;
   const selectedDayIndex = weekDates.indexOf(selectedDay);
   const [fetchedDayTasks, setFetchedDayTasks] = useState<Task[]>([]);
+  const [recurringDayTasks, setRecurringDayTasks] = useState<Task[]>([]);
   const [loadingDayTasks, setLoadingDayTasks] = useState(false);
   const [deletedTaskIds, setDeletedTaskIds] = useState<Set<string>>(new Set());
   const [fetchTrigger, setFetchTrigger] = useState(0);
@@ -122,9 +128,23 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCurrentWeek, selectedWeekStart, fetchTrigger]);
 
+  // Fetch recurring tasks for the selected day (when NOT today — today gets them from page.tsx)
+  useEffect(() => {
+    if (isToday) {
+      setRecurringDayTasks([]);
+      return;
+    }
+    // Fetch recurring tasks that should show on the selected day
+    getRecurringTasksForDate(selectedDay)
+      .then(virtualTasks => setRecurringDayTasks(virtualTasks as unknown as Task[]))
+      .catch(() => setRecurringDayTasks([]));
+  }, [isToday, selectedDay]);
+
   // When server data updates (props change), clean up optimistic state
   useEffect(() => {
     setOptimisticTasks([]);
+    // Clear deletedTaskIds — server data is fresh, moved tasks are in their new positions
+    setDeletedTaskIds(prev => prev.size > 0 ? new Set() : prev);
     // Clear completingIds/dismissedIds for tasks the server has already confirmed as completed
     const serverCompletedSet = new Set(completedTodayTasks.map(t => t.id));
     if (serverCompletedSet.size > 0) {
@@ -166,12 +186,17 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
 
   // Determine which tasks to show based on selected day
   // Use scheduled_date if set (from planner), otherwise fall back to deadline
-  const serverTasks = (isToday
+  const regularTasks = (isToday
     ? tasks
     : isCurrentWeek
       ? weekTasks.filter(t => (t.scheduled_date || t.deadline) === selectedDay)
       : fetchedDayTasks.filter(t => (t.scheduled_date || t.deadline) === selectedDay)
   ).filter(t => !deletedTaskIds.has(t.id));
+
+  // Merge recurring tasks for non-today days (today already has them from page.tsx)
+  const existingTitles = new Set(regularTasks.map(t => t.title));
+  const activeRecurring = recurringDayTasks.filter(rt => rt.status === 'active' && !existingTitles.has(rt.title));
+  const serverTasks = [...regularTasks, ...activeRecurring];
 
   // Merge server tasks with optimistic tasks (deduplicate by title)
   const serverTitles = new Set(serverTasks.map(t => t.title));
@@ -218,9 +243,10 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
     return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
   })();
 
-  // Separate priority (urgent) tasks from the rest
-  const priorityTasks = activeTasks.filter(t => t.is_urgent);
-  const normalTasks = activeTasks.filter(t => !t.is_urgent);
+  // Separate priority, recurring, and regular tasks
+  const priorityTasks = activeTasks.filter(t => t.is_urgent && !isRecurringTask(t.id));
+  const recurringActiveTasks = activeTasks.filter(t => isRecurringTask(t.id) && !t.is_urgent);
+  const normalTasks = activeTasks.filter(t => !t.is_urgent && !isRecurringTask(t.id));
 
   const grouped = normalTasks
     .sort((a, b) => (WEIGHT_ORDER[a.weight] ?? 1) - (WEIGHT_ORDER[b.weight] ?? 1))
@@ -242,6 +268,20 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   const loadColor = getLoadColor(loadLevel);
   const overloadSuggestion = getOverloadSuggestion(activeTasks, capacity);
 
+  // Report daily load to parent (FocusBlock) — only when viewing today
+  useEffect(() => {
+    if (isToday && onDailyLoadChange) {
+      onDailyLoadChange(dailyLoad);
+    }
+  }, [dailyLoad, isToday, onDailyLoadChange]);
+
+  // Report task counts to parent (FocusBlock) — only when viewing today
+  useEffect(() => {
+    if (isToday && onTaskCountsChange) {
+      onTaskCountsChange(completedCount, totalTasks);
+    }
+  }, [completedCount, totalTasks, isToday, onTaskCountsChange]);
+
   const weightLabels: Record<string, string> = {
     high: 'High',
     medium: 'Medium',
@@ -249,6 +289,8 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   };
 
   function handleComplete(taskId: string) {
+    // Play completion sound
+    playCompleteSound();
     // Find the task before removing it from active list
     const task = displayTasks.find(t => t.id === taskId);
     setCompletingIds(prev => new Set(prev).add(taskId));
@@ -284,6 +326,8 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
   }
 
   function handleUncomplete(taskId: string) {
+    // Play undo sound
+    playUndoSound();
     // Trigger amber glow animation
     setUncompletingIds(prev => new Set(prev).add(taskId));
     setTimeout(() => setUncompletingIds(prev => { const n = new Set(prev); n.delete(taskId); return n; }), 500);
@@ -342,7 +386,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
     // Calculate next day relative to the selected day, not actual today
     const nextDay = new Date(selectedDay + 'T12:00:00');
     nextDay.setDate(nextDay.getDate() + 1);
-    const nextDayStr = nextDay.toISOString().split('T')[0];
+    const nextDayStr = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
     // Optimistic removal from current day view
     setDeletedTaskIds(prev => new Set(prev).add(taskId));
     updateTask(taskId, { deadline: nextDayStr, scheduled_date: nextDayStr, flagged_for_today: false })
@@ -710,7 +754,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                   className={cn(
                     'flex items-center gap-2.5 sm:gap-3 py-3 px-3 sm:px-4 rounded-xl task-row group',
                     isDragging && 'opacity-40',
-                    isCompleting && 'animate-task-glow'
+                    isCompleting && 'animate-task-complete'
                   )}
                 >
                   {/* Star icon (click to un-prioritise) */}
@@ -925,7 +969,7 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
                     className={cn(
                       'flex items-center gap-2.5 sm:gap-3 py-3 px-3 sm:px-4 rounded-xl task-row group',
                       isDragging && 'opacity-40',
-                      isCompleting && 'animate-task-glow'
+                      isCompleting && 'animate-task-complete'
                     )}
                   >
                     {/* Grip handle */}
@@ -1069,6 +1113,68 @@ export function TodayTasks({ tasks, clients, completedTodayTasks = [], weekTasks
           </div>
         );
       })}
+
+      {/* ━━━ Recurring / Dailies section ━━━ */}
+      {recurringActiveTasks.length > 0 && (
+        <div className="space-y-1.5 rounded-xl py-2 px-2 mt-1 border-t border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-tertiary">
+              <path d="M17 1l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+            </svg>
+            <span className="text-xs font-medium text-text-secondary">Dailies</span>
+            <span className="text-xs text-text-tertiary">{recurringActiveTasks.length}</span>
+          </div>
+          {recurringActiveTasks.map((task) => {
+            const isEditing = editingTaskId === task.id;
+            const isCompleting = completingIds.has(task.id);
+            return (
+              <div key={task.id} className="relative">
+                <div
+                  className={cn(
+                    'flex items-center gap-2.5 sm:gap-3 py-2.5 px-3 sm:px-4 rounded-xl task-row group',
+                    isCompleting && 'animate-task-complete'
+                  )}
+                >
+                  <AnimatedCheckbox
+                    checked={false}
+                    onChange={() => handleComplete(task.id)}
+                    disabled={completingIds.has(task.id)}
+                    size="sm"
+                  />
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => setEditingTaskId(isEditing ? null : task.id)}
+                  >
+                    <p className={cn(
+                      'text-sm transition-all duration-300',
+                      isCompleting ? 'text-text-tertiary line-through' : 'text-text-primary'
+                    )}>{task.title}</p>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all flex-shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                      className="text-text-tertiary hover:text-danger transition-all p-1 rounded-lg hover:bg-danger/10"
+                      title="Delete recurring task"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                {isEditing && (
+                  <InlineTaskEditor
+                    task={task}
+                    clients={clients}
+                    onSave={(updates) => handleQuickUpdate(task.id, updates)}
+                    onClose={() => setEditingTaskId(null)}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Completed section */}
       {mergedCompleted.length > 0 && (

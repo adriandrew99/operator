@@ -57,7 +57,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
       {/* More menu overlay */}
       {moreOpen && (
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--overlay-bg)' }} />
           <div className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-3 right-3 animate-slide-up">
             <div
               className="rounded-2xl p-1.5 tooltip-glass"
@@ -106,7 +106,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
           backdropFilter: 'blur(20px) saturate(180%)',
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           borderTop: '1px solid var(--border-color)',
-          boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.2)',
+          boxShadow: 'var(--card-shadow-lg)',
         }}
       >
         <div className="flex items-stretch justify-around safe-area-inset-bottom">

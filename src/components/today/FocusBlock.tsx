@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState, useTransition, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
-import { getTaskMLU, DAILY_CAPACITY, calculateDailyLoad, getLoadLevel } from '@/lib/utils/mental-load';
-import { getScoreLevel, getScoreColor } from '@/lib/utils/score';
-import type { Task, Client, CalendarEvent, OperatorScore } from '@/lib/types/database';
+import { getTaskMLU, calculateDailyLoad, DAILY_CAPACITY, getLoadLevel, type LoadLevel } from '@/lib/utils/mental-load';
+import type { Task, Client, CalendarEvent, OperatorScore, PinnedNote } from '@/lib/types/database';
+import { savePinnedNote, unpinNote } from '@/actions/pinned-notes';
 
 interface FocusBlockProps {
   todayTasks: Task[];
@@ -19,22 +19,70 @@ interface FocusBlockProps {
   clients: Client[];
   completedCount: number;
   totalCount: number;
+  pinnedNote?: PinnedNote | null;
+  confirmedMRR?: number;
+  /** Computed daily load from TodayTasks — used instead of recalculating to stay in sync */
+  computedDailyLoad?: number | null;
 }
 
-function getEnergyState(hour: number): { label: string; level: 'peak' | 'high' | 'medium' | 'low'; description: string } {
-  if (hour >= 6 && hour < 11) return { label: 'Peak', level: 'peak', description: 'Highest cognitive bandwidth — do your hardest work now' };
-  if (hour >= 11 && hour < 14) return { label: 'High', level: 'high', description: 'Still sharp — tackle demanding tasks before the dip' };
-  if (hour >= 14 && hour < 17) return { label: 'Declining', level: 'medium', description: 'Energy dipping — shift to structured or routine tasks' };
-  return { label: 'Wind Down', level: 'low', description: 'Low bandwidth — admin, planning, or creative thinking' };
+// ━━━ Daily quotes — rotates by day of year ━━━
+const DAILY_QUOTES = [
+  { text: 'The obstacle is the way.', author: 'Marcus Aurelius' },
+  { text: 'We are what we repeatedly do. Excellence is not an act, but a habit.', author: 'Aristotle' },
+  { text: 'Focus on being productive instead of busy.', author: 'Tim Ferriss' },
+  { text: 'The best way to predict the future is to create it.', author: 'Peter Drucker' },
+  { text: 'Done is better than perfect.', author: 'Sheryl Sandberg' },
+  { text: 'What gets measured gets managed.', author: 'Peter Drucker' },
+  { text: 'Discipline equals freedom.', author: 'Jocko Willink' },
+  { text: 'Small daily improvements over time lead to stunning results.', author: 'Robin Sharma' },
+  { text: 'Energy, not time, is the fundamental currency of high performance.', author: 'Jim Loehr' },
+  { text: 'You do not rise to the level of your goals. You fall to the level of your systems.', author: 'James Clear' },
+  { text: 'The most dangerous form of procrastination is the one that feels productive.', author: 'James Clear' },
+  { text: 'Simplicity is the ultimate sophistication.', author: 'Leonardo da Vinci' },
+  { text: 'Your margin is your message.', author: 'Unknown' },
+  { text: 'Revenue solves all known problems.', author: 'Eric Ries' },
+  { text: 'Strategy is about making choices, trade-offs; it\'s about deliberately choosing to be different.', author: 'Michael Porter' },
+  { text: 'Execution eats strategy for breakfast.', author: 'Peter Drucker' },
+  { text: 'The way to get started is to quit talking and begin doing.', author: 'Walt Disney' },
+  { text: 'Hard choices, easy life. Easy choices, hard life.', author: 'Jerzy Gregorek' },
+  { text: 'Compound interest is the eighth wonder of the world.', author: 'Albert Einstein' },
+  { text: 'If you can\'t explain it simply, you don\'t understand it well enough.', author: 'Albert Einstein' },
+  { text: 'The goal is not to be busy. The goal is to be effective.', author: 'Unknown' },
+  { text: 'Work expands to fill the time available for its completion.', author: 'Parkinson\'s Law' },
+  { text: 'Perfectionism is the voice of the oppressor.', author: 'Anne Lamott' },
+  { text: 'The only way to do great work is to love what you do.', author: 'Steve Jobs' },
+  { text: 'Ship it.', author: 'Seth Godin' },
+  { text: 'Good enough today is better than perfect tomorrow.', author: 'Unknown' },
+  { text: 'Protect the asset.', author: 'Greg McKeown' },
+  { text: 'Less but better.', author: 'Dieter Rams' },
+  { text: 'Make it work, make it right, make it fast.', author: 'Kent Beck' },
+  { text: 'You can do anything, but not everything.', author: 'David Allen' },
+  { text: 'If everything is important, then nothing is.', author: 'Patrick Lencioni' },
+];
+
+function getDailyQuote(): { text: string; author: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = now.getTime() - start.getTime();
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
 }
 
-function getEnergyAccentColor(level: string): string {
+function getLoadAccent(level: LoadLevel): string {
   switch (level) {
-    case 'peak': return 'text-accent';
-    case 'high': return 'text-text-primary';
-    case 'medium': return 'text-text-secondary';
-    case 'low': return 'text-text-tertiary';
-    default: return 'text-text-secondary';
+    case 'light': return 'text-accent';
+    case 'moderate': return 'text-text-primary';
+    case 'heavy': return 'text-warning';
+    case 'overloaded': return 'text-danger';
+  }
+}
+
+function getLoadLabel(level: LoadLevel): string {
+  switch (level) {
+    case 'light': return 'Light day';
+    case 'moderate': return 'Balanced';
+    case 'heavy': return 'Heavy day';
+    case 'overloaded': return 'Overloaded';
   }
 }
 
@@ -50,165 +98,214 @@ export function FocusBlock({
   clients,
   completedCount,
   totalCount,
+  pinnedNote,
+  confirmedMRR = 0,
+  computedDailyLoad,
 }: FocusBlockProps) {
-  const score = todayScore?.score ?? 0;
-  const scoreLevel = getScoreLevel(score);
-  const scoreColor = getScoreColor(scoreLevel);
+  const [isEditing, setIsEditing] = useState(false);
+  const [noteText, setNoteText] = useState(pinnedNote?.content || '');
+  const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
+    }
+  }, [isEditing]);
 
   const energyData = useMemo(() => {
-    const hour = new Date().getHours();
-    const state = getEnergyState(hour);
-
-    // Calculate MLU
-    const allTasks = [...todayTasks, ...completedTodayTasks].filter(t => !t.is_personal);
-    const totalMLU = allTasks.reduce((sum, t) => sum + getTaskMLU(t), 0);
-    const completedMLU = completedTodayTasks.filter(t => !t.is_personal).reduce((sum, t) => sum + getTaskMLU(t), 0);
+    const allTasks = [...todayTasks, ...completedTodayTasks];
+    // Use computedDailyLoad from TodayTasks when available (includes optimistic/local state)
+    // Fall back to recalculating from server props only
+    const serverMLU = calculateDailyLoad(allTasks);
+    const totalMLU = computedDailyLoad ?? serverMLU;
+    const completedMLU = calculateDailyLoad(completedTodayTasks);
     const remainingMLU = Math.max(0, totalMLU - completedMLU);
     const capacityPct = Math.min(100, (totalMLU / dailyCapacity) * 100);
     const usedPct = totalMLU > 0 ? Math.min(100, (completedMLU / dailyCapacity) * 100) : 0;
     const loadLevel = getLoadLevel(totalMLU, dailyCapacity);
 
-    // Energy split
-    let creativeMLU = 0;
-    let adminMLU = 0;
-    for (const task of allTasks) {
-      const mlu = getTaskMLU(task);
-      if ((task.energy || 'admin') === 'creative') creativeMLU += mlu;
-      else adminMLU += mlu;
-    }
+    // Task breakdown (exclude personal)
+    const nonPersonal = allTasks.filter(t => !('is_personal' in t && t.is_personal));
+    const highTasks = nonPersonal.filter(t => (t.weight || 'medium') === 'high').length;
+    const creativeTasks = nonPersonal.filter(t => (t.energy || 'admin') === 'creative').length;
 
-    return { state, totalMLU, completedMLU, remainingMLU, capacityPct, usedPct, loadLevel, creativeMLU, adminMLU };
-  }, [todayTasks, completedTodayTasks, dailyCapacity]);
+    return { totalMLU, completedMLU, remainingMLU, capacityPct, usedPct, loadLevel, highTasks, creativeTasks, taskCount: nonPersonal.length };
+  }, [todayTasks, completedTodayTasks, dailyCapacity, computedDailyLoad]);
 
-  const energyLevels = [
-    { key: 'peak', label: 'Peak', active: energyData.state.level === 'peak' },
-    { key: 'high', label: 'High', active: energyData.state.level === 'high' },
-    { key: 'medium', label: 'Med', active: energyData.state.level === 'medium' },
-    { key: 'low', label: 'Low', active: energyData.state.level === 'low' },
-  ];
+  const quote = useMemo(() => getDailyQuote(), []);
+
+  function handleSaveNote() {
+    startTransition(async () => {
+      await savePinnedNote(noteText);
+      setIsEditing(false);
+    });
+  }
+
+  function handleUnpin() {
+    if (!pinnedNote) return;
+    startTransition(async () => {
+      await unpinNote(pinnedNote.id);
+      setNoteText('');
+    });
+  }
 
   return (
     <div className="card-glass rounded-2xl p-8 sm:p-10">
-      <div className="flex flex-col gap-8">
-        {/* ━━━ TOP ROW: Energy state + Capacity bar ━━━ */}
-        <div className="flex flex-col sm:flex-row items-start gap-8 sm:gap-12">
-          {/* Energy state — primary hero */}
-          <div className="shrink-0">
-            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.12em] font-medium mb-2">
-              Mental Energy
-            </p>
-            <p className={cn('display-number-large leading-none', getEnergyAccentColor(energyData.state.level))}>
-              {energyData.state.label}
-            </p>
-            <p className="text-xs text-text-tertiary mt-2 max-w-[240px] leading-relaxed">
-              {energyData.state.description}
+      <div className="flex flex-col gap-6">
+        {/* ━━━ TOP: Key metrics row ━━━ */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
+          {/* MLU Load — hero metric */}
+          <div>
+            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-2">Daily Load</p>
+            <div className="flex items-baseline gap-2">
+              <span className={cn('display-number-large leading-none', getLoadAccent(energyData.loadLevel))}>
+                {Math.round(energyData.totalMLU)}
+              </span>
+              <span className="text-sm text-text-tertiary font-mono">/ {dailyCapacity}</span>
+            </div>
+            <p className={cn('text-[11px] mt-1.5', getLoadAccent(energyData.loadLevel))}>
+              {getLoadLabel(energyData.loadLevel)}
             </p>
           </div>
 
-          {/* Energy level bars */}
-          <div className="flex items-end gap-3 h-14 sm:pt-6">
-            {energyLevels.map((level, i) => {
-              const heights = [48, 36, 24, 12];
-              return (
-                <div key={level.key} className="flex flex-col items-center gap-1.5">
-                  <div
-                    className={cn(
-                      'w-6 rounded-sm transition-all duration-500',
-                      level.active
-                        ? level.key === 'peak' ? 'bg-accent/50' : 'bg-text-primary/30'
-                        : 'bg-surface-tertiary'
-                    )}
-                    style={{ height: `${heights[i]}px` }}
-                  />
-                  <span className={cn(
-                    'text-[10px]',
-                    level.active ? (level.key === 'peak' ? 'text-accent' : 'text-text-secondary') : 'text-text-tertiary'
-                  )}>
-                    {level.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Capacity gauge — right side */}
-          <div className="flex-1 w-full sm:w-auto sm:pt-2">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium">Capacity</p>
-              <p className="text-xs font-mono text-text-tertiary">
-                {energyData.remainingMLU.toFixed(1)} MLU left
+          {/* Tasks */}
+          <div>
+            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-2">Tasks</p>
+            <div className="flex items-baseline gap-1">
+              <span className="display-number-large leading-none text-text-primary">{completedCount}</span>
+              <span className="text-sm text-text-tertiary font-mono">/ {totalCount}</span>
+            </div>
+            {energyData.highTasks > 0 && (
+              <p className="text-[11px] text-text-tertiary mt-1.5">
+                {energyData.highTasks} heavy · {energyData.creativeTasks} creative
               </p>
+            )}
+          </div>
+
+          {/* Confirmed MRR */}
+          <div>
+            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-2">Confirmed MRR</p>
+            <span className="display-number-large leading-none text-text-primary">
+              £{confirmedMRR >= 1000 ? `${(confirmedMRR / 1000).toFixed(1)}k` : confirmedMRR.toLocaleString()}
+            </span>
+            <p className="text-[11px] text-text-tertiary mt-1.5">
+              {clients.filter(c => {
+                if (!c.is_active || !c.retainer_amount) return false;
+                if (c.termination_date) {
+                  const termDate = new Date(c.termination_date + 'T12:00:00');
+                  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+                  if (termDate < monthStart) return false;
+                }
+                return true;
+              }).length} active clients
+            </p>
+          </div>
+
+          {/* Habits + Streak */}
+          <div>
+            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-2">Habits</p>
+            <div className="flex items-baseline gap-1">
+              <span className="display-number-large leading-none text-text-primary">{fundamentalsHit}</span>
+              <span className="text-sm text-text-tertiary font-mono">/ {fundamentalsTotal}</span>
             </div>
-            {/* Capacity bar */}
-            <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden">
-              <div className="h-full flex">
-                {/* Completed portion */}
-                <div
-                  className="h-full bg-accent/40 transition-all duration-700"
-                  style={{ width: `${energyData.usedPct}%` }}
-                />
-                {/* Remaining planned portion */}
-                <div
-                  className="h-full bg-text-tertiary/20 transition-all duration-700"
-                  style={{ width: `${Math.max(0, energyData.capacityPct - energyData.usedPct)}%` }}
-                />
-              </div>
-            </div>
-            {/* Split legend */}
-            <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-sm bg-accent/40" />
-                <span className="text-[10px] text-text-tertiary">Done {energyData.completedMLU.toFixed(1)}</span>
-              </div>
-              {energyData.creativeMLU > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-sm bg-text-primary/50" />
-                  <span className="text-[10px] text-text-tertiary">Creative {energyData.creativeMLU.toFixed(1)}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-sm bg-text-tertiary/40" />
-                <span className="text-[10px] text-text-tertiary">Admin {energyData.adminMLU.toFixed(1)}</span>
-              </div>
+            {streakDays > 0 && (
+              <p className="text-[11px] text-accent mt-1.5">{streakDays}d streak</p>
+            )}
+          </div>
+        </div>
+
+        {/* ━━━ CAPACITY BAR ━━━ */}
+        <div>
+          <div className="h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
+            <div className="h-full flex">
+              <div
+                className="h-full bg-accent/50 transition-all duration-700"
+                style={{ width: `${energyData.usedPct}%` }}
+              />
+              <div
+                className="h-full bg-text-tertiary/15 transition-all duration-700"
+                style={{ width: `${Math.max(0, energyData.capacityPct - energyData.usedPct)}%` }}
+              />
             </div>
           </div>
         </div>
 
-        {/* ━━━ BOTTOM ROW: Secondary stats ━━━ */}
-        <div className="grid grid-cols-4 gap-6 border-t border-border pt-6">
-          <div className="text-center sm:text-left">
-            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-1.5">Tasks</p>
-            <p className="text-lg font-semibold text-text-primary leading-none font-mono">
-              {completedCount}
-              <span className="text-sm font-normal text-text-tertiary ml-0.5">/{totalCount}</span>
-            </p>
+        {/* ━━━ BOTTOM: Pinned note + Quote ━━━ */}
+        <div className="flex flex-col sm:flex-row items-start gap-4 pt-2 border-t border-border">
+          {/* Pinned note */}
+          <div className="flex-1 min-w-0">
+            {isEditing ? (
+              <div className="space-y-2">
+                <textarea
+                  ref={inputRef}
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveNote(); }
+                    if (e.key === 'Escape') { setIsEditing(false); setNoteText(pinnedNote?.content || ''); }
+                  }}
+                  placeholder="Pin a note for today..."
+                  className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary resize-none outline-none leading-relaxed"
+                  rows={2}
+                  maxLength={280}
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveNote}
+                    disabled={isPending}
+                    className="text-[11px] text-accent hover:text-accent-bright transition-colors font-medium"
+                  >
+                    {isPending ? 'Saving...' : 'Pin'}
+                  </button>
+                  <button
+                    onClick={() => { setIsEditing(false); setNoteText(pinnedNote?.content || ''); }}
+                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : pinnedNote?.content ? (
+              <div className="group flex items-start gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent mt-0.5 flex-shrink-0">
+                  <path d="M12 2l0 20" /><path d="M18 8l-6-6-6 6" /><path d="M5 12h14" />
+                </svg>
+                <p className="text-sm text-text-secondary leading-relaxed flex-1">{pinnedNote.content}</p>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => { setNoteText(pinnedNote.content); setIsEditing(true); }}
+                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <span className="text-text-tertiary">·</span>
+                  <button
+                    onClick={handleUnpin}
+                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    Unpin
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-sm text-text-tertiary hover:text-text-secondary transition-colors"
+              >
+                + Pin a note for today
+              </button>
+            )}
           </div>
 
-          <div className="text-center sm:text-left">
-            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-1.5">Habits</p>
-            <p className="text-lg font-semibold text-text-primary leading-none font-mono">
-              {fundamentalsHit}
-              <span className="text-sm font-normal text-text-tertiary ml-0.5">/{fundamentalsTotal}</span>
+          {/* Daily quote */}
+          <div className="sm:text-right sm:max-w-[280px] flex-shrink-0">
+            <p className="text-xs text-text-tertiary italic leading-relaxed">
+              &ldquo;{quote.text}&rdquo;
             </p>
+            <p className="text-[11px] text-text-tertiary mt-1">— {quote.author}</p>
           </div>
-
-          <div className="text-center sm:text-left">
-            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-1.5">Streak</p>
-            <p className="text-lg font-semibold text-text-primary leading-none font-mono">
-              {streakDays}
-              <span className="text-sm font-normal text-text-tertiary ml-0.5">d</span>
-            </p>
-          </div>
-
-          <Link href="/score" className="text-center sm:text-left group">
-            <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium mb-1.5">Score</p>
-            <p className={cn(
-              'text-lg font-semibold leading-none font-mono transition-opacity group-hover:opacity-70',
-              score ? scoreColor : 'text-text-tertiary'
-            )}>
-              {score || '--'}
-            </p>
-          </Link>
         </div>
       </div>
     </div>

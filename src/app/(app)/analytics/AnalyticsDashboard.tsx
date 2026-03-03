@@ -56,6 +56,7 @@ interface AnalyticsDashboardProps {
   monthlyTrends: MonthlyTrend[];
   clientHealthScores: ClientHealthScore[];
   scopeCreepAnalysis?: ScopeCreepAnalysis | null;
+  debriefHistory?: { week_start: string; week_label: string; data: WeeklyDebriefData }[];
   dailyCapacity?: number;
   dashboardLayout?: DashboardLayoutPreferences;
 }
@@ -155,6 +156,7 @@ export function AnalyticsDashboard({
   monthlyTrends,
   clientHealthScores,
   scopeCreepAnalysis,
+  debriefHistory = [],
   dailyCapacity,
   dashboardLayout,
 }: AnalyticsDashboardProps) {
@@ -325,7 +327,7 @@ export function AnalyticsDashboard({
       {/* ═══ 1. Weekly Debrief ═══ */}
       {layout.weekly_debrief && weeklyDebrief && (
         <div className="card-elevated rounded-2xl p-5">
-          <WeeklyDebrief debrief={weeklyDebrief} collapsible />
+          <WeeklyDebrief debrief={weeklyDebrief} history={debriefHistory} collapsible />
         </div>
       )}
 

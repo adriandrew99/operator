@@ -30,17 +30,21 @@ export async function createClientAction(clientData: {
   renewal_probability?: number;
   risk_flag?: boolean;
   risk_notes?: string;
+  is_active?: boolean;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('clients')
-    .insert({ user_id: user.id, ...clientData });
+    .insert({ user_id: user.id, ...clientData })
+    .select()
+    .single();
 
   if (error) throw error;
   revalidatePath('/finance');
+  return data;
 }
 
 export async function updateClient(id: string, updates: Record<string, unknown>) {
@@ -297,6 +301,41 @@ export async function getClientOverridesForClient(clientId: string) {
   return data || [];
 }
 
+export async function getAllClientOverrides() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data, error } = await supabase
+    .from('client_monthly_overrides')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('month', { ascending: false });
+
+  if (error) {
+    console.warn('client_monthly_overrides query failed:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function deleteClientOverridesForMonth(month: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const monthKey = month.slice(0, 7);
+  const { error } = await supabase
+    .from('client_monthly_overrides')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('month', monthKey);
+
+  if (error) {
+    console.warn('Failed to delete overrides for month:', error.message);
+  }
+}
+
 export async function upsertClientOverride(
   clientId: string,
   month: string,
@@ -411,6 +450,96 @@ export async function deleteOneoffPayment(id: string): Promise<{ success: boolea
 
   if (error) {
     console.warn('deleteOneoffPayment failed:', error.message);
+    return { success: false, error: error.message };
+  }
+  revalidatePath('/finance');
+  return { success: true };
+}
+
+// ━━━ EXPENSE MONTHLY OVERRIDES ━━━
+
+export async function getAllExpenseOverrides() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('expense_monthly_overrides')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('month', { ascending: true });
+
+  if (error) {
+    console.warn('expense_monthly_overrides query failed (migration 00025 may not be run):', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function upsertExpenseOverride(
+  month: string,
+  staffCost: number | null,
+  salary: number | null,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Not authenticated' };
+
+  const monthKey = month.slice(0, 7);
+
+  // If both are null, delete the override entirely
+  if (staffCost === null && salary === null) {
+    const { error } = await supabase
+      .from('expense_monthly_overrides')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('month', monthKey);
+    if (error) {
+      console.warn('deleteExpenseOverride failed:', error.message);
+      return { success: false, error: error.message };
+    }
+    revalidatePath('/finance');
+    return { success: true };
+  }
+
+  const { error } = await supabase
+    .from('expense_monthly_overrides')
+    .upsert(
+      {
+        user_id: user.id,
+        month: monthKey,
+        staff_cost: staffCost,
+        salary: salary,
+        notes: notes || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,month' }
+    );
+
+  if (error) {
+    if (error.message?.includes('relation') || error.code === '42P01') {
+      return { success: false, error: 'Run migration 00025 first' };
+    }
+    return { success: false, error: error.message };
+  }
+  revalidatePath('/finance');
+  return { success: true };
+}
+
+export async function deleteExpenseOverride(id: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('expense_monthly_overrides')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.warn('deleteExpenseOverride failed:', error.message);
     return { success: false, error: error.message };
   }
   revalidatePath('/finance');

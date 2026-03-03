@@ -4,7 +4,9 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { getTaskMLU, getEstimatedMinutes } from '@/lib/utils/mental-load';
 import { sendNotification, requestNotificationPermission, canNotify } from '@/lib/utils/notifications';
-import type { Task, Client } from '@/lib/types/database';
+import { playCompleteSound } from '@/lib/utils/sounds';
+import { DailyCheckIn } from '@/components/score/DailyCheckIn';
+import type { Task, Client, CheckInRatings, OperatorScore } from '@/lib/types/database';
 
 interface DayInReviewProps {
   todayTasks: Task[];
@@ -14,11 +16,15 @@ interface DayInReviewProps {
   fundamentalsTotal: number;
   allTasksDone: boolean;
   dailyCapacity?: number;
+  existingCheckIn: CheckInRatings | null;
+  existingNotes: string | null;
+  onCheckInSaved: (score: OperatorScore) => void;
+  celebrationPlayed: boolean;
 }
 
 /**
  * "Day in Review" — shows a summary card when all tasks for the day are completed.
- * Celebrates the win and provides useful stats about the day's work.
+ * Celebrates the win, provides useful stats, and flows into the daily check-in.
  */
 export function DayInReview({
   todayTasks,
@@ -28,27 +34,41 @@ export function DayInReview({
   fundamentalsTotal,
   allTasksDone,
   dailyCapacity = 20,
+  existingCheckIn,
+  existingNotes,
+  onCheckInSaved,
+  celebrationPlayed,
 }: DayInReviewProps) {
   const [dismissed, setDismissed] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
   const notifiedRef = useRef(false);
 
-  // Only show once all tasks are done, with a slight delay for the celebration burst to fire first
+  // Only show once all tasks are done AND celebration has finished (or wasn't needed)
+  // If celebration played, show immediately after it completes.
+  // If no celebration (e.g. page loaded with tasks already done), show after a short delay.
   useEffect(() => {
-    if (allTasksDone && !dismissed) {
-      const timer = setTimeout(() => setVisible(true), 1200);
-      return () => clearTimeout(timer);
-    } else {
+    if (!allTasksDone || dismissed) {
       setVisible(false);
+      return;
     }
-  }, [allTasksDone, dismissed]);
+
+    // If celebration hasn't played yet, wait for it
+    if (!celebrationPlayed) {
+      return;
+    }
+
+    // Celebration finished (or was skipped) — slide in after a short beat
+    const timer = setTimeout(() => setVisible(true), 600);
+    return () => clearTimeout(timer);
+  }, [allTasksDone, dismissed, celebrationPlayed]);
 
   // Send push notification when all tasks are done (once per session)
   useEffect(() => {
     if (allTasksDone && !notifiedRef.current) {
       notifiedRef.current = true;
       sendNotification({
-        title: '✅ All tasks done!',
+        title: '\u2705 All tasks done!',
         body: 'Your day in review is ready.',
         tag: 'day-in-review',
         url: '/today',
@@ -110,11 +130,17 @@ export function DayInReview({
   // Generate a contextual message
   const message = useMemo(() => {
     if (stats.capacityPct >= 100) return "You went all in today. Time to recharge.";
-    if (stats.capacityPct >= 80) return "Heavy day. Great output — protect your evening.";
+    if (stats.capacityPct >= 80) return "Heavy day. Great output \u2014 protect your evening.";
     if (stats.capacityPct >= 50) return "Solid, balanced day. Well managed.";
     if (stats.totalTasks <= 2) return "Light day. Sometimes less is more.";
     return "Clean day. Everything handled.";
   }, [stats]);
+
+  const handleCheckInSaved = (score: OperatorScore) => {
+    playCompleteSound();
+    setShowCheckIn(false);
+    onCheckInSaved(score);
+  };
 
   if (!visible) return null;
 
@@ -138,7 +164,7 @@ export function DayInReview({
         {/* Header */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-lg">✅</span>
+            <span className="text-lg">{'\u2705'}</span>
             <p className="text-xs font-medium text-text-secondary ">Day in Review</p>
           </div>
           <p className="text-sm text-text-secondary italic">{message}</p>
@@ -188,8 +214,48 @@ export function DayInReview({
             Fundamentals: <span className={cn('font-medium', fundamentalsHit >= fundamentalsTotal ? 'text-text-primary' : 'text-text-primary')}>
               {fundamentalsHit}/{fundamentalsTotal}
             </span>
-            {fundamentalsHit >= fundamentalsTotal && ' — all done ✓'}
+            {fundamentalsHit >= fundamentalsTotal && ' \u2014 all done \u2713'}
           </p>
+        )}
+
+        {/* ━━━ DAILY CHECK-IN INTEGRATION ━━━ */}
+        {existingCheckIn ? (
+          /* Already checked in — show compact inline summary */
+          <DailyCheckIn
+            existingCheckIn={existingCheckIn}
+            existingNotes={existingNotes}
+            onSaved={handleCheckInSaved}
+            variant="inline"
+          />
+        ) : showCheckIn ? (
+          /* Check-in form expanded inline */
+          <div className="animate-slide-up">
+            <DailyCheckIn
+              existingCheckIn={null}
+              existingNotes={null}
+              onSaved={handleCheckInSaved}
+              variant="inline"
+            />
+          </div>
+        ) : (
+          /* Prompt to reflect */
+          <div className="pt-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-primary font-medium">How did today feel?</p>
+                <p className="text-xs text-text-tertiary mt-0.5">30-second reflection to close out the day.</p>
+              </div>
+              <button
+                onClick={() => setShowCheckIn(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-text-primary text-background text-xs font-medium hover:bg-text-primary/90 transition-all cursor-pointer"
+              >
+                Reflect now
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Notification prompt */}
@@ -200,7 +266,7 @@ export function DayInReview({
             }}
             className="text-xs text-text-secondary hover:text-text-primary font-medium cursor-pointer transition-colors"
           >
-            🔔 Enable notifications to get day summaries even when the app is in the background
+            {'\uD83D\uDD14'} Enable notifications to get day summaries even when the app is in the background
           </button>
         )}
       </div>

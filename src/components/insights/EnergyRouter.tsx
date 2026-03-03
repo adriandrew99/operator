@@ -16,6 +16,7 @@ interface EnergyRouterProps {
   }[];
   fundamentalsCompleted: number;
   fundamentalsTotal: number;
+  compact?: boolean;
 }
 
 type EnergyState = 'peak' | 'high' | 'medium' | 'low';
@@ -102,6 +103,7 @@ export function EnergyRouter({
   todayTasks,
   fundamentalsCompleted,
   fundamentalsTotal,
+  compact,
 }: EnergyRouterProps) {
   const [showDetail, setShowDetail] = useState(false);
 
@@ -170,6 +172,42 @@ export function EnergyRouter({
     { key: 'medium', label: 'Med', active: analysis.state === 'medium' },
     { key: 'low', label: 'Low', active: analysis.state === 'low' },
   ];
+
+  // Compact mode: just the suggestion, no energy bars or queue summary
+  if (compact) {
+    if (!analysis.recommendation.task) {
+      return (
+        <p className="text-xs text-text-tertiary py-2">No tasks to suggest right now.</p>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className={cn('text-xs font-medium', getEnergyColor(analysis.state))}>
+            {analysis.label}
+          </span>
+          <span className="text-xs text-text-tertiary">{analysis.timeSlot}</span>
+        </div>
+        <p className="text-sm font-medium text-text-primary leading-snug">
+          {analysis.recommendation.task.title}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium', WEIGHT_BADGE[analysis.recommendation.task.weight] || WEIGHT_BADGE.medium)}>
+            {analysis.recommendation.task.weight}
+          </span>
+          {analysis.recommendation.task.estimated_minutes && (
+            <span className="text-xs text-text-tertiary font-mono">
+              ~{analysis.recommendation.task.estimated_minutes}m
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-text-tertiary leading-relaxed">
+          {analysis.recommendation.reasoning}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>

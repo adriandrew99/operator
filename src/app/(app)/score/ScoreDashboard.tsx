@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ScoreHero } from '@/components/score/ScoreHero';
 import { DailyCheckIn } from '@/components/score/DailyCheckIn';
+import { RetroactiveCheckIn } from '@/components/score/RetroactiveCheckIn';
 import { ScoreTrendChart } from '@/components/score/ScoreTrendChart';
 import { DimensionBreakdown } from '@/components/score/DimensionBreakdown';
 import { WeeklyAverages } from '@/components/score/WeeklyAverages';
@@ -57,6 +58,12 @@ export function ScoreDashboard({
     setCurrentScore(updatedScore);
   }
 
+  // Find missed days (days with a score but no check-in in the last 7 days)
+  const missedDays = scoreHistory
+    .filter(h => h.check_in === null && h.version === 2)
+    .slice(-7)
+    .map(h => h.date);
+
   return (
     <div className="max-w-5xl mx-auto">
       <BentoGrid columns={4}>
@@ -78,6 +85,11 @@ export function ScoreDashboard({
             existingNotes={currentScore?.notes ?? null}
             onSaved={handleCheckInSaved}
           />
+        </BentoItem>
+
+        {/* ━━━ RETROACTIVE CHECK-IN (missed days) ━━━ */}
+        <BentoItem span="wide" delay={90}>
+          <RetroactiveCheckIn scoreHistory={scoreHistory} />
         </BentoItem>
 
         {/* ━━━ 30-DAY TREND ━━━ */}

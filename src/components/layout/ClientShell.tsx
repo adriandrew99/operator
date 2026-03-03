@@ -9,6 +9,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { FocusRefresh } from './FocusRefresh';
 import { CommandPalette } from './CommandPalette';
 import { DebriefPopup } from '@/components/insights/DebriefPopup';
+import { FinanceChat } from '@/components/chat/FinanceChat';
 
 interface ClientShellProps {
   children: ReactNode;
@@ -32,6 +33,7 @@ export function ClientShell({ children, debriefReady }: ClientShellProps) {
         <FocusRefresh />
         <CommandPalette />
         <DebriefPopup debriefReady={debriefReady} />
+        <FinanceChat />
       </div>
     </SidebarProvider>
   );

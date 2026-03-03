@@ -248,6 +248,94 @@ export async function getRecurringStreaks(): Promise<Record<string, number>> {
   return streaks;
 }
 
+/**
+ * Get completions for a specific date (not just today).
+ * Used when navigating to other days in the day forecast view.
+ */
+export async function getCompletionsForDate(date: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('recurring_task_completions')
+    .select('recurring_task_id')
+    .eq('user_id', user.id)
+    .eq('date', date);
+
+  if (error) return [];
+  return data?.map((c) => c.recurring_task_id) || [];
+}
+
+/**
+ * Get virtual recurring tasks for a specific date.
+ * Returns tasks shaped like regular Task objects with `recurring-{id}` IDs.
+ * This is used when navigating to future/past days in the day forecast view.
+ */
+export async function getRecurringTasksForDate(targetDate: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Fetch all active recurring tasks + completions for the target date
+  const [{ data: recurringTasks }, completedIds] = await Promise.all([
+    supabase
+      .from('recurring_tasks')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
+    getCompletionsForDate(targetDate),
+  ]);
+
+  if (!recurringTasks) return [];
+
+  // Determine which day of week the target date is
+  const targetDateObj = new Date(targetDate + 'T12:00:00');
+  const dayOfWeek = targetDateObj.getDay(); // 0=Sun, 6=Sat
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+
+  const completedSet = new Set(completedIds);
+
+  // Filter recurring tasks that should appear on this day
+  const tasksForDay = recurringTasks.filter((t) => {
+    if (t.frequency === 'daily') return true;
+    if (t.frequency === 'weekdays') return isWeekday;
+    if (t.frequency === 'weekly') return t.day_of_week === dayOfWeek;
+    if (t.frequency === 'custom' && t.days_of_week) return t.days_of_week.includes(dayOfWeek);
+    return true;
+  });
+
+  // Convert to virtual task objects that look like regular tasks
+  return tasksForDay.map((rt) => ({
+    id: `recurring-${rt.id}`,
+    user_id: user.id,
+    title: rt.title,
+    description: rt.description || null,
+    category: rt.category || 'admin',
+    weight: rt.weight || 'low',
+    energy: rt.energy || 'admin',
+    estimated_minutes: rt.estimated_minutes || null,
+    deadline: null,
+    status: completedSet.has(rt.id) ? 'completed' as const : 'active' as const,
+    flagged_for_today: true,
+    sort_order: 999,
+    client_id: rt.client_id || null,
+    sprint_id: null,
+    project: null,
+    is_high_impact: false,
+    is_revenue_generating: false,
+    is_low_energy: false,
+    is_urgent: false,
+    is_personal: false,
+    scheduled_date: targetDate,
+    scheduled_time_block: rt.scheduled_time || null,
+    completed_at: completedSet.has(rt.id) ? targetDate + 'T00:00:00' : null,
+    created_at: rt.created_at,
+    updated_at: rt.updated_at,
+  }));
+}
+
 export async function toggleRecurringTaskCompletion(recurringTaskId: string, completed: boolean) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

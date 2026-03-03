@@ -4,18 +4,26 @@ import { useState, useRef, useTransition } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { parseBankStatement, importTransactions, resetMonthData, type ParsedTransaction } from '@/actions/bank-import';
+import { parseBankStatement, importTransactions, resetMonthData, importIncomeAsOverrides, importOneoffPayments, type ParsedTransaction } from '@/actions/bank-import';
+import { createClientAction } from '@/actions/finance';
 import { EXPENSE_CATEGORIES } from '@/lib/constants';
+import type { Client } from '@/lib/types/database';
 
 interface BankImportModalProps {
   open: boolean;
   onClose: () => void;
+  clients?: Client[];
 }
 
 type ReviewTransaction = ParsedTransaction & {
   include: boolean;
   category: string;
   expenseType: 'business' | 'personal';
+};
+
+type IncomeMapping = {
+  type: 'client' | 'oneoff' | 'skip';
+  clientId?: string;
 };
 
 /** Derive unique months from a set of transactions */
@@ -47,15 +55,44 @@ function formatDateLabel(date: string): string {
   return `${Number(day)} ${names[month - 1]}`;
 }
 
-export function BankImportModal({ open, onClose }: BankImportModalProps) {
-  const [step, setStep] = useState<'upload' | 'review' | 'importing' | 'done'>('upload');
+/** Fuzzy match a transaction description against client names */
+function autoMatchClient(description: string, clients: Client[]): string | undefined {
+  const desc = description.toLowerCase();
+  for (const c of clients) {
+    const name = c.name.toLowerCase();
+    // Check if client name appears in description (or vice versa)
+    if (desc.includes(name) || name.includes(desc)) {
+      return c.id;
+    }
+    // Check individual words (for multi-word client names)
+    const words = name.split(/\s+/).filter(w => w.length > 3);
+    if (words.some(w => desc.includes(w))) {
+      return c.id;
+    }
+  }
+  return undefined;
+}
+
+export function BankImportModal({ open, onClose, clients = [] }: BankImportModalProps) {
+  const [step, setStep] = useState<'upload' | 'review' | 'map-income' | 'importing' | 'done'>('upload');
   const [transactions, setTransactions] = useState<ReviewTransaction[]>([]);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<{ importedExpenses: number; importedIncome: number; monthsReset: number } | null>(null);
+  const [result, setResult] = useState<{ importedExpenses: number; mappedToClients: number; oneoffPayments: number; skippedIncome: number; monthsReset: number } | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const [resetMonths, setResetMonths] = useState(true);
   const [importProgress, setImportProgress] = useState('');
+
+  // Income mapping state
+  const [incomeMappings, setIncomeMappings] = useState<Record<number, IncomeMapping>>({});
+  const [localClients, setLocalClients] = useState<Client[]>([]);
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientRetainer, setNewClientRetainer] = useState('');
+  const [creatingClient, setCreatingClient] = useState(false);
+
+  // Merge prop clients with any newly created ones
+  const allClients = [...clients, ...localClients];
 
   function handleReset() {
     setStep('upload');
@@ -64,6 +101,11 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
     setResult(null);
     setResetMonths(true);
     setImportProgress('');
+    setIncomeMappings({});
+    setLocalClients([]);
+    setShowNewClient(false);
+    setNewClientName('');
+    setNewClientRetainer('');
     if (fileRef.current) fileRef.current.value = '';
   }
 
@@ -119,6 +161,58 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
     setTransactions(prev => prev.map((t, i) => i === index ? { ...t, expenseType } : t));
   }
 
+  function handleReviewNext() {
+    const hasIncome = transactions.some(t => t.include && t.type === 'income');
+    if (hasIncome) {
+      // Auto-match income transactions to clients
+      const mappings: Record<number, IncomeMapping> = {};
+      transactions.forEach((t, i) => {
+        if (t.include && t.type === 'income') {
+          const matchedId = autoMatchClient(t.description, allClients);
+          mappings[i] = matchedId
+            ? { type: 'client', clientId: matchedId }
+            : { type: 'skip' };
+        }
+      });
+      setIncomeMappings(mappings);
+      setStep('map-income');
+    } else {
+      handleImport();
+    }
+  }
+
+  function updateIncomeMapping(index: number, value: string) {
+    if (value === '__oneoff__') {
+      setIncomeMappings(prev => ({ ...prev, [index]: { type: 'oneoff' } }));
+    } else if (value === '__skip__') {
+      setIncomeMappings(prev => ({ ...prev, [index]: { type: 'skip' } }));
+    } else {
+      setIncomeMappings(prev => ({ ...prev, [index]: { type: 'client', clientId: value } }));
+    }
+  }
+
+  async function handleCreateClient() {
+    if (!newClientName.trim()) return;
+    setCreatingClient(true);
+    try {
+      const result = await createClientAction({
+        name: newClientName.trim(),
+        retainer_amount: Number(newClientRetainer) || 0,
+        is_active: true,
+      });
+      if (result && typeof result === 'object' && 'id' in result) {
+        setLocalClients(prev => [...prev, result as Client]);
+      }
+      setNewClientName('');
+      setNewClientRetainer('');
+      setShowNewClient(false);
+    } catch (e) {
+      setError(`Failed to create client: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } finally {
+      setCreatingClient(false);
+    }
+  }
+
   function handleImport() {
     const toImport = transactions.filter(t => t.include).map(t => ({
       date: t.date,
@@ -129,7 +223,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
       expenseType: t.type === 'expense' ? t.expenseType : undefined,
     }));
 
-    if (toImport.length === 0) {
+    if (toImport.length === 0 && Object.keys(incomeMappings).length === 0) {
       setError('No transactions selected for import.');
       return;
     }
@@ -149,9 +243,58 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
           }
         }
 
-        setImportProgress(`Importing ${toImport.length} transactions...`);
-        const res = await importTransactions(toImport);
-        setResult({ ...res, monthsReset: monthsResetCount });
+        // Import expenses
+        const expenseTransactions = toImport.filter(t => t.type === 'expense');
+        let importedExpenses = 0;
+        if (expenseTransactions.length > 0) {
+          setImportProgress(`Importing ${expenseTransactions.length} expenses...`);
+          const res = await importTransactions(expenseTransactions);
+          importedExpenses = res.importedExpenses;
+        }
+
+        // Process income mappings
+        let mappedToClients = 0;
+        let oneoffCount = 0;
+        let skippedIncome = 0;
+
+        const clientMappings: { clientId: string; month: string; amount: number }[] = [];
+        const oneoffMappings: { description: string; month: string; amount: number }[] = [];
+
+        for (const [indexStr, mapping] of Object.entries(incomeMappings)) {
+          const idx = Number(indexStr);
+          const t = transactions[idx];
+          if (!t || !t.include) continue;
+
+          if (mapping.type === 'client' && mapping.clientId) {
+            clientMappings.push({
+              clientId: mapping.clientId,
+              month: t.date.slice(0, 7),
+              amount: t.amount,
+            });
+          } else if (mapping.type === 'oneoff') {
+            oneoffMappings.push({
+              description: t.description,
+              month: t.date.slice(0, 7),
+              amount: t.amount,
+            });
+          } else {
+            skippedIncome++;
+          }
+        }
+
+        if (clientMappings.length > 0) {
+          setImportProgress(`Mapping ${clientMappings.length} income entries to clients...`);
+          const res = await importIncomeAsOverrides(clientMappings);
+          mappedToClients = res.imported;
+        }
+
+        if (oneoffMappings.length > 0) {
+          setImportProgress(`Creating ${oneoffMappings.length} one-off payments...`);
+          const res = await importOneoffPayments(oneoffMappings);
+          oneoffCount = res.imported;
+        }
+
+        setResult({ importedExpenses, mappedToClients, oneoffPayments: oneoffCount, skippedIncome, monthsReset: monthsResetCount });
         setStep('done');
       } catch (e) {
         setError(`Import failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
@@ -166,6 +309,11 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
   const totalExpenses = includedExpenses.reduce((s, t) => s + t.amount, 0);
   const totalIncome = includedIncome.reduce((s, t) => s + t.amount, 0);
   const affectedMonths = getMonthsFromTransactions(transactions.filter(t => t.include));
+
+  // Income mapping stats
+  const mappedClientCount = Object.values(incomeMappings).filter(m => m.type === 'client' && m.clientId).length;
+  const mappedOneoffCount = Object.values(incomeMappings).filter(m => m.type === 'oneoff').length;
+  const mappedSkipCount = Object.values(incomeMappings).filter(m => m.type === 'skip').length;
 
   return (
     <Modal open={open} onClose={handleClose} title="Import Bank Statement" className="max-w-2xl">
@@ -236,7 +384,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-text-primary">Reset existing data before import</p>
                   <p className="text-xs text-text-tertiary mt-0.5">
-                    Clears expenses & snapshots for {affectedMonths.length === 1
+                    Clears expenses, revenue records & snapshots for {affectedMonths.length === 1
                       ? formatMonthLabel(affectedMonths[0])
                       : `${affectedMonths.length} months (${affectedMonths.map(formatMonthLabel).join(', ')})`
                     } before importing. Prevents duplicates.
@@ -308,6 +456,10 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
                     </button>
                   )}
 
+                  {t.type === 'income' && t.include && (
+                    <span className="text-xs text-text-tertiary flex-shrink-0 italic">Map next →</span>
+                  )}
+
                   <span className={cn(
                     'font-mono font-medium flex-shrink-0 text-right w-16',
                     t.type === 'income' ? 'text-text-primary' : 'text-text-secondary'
@@ -322,14 +474,135 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
               <button onClick={handleReset} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
                 ← Start over
               </button>
-              <Button size="sm" onClick={handleImport} disabled={includedCount === 0}>
-                {resetMonths ? 'Reset & Import' : 'Import'} {includedCount} transactions
+              {includedIncome.length > 0 ? (
+                <Button size="sm" onClick={handleReviewNext} disabled={includedCount === 0}>
+                  Next: Map Income →
+                </Button>
+              ) : (
+                <Button size="sm" onClick={handleImport} disabled={includedCount === 0}>
+                  {resetMonths ? 'Reset & Import' : 'Import'} {includedCount} transactions
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Map Income */}
+        {step === 'map-income' && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-text-secondary">
+                Map each income entry to a client. This records per-client revenue for accurate historical tracking.
+              </p>
+            </div>
+
+            {/* Summary bar */}
+            <div className="flex gap-3">
+              <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+                <p className="text-xs text-text-tertiary">Mapped to clients</p>
+                <p className="text-sm font-bold text-text-primary">{mappedClientCount}</p>
+              </div>
+              <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+                <p className="text-xs text-text-tertiary">One-off payments</p>
+                <p className="text-sm font-bold text-text-primary">{mappedOneoffCount}</p>
+              </div>
+              <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+                <p className="text-xs text-text-tertiary">Skipped</p>
+                <p className="text-sm font-bold text-text-secondary">{mappedSkipCount}</p>
+              </div>
+            </div>
+
+            {/* Income transaction mapping list */}
+            <div className="max-h-[35vh] overflow-y-auto space-y-1.5 -mx-1 px-1">
+              {transactions.map((t, i) => {
+                if (!t.include || t.type !== 'income') return null;
+                const mapping = incomeMappings[i] || { type: 'skip' };
+                return (
+                  <div key={i} className="rounded-lg bg-surface-tertiary px-3 py-2.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-xs text-text-tertiary font-mono flex-shrink-0">{formatDateLabel(t.date)}</span>
+                        <span className="text-xs text-text-primary truncate">{t.description}</span>
+                      </div>
+                      <span className="text-xs font-mono font-medium text-text-primary flex-shrink-0">
+                        +{'\u00A3'}{t.amount.toFixed(2)}
+                      </span>
+                    </div>
+                    <select
+                      value={mapping.type === 'client' ? (mapping.clientId || '__skip__') : mapping.type === 'oneoff' ? '__oneoff__' : '__skip__'}
+                      onChange={(e) => updateIncomeMapping(i, e.target.value)}
+                      className="w-full text-xs bg-surface-secondary border border-border rounded px-2 py-1.5 text-text-primary cursor-pointer"
+                    >
+                      <option value="__skip__">Skip (don&apos;t import)</option>
+                      <option value="__oneoff__">One-off payment</option>
+                      {allClients.length > 0 && (
+                        <optgroup label="Map to client">
+                          {allClients
+                            .filter(c => c.is_active)
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}{c.retainer_amount ? ` (£${c.retainer_amount}/mo)` : ''}
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add new client */}
+            {showNewClient ? (
+              <div className="rounded-lg border border-border bg-surface-tertiary px-3 py-2.5 space-y-2">
+                <p className="text-xs font-medium text-text-primary">New Client</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Client name"
+                    value={newClientName}
+                    onChange={(e) => setNewClientName(e.target.value)}
+                    className="flex-1 text-xs bg-surface-secondary border border-border rounded px-2 py-1.5 text-text-primary"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Monthly retainer"
+                    value={newClientRetainer}
+                    onChange={(e) => setNewClientRetainer(e.target.value)}
+                    className="w-28 text-xs bg-surface-secondary border border-border rounded px-2 py-1.5 text-text-primary"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleCreateClient} disabled={!newClientName.trim() || creatingClient}>
+                    {creatingClient ? 'Creating...' : 'Create Client'}
+                  </Button>
+                  <button onClick={() => setShowNewClient(false)} className="text-xs text-text-tertiary cursor-pointer">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowNewClient(true)}
+                className="text-xs text-text-secondary hover:text-text-primary cursor-pointer"
+              >
+                + Add new client
+              </button>
+            )}
+
+            <div className="flex items-center justify-between pt-2 border-t border-border">
+              <button onClick={() => setStep('review')} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
+                ← Back to review
+              </button>
+              <Button size="sm" onClick={handleImport}>
+                {resetMonths ? 'Reset & Import' : 'Import'} All
               </Button>
             </div>
           </div>
         )}
 
-        {/* STEP 3: Importing */}
+        {/* STEP 4: Importing */}
         {step === 'importing' && (
           <div className="text-center py-8">
             <div className="w-8 h-8 border-2 border-text-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -337,7 +610,7 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
           </div>
         )}
 
-        {/* STEP 4: Done */}
+        {/* STEP 5: Done */}
         {step === 'done' && result && (
           <div className="text-center py-6 space-y-3">
             <div className="w-12 h-12 rounded-full bg-surface-tertiary flex items-center justify-center mx-auto">
@@ -350,8 +623,10 @@ export function BankImportModal({ open, onClose }: BankImportModalProps) {
               <p className="text-xs text-text-tertiary mt-1">
                 {result.monthsReset > 0 && `${result.monthsReset} month(s) reset. `}
                 {result.importedExpenses > 0 && `${result.importedExpenses} expenses added. `}
-                {result.importedIncome > 0 && `${result.importedIncome} income entries recorded.`}
-                {result.importedExpenses === 0 && result.importedIncome === 0 && 'No transactions imported.'}
+                {result.mappedToClients > 0 && `${result.mappedToClients} income mapped to clients. `}
+                {result.oneoffPayments > 0 && `${result.oneoffPayments} one-off payments created. `}
+                {result.skippedIncome > 0 && `${result.skippedIncome} income skipped. `}
+                {result.importedExpenses === 0 && result.mappedToClients === 0 && result.oneoffPayments === 0 && 'No transactions imported.'}
               </p>
             </div>
             <Button size="sm" onClick={handleClose}>Done</Button>

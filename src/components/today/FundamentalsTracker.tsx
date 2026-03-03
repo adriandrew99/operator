@@ -9,9 +9,10 @@ import type { CustomFundamental } from '@/lib/types/database';
 interface FundamentalsTrackerProps {
   fundamentals: CustomFundamental[];
   completions: Record<string, boolean>;
+  compact?: boolean;
 }
 
-export function FundamentalsTracker({ fundamentals, completions }: FundamentalsTrackerProps) {
+export function FundamentalsTracker({ fundamentals, completions, compact }: FundamentalsTrackerProps) {
   const [state, setState] = useState<Record<string, boolean>>(completions);
 
   function handleToggle(fundamentalId: string, newValue: boolean) {
@@ -23,6 +24,48 @@ export function FundamentalsTracker({ fundamentals, completions }: FundamentalsT
   const hitCount = fundamentals.filter((f) => state[f.id]).length;
   const progressPct = fundamentals.length > 0 ? (hitCount / fundamentals.length) * 100 : 0;
 
+  if (fundamentals.length === 0) {
+    return (
+      <p className="text-xs text-text-tertiary py-3">
+        No fundamentals configured. Add them in Settings.
+      </p>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-1">
+        {fundamentals.map((fundamental) => {
+          const checked = state[fundamental.id] ?? false;
+          return (
+            <div
+              key={fundamental.id}
+              className={cn(
+                'flex items-center gap-2.5 py-1.5 px-2 rounded-lg transition-colors duration-150',
+                checked ? 'opacity-60' : 'hover:bg-surface-tertiary'
+              )}
+            >
+              <AnimatedCheckbox
+                checked={checked}
+                onChange={(val) => handleToggle(fundamental.id, val)}
+                size="sm"
+              />
+              <span className="text-sm flex-shrink-0">{fundamental.icon}</span>
+              <span
+                className={cn(
+                  'text-xs transition-colors',
+                  checked ? 'text-text-tertiary line-through' : 'text-text-secondary'
+                )}
+              >
+                {fundamental.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Progress bar */}
@@ -33,43 +76,37 @@ export function FundamentalsTracker({ fundamentals, completions }: FundamentalsT
         />
       </div>
 
-      {fundamentals.length === 0 ? (
-        <p className="text-xs text-text-tertiary py-3">
-          No fundamentals configured. Add them in Settings.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {fundamentals.map((fundamental) => {
-            const checked = state[fundamental.id] ?? false;
-            return (
-              <div
-                key={fundamental.id}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {fundamentals.map((fundamental) => {
+          const checked = state[fundamental.id] ?? false;
+          return (
+            <div
+              key={fundamental.id}
+              className={cn(
+                'flex items-center gap-3 py-3 px-3.5 rounded-xl transition-colors duration-150',
+                checked
+                  ? 'bg-surface-tertiary'
+                  : 'hover:bg-surface-tertiary'
+              )}
+            >
+              <AnimatedCheckbox
+                checked={checked}
+                onChange={(val) => handleToggle(fundamental.id, val)}
+                size="sm"
+              />
+              <span className="text-base flex-shrink-0">{fundamental.icon}</span>
+              <span
                 className={cn(
-                  'flex items-center gap-3 py-3 px-3.5 rounded-xl transition-colors duration-150',
-                  checked
-                    ? 'bg-surface-tertiary'
-                    : 'hover:bg-surface-tertiary'
+                  'text-xs transition-colors',
+                  checked ? 'text-text-primary' : 'text-text-secondary'
                 )}
               >
-                <AnimatedCheckbox
-                  checked={checked}
-                  onChange={(val) => handleToggle(fundamental.id, val)}
-                  size="sm"
-                />
-                <span className="text-base flex-shrink-0">{fundamental.icon}</span>
-                <span
-                  className={cn(
-                    'text-xs transition-colors',
-                    checked ? 'text-text-primary' : 'text-text-secondary'
-                  )}
-                >
-                  {fundamental.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                {fundamental.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

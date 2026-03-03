@@ -8,6 +8,7 @@ import { getRecurringStreaks } from '@/actions/recurring';
 import { isWeeklyDebriefReady } from '@/actions/insights';
 import { getExternalCalendarEvents } from '@/actions/external-calendar';
 import { getTodayScore } from '@/actions/score';
+import { getPinnedNote } from '@/actions/pinned-notes';
 import { TodayDashboard } from './TodayDashboard';
 import { DebriefBanner } from '@/components/insights/DebriefBanner';
 
@@ -51,6 +52,7 @@ export default async function TodayPage() {
     calendarEventsRes,
     recurringStreaks,
     todayScore,
+    pinnedNote,
   ] = await Promise.all([
     supabase
       .from('operator_scores')
@@ -111,6 +113,7 @@ export default async function TodayPage() {
     ).catch(() => ({ data: [] })),
     getRecurringStreaks().catch(() => ({} as Record<string, number>)),
     getTodayScore().catch(() => null),
+    getPinnedNote().catch(() => null),
   ]);
 
   // Build recurring tasks with today's completion status
@@ -189,6 +192,25 @@ export default async function TodayPage() {
 
   const calendarEvents = [...internalEvents, ...externalAsCalendar];
 
+  // Compute confirmed MRR from active clients with retainers
+  // Only exclude clients whose termination_date is before this month (matches Finance page logic)
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const confirmedMRR = (clients || [])
+    .filter((c: { is_active?: boolean; termination_date?: string | null; retainer_amount?: number | null; contract_start?: string | null }) => {
+      if (!c.is_active || !c.retainer_amount) return false;
+      if (c.termination_date) {
+        const termDate = new Date(c.termination_date + 'T12:00:00');
+        if (termDate < thisMonthStart) return false;
+      }
+      if (c.contract_start) {
+        const startDate = new Date(c.contract_start + 'T12:00:00');
+        if (startDate > thisMonthStart) return false;
+      }
+      return true;
+    })
+    .reduce((sum: number, c: { retainer_amount?: number | null }) => sum + (c.retainer_amount || 0), 0);
+
   // Auto-sync: create virtual today-tasks from recurring tasks due today
   // These appear in the main Today's Plan so completion syncs across both views
   const recurringAsTodayTasks = recurringTasks.map((rt) => ({
@@ -256,6 +278,8 @@ export default async function TodayPage() {
         calendarEvents={calendarEvents as import('@/lib/types/database').CalendarEvent[]}
         recurringStreaks={recurringStreaks as Record<string, number>}
         todayScore={todayScore}
+        pinnedNote={pinnedNote}
+        confirmedMRR={confirmedMRR}
       />
     </div>
   );

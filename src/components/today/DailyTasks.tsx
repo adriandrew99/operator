@@ -17,6 +17,7 @@ interface DailyTasksProps {
   allTasks?: RecurringTaskWithStatus[];
   clients: Client[];
   streaks?: Record<string, number>;
+  compact?: boolean;
 }
 
 const FREQUENCY_OPTIONS = [
@@ -34,7 +35,7 @@ function formatTime12h(time24: string): string {
   return `${hour12}:${m} ${ampm}`;
 }
 
-export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTasksProps) {
+export function DailyTasks({ tasks, allTasks, clients, streaks = {}, compact }: DailyTasksProps) {
   const [todayItems, setTodayItems] = useState(tasks);
   const [allItems, setAllItems] = useState(allTasks || tasks);
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
@@ -324,6 +325,9 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
   }
 
   if (todayItems.length === 0 && allItems.length === 0 && !showForm) {
+    if (compact) {
+      return <p className="text-xs text-text-tertiary py-2">No recurring tasks yet.</p>;
+    }
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -337,6 +341,58 @@ export function DailyTasks({ tasks, allTasks, clients, streaks = {} }: DailyTask
         <p className="text-xs text-text-tertiary py-3">
           Add recurring daily reminders like checking comments, scheduling posts, etc.
         </p>
+        {renderFormModal()}
+      </div>
+    );
+  }
+
+  // Compact mode: simple checklist for sidebar
+  if (compact) {
+    return (
+      <div className="space-y-1">
+        {todayItems.map((task) => (
+          <div
+            key={task.id}
+            className={cn(
+              'flex items-center gap-2.5 py-1.5 px-2 rounded-lg transition-colors duration-150 group',
+              task.completedToday ? 'opacity-60' : 'hover:bg-surface-tertiary'
+            )}
+          >
+            <button
+              onClick={() => handleToggle(task)}
+              className={cn(
+                'w-4 h-4 border flex-shrink-0 flex items-center justify-center transition-all cursor-pointer',
+                task.completedToday
+                  ? 'bg-text-primary border-text-primary'
+                  : 'border-border-light hover:border-text-secondary'
+              )}
+            >
+              {task.completedToday && (
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6L5 9L10 3" stroke="black" strokeWidth="2" strokeLinecap="square" />
+                </svg>
+              )}
+            </button>
+            <span className={cn(
+              'text-xs flex-1 truncate transition-colors',
+              task.completedToday ? 'text-text-tertiary line-through' : 'text-text-secondary'
+            )}>
+              {task.title}
+            </span>
+            {!task.completedToday && (
+              <button
+                onClick={() => handleSkip(task)}
+                className="text-text-tertiary hover:text-amber-400 transition-all p-0.5 rounded opacity-0 group-hover:opacity-100"
+                title="Skip"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 4 15 12 5 20 5 4" />
+                  <line x1="19" y1="5" x2="19" y2="19" />
+                </svg>
+              </button>
+            )}
+          </div>
+        ))}
         {renderFormModal()}
       </div>
     );

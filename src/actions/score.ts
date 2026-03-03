@@ -188,6 +188,101 @@ export async function recalculateAutoScore() {
   // Don't revalidate here — the caller's server action already revalidates
 }
 
+// ━━━ Save Check-In for a Specific Date (Retroactive) ━━━
+
+export async function saveCheckInForDate(
+  date: string,
+  ratings: CheckInRatings,
+  notes?: string
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // If it's today, use the normal saveCheckIn flow
+  const today = getToday();
+  if (date === today) {
+    return saveCheckIn(ratings, notes);
+  }
+
+  // For past dates, we need to upsert with whatever auto-metrics existed that day
+  // Fetch the existing score for that date (if any)
+  const existingRes = await supabase
+    .from('operator_scores')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('date', date)
+    .maybeSingle();
+
+  const existing = existingRes.data;
+
+  // If there's an existing score, recalculate with check-in
+  // If no existing score, we create one with just the check-in (auto metrics set to 0)
+  let breakdown: any = existing?.breakdown || { execution: 0, habits: 0, focus: 0, energy: 0, decisions: 0, clarity: 0, stress: 0, momentum: 0 };
+
+  // Recalculate self-assessed dimensions with new ratings
+  const focus = Math.round((ratings.focus / 5) * 12);
+  const energy = Math.round((ratings.energy / 5) * 10);
+  const decisions = Math.round((ratings.decisions / 5) * 8);
+  const clarity = Math.round(((ratings.clarity ?? 3) / 5) * 8);
+  const stress = Math.round(((ratings.stress ?? 3) / 5) * 7);
+
+  // Keep auto dimensions from existing, update self-assessed
+  const newBreakdown = {
+    execution: breakdown.execution || 0,
+    habits: breakdown.habits || 0,
+    focus,
+    energy,
+    decisions,
+    clarity,
+    stress,
+    momentum: breakdown.momentum || 0,
+  };
+
+  const score = Math.min(100,
+    newBreakdown.execution + newBreakdown.habits + newBreakdown.focus +
+    newBreakdown.energy + newBreakdown.decisions + newBreakdown.clarity +
+    newBreakdown.stress + newBreakdown.momentum
+  );
+
+  const { error } = await supabase
+    .from('operator_scores')
+    .upsert(
+      {
+        user_id: user.id,
+        date,
+        score,
+        breakdown: newBreakdown,
+        check_in: ratings,
+        notes: notes || existing?.notes || null,
+        version: 2,
+      },
+      { onConflict: 'user_id,date' }
+    );
+
+  if (error) throw error;
+
+  revalidatePath('/score');
+  revalidatePath('/today');
+}
+
+// ━━━ Get Score for a Specific Date ━━━
+
+export async function getScoreForDate(date: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from('operator_scores')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('date', date)
+    .maybeSingle();
+
+  return data as OperatorScore | null;
+}
+
 // ━━━ Get Today's Score ━━━
 
 export async function getTodayScore(): Promise<OperatorScore | null> {

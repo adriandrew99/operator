@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { CATEGORY_KEYWORDS, suggestCategory } from '@/lib/bank-categories';
 
 export interface ParsedTransaction {
   date: string;          // YYYY-MM-DD (uses 1st of month for P/L entries)
@@ -9,26 +10,6 @@ export interface ParsedTransaction {
   amount: number;        // Always positive
   type: 'income' | 'expense';
   suggestedCategory?: string;
-}
-
-/** Category keywords for auto-categorisation */
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  software: ['stripe', 'github', 'aws', 'heroku', 'vercel', 'figma', 'notion', 'slack', 'adobe', 'google cloud', 'digital ocean', 'cloudflare', 'openai', 'anthropic', 'railway', 'supabase', 'microsoft', 'zoom', 'canva'],
-  hosting: ['hosting', 'domain', 'namecheap', 'godaddy', 'dns', 'linode'],
-  marketing: ['facebook ads', 'google ads', 'linkedin', 'mailchimp', 'convertkit', 'advertising', 'sponsor', 'meta ads'],
-  office: ['office', 'desk', 'chair', 'monitor', 'keyboard', 'stationery', 'amazon', 'equipment', 'laptop', 'apple store'],
-  travel: ['uber', 'lyft', 'train', 'flight', 'hotel', 'airbnb', 'travel', 'parking', 'fuel', 'petrol', 'tfl', 'national rail'],
-  professional: ['accountant', 'lawyer', 'solicitor', 'consultant', 'hmrc', 'companies house'],
-  subscriptions: ['subscription', 'spotify', 'netflix', 'gym', 'membership', 'apple.com', 'icloud', 'openai', 'chatgpt'],
-  insurance: ['insurance', 'indemnity', 'liability', 'hiscox'],
-};
-
-function suggestCategory(description: string): string {
-  const lower = description.toLowerCase();
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some(kw => lower.includes(kw))) return category;
-  }
-  return 'other';
 }
 
 /* ━━━ CSV LINE PARSER ━━━ */
@@ -590,6 +571,24 @@ export async function resetMonthData(month: string) {
 
   if (snapError) console.error('Failed to delete snapshot:', snapError);
 
+  // Delete client monthly overrides for this month
+  const { error: overrideError } = await supabase
+    .from('client_monthly_overrides')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('month', monthKey);
+
+  if (overrideError) console.warn('Failed to delete client overrides:', overrideError.message);
+
+  // Delete one-off payments for this month
+  const { error: oneoffError } = await supabase
+    .from('oneoff_payments')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('month', monthKey);
+
+  if (oneoffError) console.warn('Failed to delete one-off payments:', oneoffError.message);
+
   revalidatePath('/finance');
   return { success: true };
 }
@@ -653,57 +652,41 @@ export async function importTransactions(
     }
   }
 
-  // Aggregate income AND expenses by month, then upsert snapshots
-  const incomeByMonth = new Map<string, number>();
+  // Aggregate imported expenses by month and update snapshot expense totals only.
+  // Revenue is always calculated live from client retainers — bank imports should not touch total_revenue.
   const expensesByMonth = new Map<string, number>();
-
-  for (const t of incomeRows) {
-    const monthKey = t.date.slice(0, 7) + '-01';
-    incomeByMonth.set(monthKey, (incomeByMonth.get(monthKey) || 0) + t.amount);
-  }
 
   for (const t of expenseRows) {
     const monthKey = t.date.slice(0, 7) + '-01';
     expensesByMonth.set(monthKey, (expensesByMonth.get(monthKey) || 0) + t.amount);
   }
 
-  // Get all unique months from both income and expenses
-  const allMonths = new Set([...incomeByMonth.keys(), ...expensesByMonth.keys()]);
-
-  for (const month of allMonths) {
-    const monthIncome = incomeByMonth.get(month) || 0;
-    const monthExpenses = expensesByMonth.get(month) || 0;
-
+  for (const [month, monthExpenses] of expensesByMonth) {
     const { data: existing } = await supabase
       .from('financial_snapshots')
-      .select('id, total_revenue, total_expenses')
+      .select('id, total_expenses')
       .eq('user_id', user.id)
       .eq('month', month)
       .single();
 
     if (existing) {
-      const newRevenue = (Number(existing.total_revenue) || 0) + monthIncome;
       const newExpenses = (Number(existing.total_expenses) || 0) + monthExpenses;
-      const taxableProfit = Math.max(0, newRevenue - newExpenses);
       await supabase
         .from('financial_snapshots')
         .update({
-          total_revenue: newRevenue,
           total_expenses: newExpenses,
-          corp_tax_reserve: taxableProfit * 0.19,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
     } else {
-      const taxableProfit = Math.max(0, monthIncome - monthExpenses);
       await supabase
         .from('financial_snapshots')
         .insert({
           user_id: user.id,
           month,
-          total_revenue: monthIncome,
+          total_revenue: 0,
           total_expenses: monthExpenses,
-          corp_tax_reserve: taxableProfit * 0.19,
+          corp_tax_reserve: 0,
           dividend_paid: 0,
         });
     }
@@ -711,4 +694,93 @@ export async function importTransactions(
 
   revalidatePath('/finance');
   return { importedExpenses: expenseRows.length, importedIncome: incomeRows.length };
+}
+
+
+/* ━━━ IMPORT INCOME AS CLIENT OVERRIDES ━━━ */
+/** Map income transactions to clients as monthly overrides */
+export async function importIncomeAsOverrides(
+  mappings: { clientId: string; month: string; amount: number }[]
+) {
+  if (mappings.length === 0) return { imported: 0 };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Group by (clientId, month) and sum amounts
+  const grouped = new Map<string, { clientId: string; month: string; amount: number }>();
+  for (const m of mappings) {
+    const monthKey = m.month.slice(0, 7); // Ensure YYYY-MM
+    const key = `${m.clientId}::${monthKey}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.amount += m.amount;
+    } else {
+      grouped.set(key, { clientId: m.clientId, month: monthKey, amount: m.amount });
+    }
+  }
+
+  // Upsert each override
+  let imported = 0;
+  for (const { clientId, month, amount } of grouped.values()) {
+    const { error } = await supabase
+      .from('client_monthly_overrides')
+      .upsert(
+        {
+          user_id: user.id,
+          client_id: clientId,
+          month,
+          amount,
+          notes: 'Bank import',
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'client_id,month' }
+      );
+
+    if (error) {
+      console.error(`Failed to upsert override for ${clientId} ${month}:`, error.message);
+    } else {
+      imported++;
+    }
+  }
+
+  revalidatePath('/finance');
+  return { imported };
+}
+
+
+/* ━━━ IMPORT ONE-OFF PAYMENTS ━━━ */
+/** Create one-off payment entries from bank import income */
+export async function importOneoffPayments(
+  payments: { description: string; month: string; amount: number }[]
+) {
+  if (payments.length === 0) return { imported: 0 };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  let imported = 0;
+  for (const p of payments) {
+    const monthKey = p.month.slice(0, 7);
+    const { error } = await supabase
+      .from('oneoff_payments')
+      .insert({
+        user_id: user.id,
+        description: p.description,
+        amount: p.amount,
+        month: monthKey,
+        notes: 'Bank import',
+      });
+
+    if (error) {
+      console.error(`Failed to insert one-off payment:`, error.message);
+    } else {
+      imported++;
+    }
+  }
+
+  revalidatePath('/finance');
+  return { imported };
 }

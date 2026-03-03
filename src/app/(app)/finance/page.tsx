@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getClients, getExpenses, getFinancialSnapshot, getFinancialHistory, getSavingsGoals, getClientOverrides } from '@/actions/finance';
+import { getClients, getExpenses, getFinancialSnapshot, getFinancialHistory, getSavingsGoals, getClientOverrides, getAllClientOverrides, getAllOneoffPayments, getAllExpenseOverrides } from '@/actions/finance';
 import { getClientEnergyProfiles, generateInsights } from '@/actions/insights';
+import { getStaffMembers } from '@/actions/staff';
+import { getBankConnections, getBankTransactions } from '@/actions/banking';
 import { getMonthStart } from '@/lib/utils/date';
 import { FinanceDashboard } from './FinanceDashboard';
 
@@ -19,7 +21,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   const params = await searchParams;
   const month = params.month || getMonthStart();
 
-  const [clients, expenses, snapshot, history, pipelineRes, savingsGoals, clientOverrides, clientEnergyProfiles, insights, profileRes] = await Promise.all([
+  const [clients, expenses, snapshot, history, pipelineRes, savingsGoals, clientOverrides, allClientOverrides, clientEnergyProfiles, insights, profileRes, staffMembers, bankConnections, bankTransactions, oneoffPayments, expenseOverrides] = await Promise.all([
     getClients().catch(() => []),
     getExpenses(month).catch(() => []),
     getFinancialSnapshot(month).catch(() => null),
@@ -31,9 +33,15 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
       .order('created_at', { ascending: false })).catch(() => ({ data: [] })),
     getSavingsGoals().catch(() => []),
     getClientOverrides(month).catch(() => []),
+    getAllClientOverrides().catch(() => []),
     getClientEnergyProfiles().catch(() => []),
     generateInsights().catch(() => []),
     Promise.resolve(supabase.from('profiles').select('*').eq('id', user.id).single()).catch(() => ({ data: null })),
+    getStaffMembers().catch(() => []),
+    getBankConnections().catch(() => []),
+    getBankTransactions().catch(() => []),
+    getAllOneoffPayments().catch(() => []),
+    getAllExpenseOverrides().catch(() => []),
   ]);
 
   return (
@@ -50,6 +58,12 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
       insights={insights || []}
       monthlySalary={Number(profileRes?.data?.monthly_salary) || 0}
       staffCost={Number(profileRes?.data?.staff_cost) || 0}
+      staffMembers={staffMembers || []}
+      bankConnections={bankConnections || []}
+      bankTransactions={bankTransactions || []}
+      oneoffPayments={oneoffPayments || []}
+      expenseOverrides={expenseOverrides || []}
+      allClientOverrides={allClientOverrides || []}
     />
   );
 }

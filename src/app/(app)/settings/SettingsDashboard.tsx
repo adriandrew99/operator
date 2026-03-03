@@ -21,6 +21,9 @@ import { useRouter } from 'next/navigation';
 import type { Profile, IdentityGoal, CustomFundamental } from '@/lib/types/database';
 import { saveSlackWebhookUrl, testSlackWebhook, sendSlackDailySummary } from '@/actions/slack';
 import { generateCalendarToken, getCalendarFeedUrl, revokeCalendarToken } from '@/actions/calendar-feed';
+import { savePushSubscription, removePushSubscription, sendTestPush, createReminder, updateReminder, deleteReminder } from '@/actions/notifications';
+import { subscribeToPush } from '@/lib/utils/notifications';
+import type { PushSubscriptionRecord, Reminder } from '@/lib/types/database';
 
 /* ━━━ Emoji Picker ━━━ */
 const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
@@ -102,9 +105,12 @@ interface SettingsDashboardProps {
   dashboardLayout?: DashboardLayoutPreferences;
   slackWebhookUrl?: string | null;
   calendarFeedUrl?: string | null;
+  pushSubscriptions?: import('@/lib/types/database').PushSubscriptionRecord[];
+  reminders?: import('@/lib/types/database').Reminder[];
+  clients?: { id: string; name: string }[];
 }
 
-export function SettingsDashboard({ profile, goals, fundamentals, userEmail, completionHistory = [], calendarSources: initialCalendarSources, dashboardLayout, slackWebhookUrl: initialSlackUrl, calendarFeedUrl: initialFeedUrl }: SettingsDashboardProps) {
+export function SettingsDashboard({ profile, goals, fundamentals, userEmail, completionHistory = [], calendarSources: initialCalendarSources, dashboardLayout, slackWebhookUrl: initialSlackUrl, calendarFeedUrl: initialFeedUrl, pushSubscriptions: initialPushSubs = [], reminders: initialReminders = [], clients: initialClients = [] }: SettingsDashboardProps) {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<IdentityGoal | null>(null);
   const [showFundamentalForm, setShowFundamentalForm] = useState(false);
@@ -570,6 +576,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
 
           {activeTab === 'integrations' && (
             <>
+              <NotificationsSection initialPushSubs={initialPushSubs} initialReminders={initialReminders} clients={initialClients} />
               <CalendarSection initialSources={initialCalendarSources || []} />
               <SlackSection initialWebhookUrl={initialSlackUrl || null} />
               <CalendarFeedSection initialFeedUrl={initialFeedUrl || null} />
@@ -701,22 +708,31 @@ function MentalLoadSection({
 
       {/* History-based suggestion nudge */}
       {showHistoryNudge && !showQuiz && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-tertiary border border-border animate-fade-in">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-text-primary font-medium">
-              Based on your last 30 days, your natural capacity looks like ~{suggestedCapacity} MLU.
-            </p>
-            <p className="text-xs text-text-tertiary mt-0.5">
-              {suggestedCapacity! > effectiveCapacity ? 'You might be able to handle more.' : 'You might be pushing too hard.'}
-            </p>
+        <div className="px-4 py-3 rounded-xl bg-surface-tertiary border border-border animate-fade-in space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-text-primary font-medium">
+                Your natural capacity looks like ~{suggestedCapacity} MLU/day.
+              </p>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                Based on your typical working day load (tasks + dailies) over the last 30 days.
+                {' '}{suggestedCapacity! > effectiveCapacity ? 'You might be able to handle more.' : 'You might be pushing too hard.'}
+              </p>
+            </div>
+            <button
+              onClick={() => handleSaveCapacity(suggestedCapacity!)}
+              disabled={saving}
+              className="text-xs text-text-primary font-medium hover:text-text-secondary transition-colors px-3 py-1.5 rounded-lg bg-surface-tertiary hover:bg-surface-tertiary flex-shrink-0 cursor-pointer disabled:opacity-50"
+            >
+              {saving ? '...' : 'Apply'}
+            </button>
           </div>
-          <button
-            onClick={() => handleSaveCapacity(suggestedCapacity!)}
-            disabled={saving}
-            className="text-xs text-text-primary font-medium hover:text-text-secondary transition-colors px-3 py-1.5 rounded-lg bg-surface-tertiary hover:bg-surface-tertiary flex-shrink-0 cursor-pointer disabled:opacity-50"
-          >
-            {saving ? '...' : 'Apply'}
-          </button>
+          {/* Breakdown for transparency */}
+          <div className="flex items-center gap-3 text-xs text-text-tertiary pt-1 border-t border-border/50">
+            <span>{completionHistory.filter(d => d.totalMLU >= 5).length} working days sampled</span>
+            <span>·</span>
+            <span>75th percentile of daily load</span>
+          </div>
         </div>
       )}
 
@@ -1484,6 +1500,314 @@ function CalendarFeedSection({ initialFeedUrl }: { initialFeedUrl: string | null
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ━━━ Notifications & Reminders Section ━━━ */
+const REMINDER_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const REMINDER_HOUR_OPTIONS = Array.from({ length: 17 }, (_, i) => i + 6); // 6am-10pm
+
+function NotificationsSection({ initialPushSubs, initialReminders, clients = [] }: { initialPushSubs: PushSubscriptionRecord[]; initialReminders: Reminder[]; clients?: { id: string; name: string }[] }) {
+  const [pushSubs, setPushSubs] = useState(initialPushSubs);
+  const [reminders, setReminders] = useState(initialReminders);
+  const [enabling, setEnabling] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [showAddReminder, setShowAddReminder] = useState(false);
+
+  // Add reminder form state
+  const [newTitle, setNewTitle] = useState('');
+  const [newBody, setNewBody] = useState('');
+  const [newClientId, setNewClientId] = useState('');
+  const [startHour, setStartHour] = useState(9);
+  const [endHour, setEndHour] = useState(13);
+  const [newDays, setNewDays] = useState([1, 2, 3, 4, 5]); // weekdays
+  const [addingReminder, setAddingReminder] = useState(false);
+
+  async function handleEnablePush() {
+    setEnabling(true);
+    setStatus(null);
+    try {
+      const sub = await subscribeToPush();
+      if (!sub || !sub.endpoint || !sub.keys) {
+        setStatus({ ok: false, message: 'Push subscription failed. Check browser permissions.' });
+        return;
+      }
+      const result = await savePushSubscription({
+        endpoint: sub.endpoint,
+        keys: { p256dh: sub.keys.p256dh!, auth: sub.keys.auth! },
+        userAgent: navigator.userAgent,
+      });
+      if (result.success) {
+        setPushSubs(prev => [...prev, { id: '', user_id: '', endpoint: sub.endpoint!, keys_p256dh: sub.keys!.p256dh!, keys_auth: sub.keys!.auth!, user_agent: navigator.userAgent, created_at: '', updated_at: '' }]);
+        setStatus({ ok: true, message: 'Push notifications enabled on this device.' });
+      } else {
+        setStatus({ ok: false, message: result.error || 'Failed to save subscription.' });
+      }
+    } catch {
+      setStatus({ ok: false, message: 'Failed to enable push notifications.' });
+    } finally {
+      setEnabling(false);
+    }
+  }
+
+  async function handleTestPush() {
+    setTesting(true);
+    setStatus(null);
+    const result = await sendTestPush();
+    setStatus({ ok: result.success, message: result.success ? 'Test notification sent!' : (result.error || 'Failed.') });
+    setTesting(false);
+  }
+
+  async function handleRemoveDevice(endpoint: string) {
+    await removePushSubscription(endpoint);
+    setPushSubs(prev => prev.filter(s => s.endpoint !== endpoint));
+  }
+
+  async function handleAddReminder() {
+    if (!newTitle.trim()) return;
+    setAddingReminder(true);
+    // Build hours array from start→end range
+    const hours: number[] = [];
+    for (let h = startHour; h <= endHour; h++) hours.push(h);
+
+    const result = await createReminder({
+      title: newTitle.trim(),
+      body: newBody.trim() || undefined,
+      hours,
+      days_of_week: newDays,
+      client_id: newClientId || undefined,
+    });
+    if (result.success) {
+      const clientName = newClientId ? clients.find(c => c.id === newClientId)?.name : undefined;
+      setReminders(prev => [...prev, { id: crypto.randomUUID(), user_id: '', client_id: newClientId || null, title: newTitle.trim(), body: newBody.trim() || null, url: '/today', tag: 'reminder', hours, days_of_week: newDays, timezone: 'Europe/London', is_active: true, created_at: '', updated_at: '', client_name: clientName }]);
+      setNewTitle('');
+      setNewBody('');
+      setNewClientId('');
+      setShowAddReminder(false);
+    }
+    setAddingReminder(false);
+  }
+
+  async function handleToggleReminder(id: string, isActive: boolean) {
+    await updateReminder(id, { is_active: !isActive });
+    setReminders(prev => prev.map(r => r.id === id ? { ...r, is_active: !isActive } : r));
+  }
+
+  async function handleDeleteReminder(id: string) {
+    await deleteReminder(id);
+    setReminders(prev => prev.filter(r => r.id !== id));
+  }
+
+  function toggleDay(day: number) {
+    setNewDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort());
+  }
+
+  const deviceCount = pushSubs.length;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-medium text-text-tertiary">Push Notifications</p>
+      <p className="text-xs text-text-secondary">Get reminders on your phone and desktop, even when the app is closed.</p>
+
+      {/* Push status */}
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {deviceCount > 0 && <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />}
+            <div>
+              <p className="text-sm text-text-primary font-medium">
+                {deviceCount > 0 ? `Enabled on ${deviceCount} device${deviceCount > 1 ? 's' : ''}` : 'Not enabled'}
+              </p>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                {deviceCount > 0 ? 'Receiving push notifications' : 'Enable to receive reminders on this device'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {deviceCount > 0 && (
+              <Button size="sm" onClick={handleTestPush} disabled={testing}>
+                {testing ? '...' : 'Test'}
+              </Button>
+            )}
+            <Button size="sm" onClick={handleEnablePush} disabled={enabling}>
+              {enabling ? '...' : deviceCount > 0 ? 'Add Device' : 'Enable Push'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Device list */}
+        {deviceCount > 0 && (
+          <div className="mt-3 pt-3 border-t border-border space-y-2">
+            {pushSubs.map((sub, i) => {
+              const isMobile = /Mobile|iPhone|Android/i.test(sub.user_agent || '');
+              const label = isMobile ? 'Mobile' : 'Desktop';
+              return (
+                <div key={sub.endpoint} className="flex items-center justify-between text-xs">
+                  <span className="text-text-secondary">{label} {deviceCount > 1 ? `(${i + 1})` : ''}</span>
+                  <button onClick={() => handleRemoveDevice(sub.endpoint)} className="text-text-tertiary hover:text-red-400 transition-colors cursor-pointer">Remove</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {status && (
+        <p className={cn('text-xs', status.ok ? 'text-green-400' : 'text-red-400')}>
+          {status.message}
+        </p>
+      )}
+
+      {/* Reminders */}
+      <div className="flex items-center justify-between mt-6">
+        <p className="text-xs font-medium text-text-tertiary">Reminders</p>
+        <Button size="sm" onClick={() => setShowAddReminder(!showAddReminder)}>
+          {showAddReminder ? 'Cancel' : 'Add Reminder'}
+        </Button>
+      </div>
+
+      {reminders.length === 0 && !showAddReminder && (
+        <p className="text-xs text-text-tertiary">No reminders set up yet.</p>
+      )}
+
+      {/* Existing reminders */}
+      {reminders.map(reminder => {
+        const hoursStr = reminder.hours.length > 0
+          ? `${reminder.hours[0]}:00–${reminder.hours[reminder.hours.length - 1]}:00`
+          : 'No hours set';
+        const daysStr = reminder.days_of_week.map(d => REMINDER_DAY_LABELS[d]).join(', ');
+        return (
+          <Card key={reminder.id}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className={cn('text-sm font-medium', reminder.is_active ? 'text-text-primary' : 'text-text-tertiary line-through')}>
+                    {reminder.title}
+                  </p>
+                  {reminder.client_name && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/15 text-accent font-medium flex-shrink-0">
+                      {reminder.client_name}
+                    </span>
+                  )}
+                </div>
+                {reminder.body && (
+                  <p className="text-xs text-text-tertiary mt-0.5 truncate">{reminder.body}</p>
+                )}
+                <p className="text-xs text-text-tertiary mt-1">{hoursStr} · {daysStr}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                <button
+                  onClick={() => handleToggleReminder(reminder.id, reminder.is_active)}
+                  className={cn(
+                    'w-8 h-4.5 rounded-full transition-colors relative cursor-pointer',
+                    reminder.is_active ? 'bg-accent' : 'bg-surface-tertiary'
+                  )}
+                >
+                  <span className={cn(
+                    'absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all',
+                    reminder.is_active ? 'left-4' : 'left-0.5'
+                  )} />
+                </button>
+                <button
+                  onClick={() => handleDeleteReminder(reminder.id)}
+                  className="text-text-tertiary hover:text-red-400 transition-colors p-1 cursor-pointer"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                </button>
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+
+      {/* Add reminder form */}
+      {showAddReminder && (
+        <Card>
+          <div className="space-y-3">
+            <Input
+              label="Title"
+              placeholder="e.g. Check posts for @person"
+              value={newTitle}
+              onChange={e => setNewTitle(e.target.value)}
+            />
+            <Input
+              label="Body (optional)"
+              placeholder="e.g. LinkedIn + Twitter"
+              value={newBody}
+              onChange={e => setNewBody(e.target.value)}
+            />
+
+            {/* Client (optional) */}
+            {clients.length > 0 && (
+              <div>
+                <p className="text-xs text-text-tertiary font-medium mb-1.5">Client (optional)</p>
+                <select
+                  value={newClientId}
+                  onChange={e => setNewClientId(e.target.value)}
+                  className="w-full text-xs bg-surface-tertiary border border-border rounded-lg px-2 py-1.5 text-text-primary"
+                >
+                  <option value="">No client</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Hour range */}
+            <div>
+              <p className="text-xs text-text-tertiary font-medium mb-1.5">Time range</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={startHour}
+                  onChange={e => setStartHour(Number(e.target.value))}
+                  className="text-xs bg-surface-tertiary border border-border rounded-lg px-2 py-1.5 text-text-primary"
+                >
+                  {REMINDER_HOUR_OPTIONS.map(h => (
+                    <option key={h} value={h}>{h}:00</option>
+                  ))}
+                </select>
+                <span className="text-xs text-text-tertiary">to</span>
+                <select
+                  value={endHour}
+                  onChange={e => setEndHour(Number(e.target.value))}
+                  className="text-xs bg-surface-tertiary border border-border rounded-lg px-2 py-1.5 text-text-primary"
+                >
+                  {REMINDER_HOUR_OPTIONS.filter(h => h >= startHour).map(h => (
+                    <option key={h} value={h}>{h}:00</option>
+                  ))}
+                </select>
+                <span className="text-xs text-text-tertiary ml-1">({endHour - startHour + 1} notifications)</span>
+              </div>
+            </div>
+
+            {/* Days of week */}
+            <div>
+              <p className="text-xs text-text-tertiary font-medium mb-1.5">Days</p>
+              <div className="flex gap-1">
+                {REMINDER_DAY_LABELS.map((label, i) => (
+                  <button
+                    key={i}
+                    onClick={() => toggleDay(i)}
+                    className={cn(
+                      'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
+                      newDays.includes(i) ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-tertiary hover:text-text-secondary'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button size="sm" onClick={handleAddReminder} disabled={addingReminder || !newTitle.trim()}>
+              {addingReminder ? '...' : 'Add Reminder'}
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
