@@ -135,7 +135,7 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
 
       setTransactions(parsed.map(t => ({
         ...t,
-        include: true,
+        include: t.type !== 'transfer', // Auto-exclude transfers
         category: t.suggestedCategory || 'other',
         expenseType: 'business' as const,
       })));
@@ -214,14 +214,17 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
   }
 
   function handleImport() {
-    const toImport = transactions.filter(t => t.include).map(t => ({
-      date: t.date,
-      description: t.description,
-      amount: t.amount,
-      type: t.type,
-      category: t.type === 'expense' ? t.category : undefined,
-      expenseType: t.type === 'expense' ? t.expenseType : undefined,
-    }));
+    // Only import expenses and income — transfers are excluded
+    const toImport = transactions
+      .filter(t => t.include && t.type !== 'transfer')
+      .map(t => ({
+        date: t.date,
+        description: t.description,
+        amount: t.amount,
+        type: t.type as 'income' | 'expense',
+        category: t.type === 'expense' ? t.category : undefined,
+        expenseType: t.type === 'expense' ? t.expenseType : undefined,
+      }));
 
     if (toImport.length === 0 && Object.keys(incomeMappings).length === 0) {
       setError('No transactions selected for import.');
@@ -306,6 +309,7 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
   const includedCount = transactions.filter(t => t.include).length;
   const includedExpenses = transactions.filter(t => t.include && t.type === 'expense');
   const includedIncome = transactions.filter(t => t.include && t.type === 'income');
+  const transferCount = transactions.filter(t => t.type === 'transfer').length;
   const totalExpenses = includedExpenses.reduce((s, t) => s + t.amount, 0);
   const totalIncome = includedIncome.reduce((s, t) => s + t.amount, 0);
   const affectedMonths = getMonthsFromTransactions(transactions.filter(t => t.include));
@@ -376,6 +380,12 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
                 <p className="text-xs text-text-tertiary uppercase">Expenses ({includedExpenses.length})</p>
                 <p className="text-sm font-bold text-text-primary">{'\u00A3'}{totalExpenses.toFixed(2)}</p>
               </div>
+              {transferCount > 0 && (
+                <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+                  <p className="text-xs text-text-tertiary uppercase">Transfers ({transferCount})</p>
+                  <p className="text-xs text-text-tertiary mt-1">Auto-excluded</p>
+                </div>
+              )}
             </div>
 
             {/* Month reset toggle */}
@@ -460,9 +470,15 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
                     <span className="text-xs text-text-tertiary flex-shrink-0 italic">Map next →</span>
                   )}
 
+                  {t.type === 'transfer' && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-semibold flex-shrink-0">
+                      TRANSFER
+                    </span>
+                  )}
+
                   <span className={cn(
                     'font-mono font-medium flex-shrink-0 text-right w-16',
-                    t.type === 'income' ? 'text-text-primary' : 'text-text-secondary'
+                    t.type === 'income' ? 'text-text-primary' : t.type === 'transfer' ? 'text-blue-400/60' : 'text-text-secondary'
                   )}>
                     {t.type === 'income' ? '+' : '-'}{'\u00A3'}{t.amount.toFixed(2)}
                   </span>

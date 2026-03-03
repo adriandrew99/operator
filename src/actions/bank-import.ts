@@ -8,8 +8,22 @@ export interface ParsedTransaction {
   date: string;          // YYYY-MM-DD (uses 1st of month for P/L entries)
   description: string;
   amount: number;        // Always positive
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   suggestedCategory?: string;
+}
+
+/** Keywords that indicate an internal transfer (not a real expense or income) */
+const TRANSFER_KEYWORDS = [
+  'instant saver', 'savings', 'transfer to', 'transfer from',
+  'internal transfer', 'between accounts', 'pot transfer',
+  'move to', 'move from', 'instant access', 'easy access',
+  'round up', 'roundup', 'sweep', 'to savings', 'from savings',
+  'interest earned', 'cashback',
+];
+
+function isLikelyTransfer(description: string): boolean {
+  const lower = description.toLowerCase();
+  return TRANSFER_KEYWORDS.some(kw => lower.includes(kw));
 }
 
 /* ━━━ CSV LINE PARSER ━━━ */
@@ -465,11 +479,16 @@ function parseTransactionCSV(lines: string[], mapping: ColumnMapping): ParsedTra
       category = suggestCategory(description);
     }
 
+    const cleanDescription = description.replace(/\s+/g, ' ').trim();
+
+    // Auto-detect internal transfers (not real expenses/income)
+    const finalType = isLikelyTransfer(cleanDescription) ? 'transfer' as const : type;
+
     transactions.push({
       date,
-      description: description.replace(/\s+/g, ' ').trim(),
+      description: cleanDescription,
       amount,
-      type,
+      type: finalType,
       suggestedCategory: category,
     });
   }
@@ -499,11 +518,15 @@ function parseFallbackCSV(lines: string[]): ParsedTransaction[] {
     const description = fields.slice(1, amountIdx).join(' ').trim() || fields[1].trim();
     if (!description) continue;
 
+    const cleanDescription = description.replace(/\s+/g, ' ').trim();
+    const baseType = raw > 0 ? 'income' : 'expense';
+    const finalType = isLikelyTransfer(cleanDescription) ? 'transfer' as const : baseType;
+
     transactions.push({
       date,
-      description: description.replace(/\s+/g, ' ').trim(),
+      description: cleanDescription,
       amount: Math.abs(raw),
-      type: raw > 0 ? 'income' : 'expense',
+      type: finalType,
       suggestedCategory: raw < 0 ? suggestCategory(description) : undefined,
     });
   }
