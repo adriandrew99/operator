@@ -52,6 +52,9 @@ export const EXPENSE_CATEGORIES = [
   { value: 'professional', label: 'Professional Services' },
   { value: 'insurance', label: 'Insurance' },
   { value: 'subscriptions', label: 'Subscriptions' },
+  { value: 'tax', label: 'Corporation Tax' },
+  { value: 'vat', label: 'VAT' },
+  { value: 'pension', label: 'Pension' },
   { value: 'other', label: 'Other' },
 ] as const;
 

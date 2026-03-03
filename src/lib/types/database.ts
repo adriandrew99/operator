@@ -5,7 +5,7 @@ export type TaskStatus = 'active' | 'completed' | 'archived';
 export type LeadStage = 'lead' | 'conversation' | 'proposal_sent' | 'closed' | 'lost';
 export type KnowledgeEntryType = 'reading' | 'idea' | 'lesson' | 'quote' | 'mental_model' | 'content_hook';
 export type ReadingStatus = 'to_read' | 'reading' | 'completed';
-export type ExpenseCategoryType = 'software' | 'hosting' | 'marketing' | 'office' | 'travel' | 'professional' | 'insurance' | 'subscriptions' | 'other';
+export type ExpenseCategoryType = 'software' | 'hosting' | 'marketing' | 'office' | 'travel' | 'professional' | 'insurance' | 'subscriptions' | 'tax' | 'vat' | 'pension' | 'other';
 export type TimePeriod = 'morning' | 'afternoon' | 'evening';
 export type OutboundCampaignStatus = 'active' | 'paused' | 'completed';
 

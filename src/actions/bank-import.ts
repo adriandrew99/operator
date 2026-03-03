@@ -4,11 +4,13 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { CATEGORY_KEYWORDS, suggestCategory } from '@/lib/bank-categories';
 
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'dividend' | 'salary' | 'tax' | 'vat' | 'pension';
+
 export interface ParsedTransaction {
   date: string;          // YYYY-MM-DD (uses 1st of month for P/L entries)
   description: string;
   amount: number;        // Always positive
-  type: 'income' | 'expense' | 'transfer';
+  type: TransactionType;
   suggestedCategory?: string;
 }
 
@@ -21,9 +23,53 @@ const TRANSFER_KEYWORDS = [
   'interest earned', 'cashback',
 ];
 
+/** Keywords that indicate a dividend payment to director(s) */
+const DIVIDEND_KEYWORDS = [
+  'dividend', 'div payment', 'director dividend', 'shareholder dividend',
+  'interim dividend', 'final dividend',
+];
+
+/** Keywords that indicate salary / PAYE payments */
+const SALARY_KEYWORDS = [
+  'salary', 'paye', 'payroll', 'wages', 'net pay', 'staff pay',
+  'employee pay', 'monthly pay',
+];
+
+/** Keywords that indicate HMRC / corporation tax payments */
+const TAX_KEYWORDS = [
+  'hmrc', 'corporation tax', 'corp tax', 'tax payment', 'self assessment',
+  'companies house',
+];
+
+/** Keywords that indicate VAT payments */
+const VAT_KEYWORDS = [
+  'vat payment', 'vat return', 'value added tax', 'hmrc vat',
+  'vat quarter', 'vat bill',
+];
+
+/** Keywords that indicate pension contributions */
+const PENSION_KEYWORDS = [
+  'pension', 'nest', 'workplace pension', 'auto enrolment',
+  'pension contribution', 'retirement',
+];
+
 function isLikelyTransfer(description: string): boolean {
   const lower = description.toLowerCase();
   return TRANSFER_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+/** Detect special outgoing transaction types that are NOT regular business expenses */
+function detectSpecialType(description: string, baseType: 'income' | 'expense'): TransactionType {
+  if (baseType === 'income') return 'income';
+  const lower = description.toLowerCase();
+  if (TRANSFER_KEYWORDS.some(kw => lower.includes(kw))) return 'transfer';
+  if (DIVIDEND_KEYWORDS.some(kw => lower.includes(kw))) return 'dividend';
+  if (SALARY_KEYWORDS.some(kw => lower.includes(kw))) return 'salary';
+  // Check VAT before general tax (more specific first)
+  if (VAT_KEYWORDS.some(kw => lower.includes(kw))) return 'vat';
+  if (TAX_KEYWORDS.some(kw => lower.includes(kw))) return 'tax';
+  if (PENSION_KEYWORDS.some(kw => lower.includes(kw))) return 'pension';
+  return 'expense';
 }
 
 /* ━━━ CSV LINE PARSER ━━━ */
@@ -481,8 +527,8 @@ function parseTransactionCSV(lines: string[], mapping: ColumnMapping): ParsedTra
 
     const cleanDescription = description.replace(/\s+/g, ' ').trim();
 
-    // Auto-detect internal transfers (not real expenses/income)
-    const finalType = isLikelyTransfer(cleanDescription) ? 'transfer' as const : type;
+    // Auto-detect special transaction types (transfers, dividends, salary, tax, etc.)
+    const finalType = detectSpecialType(cleanDescription, type);
 
     transactions.push({
       date,
@@ -520,7 +566,7 @@ function parseFallbackCSV(lines: string[]): ParsedTransaction[] {
 
     const cleanDescription = description.replace(/\s+/g, ' ').trim();
     const baseType = raw > 0 ? 'income' : 'expense';
-    const finalType = isLikelyTransfer(cleanDescription) ? 'transfer' as const : baseType;
+    const finalType = detectSpecialType(cleanDescription, baseType);
 
     transactions.push({
       date,
@@ -619,14 +665,18 @@ export async function resetMonthData(month: string) {
 
 /* ━━━ IMPORT TRANSACTIONS ━━━ */
 export async function importTransactions(
-  transactions: { date: string; description: string; amount: number; type: 'income' | 'expense'; category?: string; expenseType?: 'business' | 'personal' }[]
+  transactions: { date: string; description: string; amount: number; type: TransactionType; category?: string; expenseType?: 'business' | 'personal' }[]
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const expenseRows = transactions.filter(t => t.type === 'expense');
-  const incomeRows = transactions.filter(t => t.type === 'income');
+  const dividendRows = transactions.filter(t => t.type === 'dividend');
+  const salaryRows = transactions.filter(t => t.type === 'salary');
+  const taxRows = transactions.filter(t => t.type === 'tax');
+  const vatRows = transactions.filter(t => t.type === 'vat');
+  const pensionRows = transactions.filter(t => t.type === 'pension');
 
   // Insert expenses in batches (Supabase has row limits on bulk inserts)
   if (expenseRows.length > 0) {
@@ -675,11 +725,92 @@ export async function importTransactions(
     }
   }
 
+  // Aggregate dividends by month → update snapshot.dividend_paid
+  const dividendsByMonth = new Map<string, number>();
+  for (const t of dividendRows) {
+    const monthKey = t.date.slice(0, 7) + '-01';
+    dividendsByMonth.set(monthKey, (dividendsByMonth.get(monthKey) || 0) + t.amount);
+  }
+
+  for (const [month, amount] of dividendsByMonth) {
+    const { data: existing } = await supabase
+      .from('financial_snapshots')
+      .select('id, dividend_paid')
+      .eq('user_id', user.id)
+      .eq('month', month)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from('financial_snapshots')
+        .update({
+          dividend_paid: (Number(existing.dividend_paid) || 0) + amount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+    } else {
+      await supabase
+        .from('financial_snapshots')
+        .insert({
+          user_id: user.id,
+          month,
+          total_revenue: 0,
+          total_expenses: 0,
+          corp_tax_reserve: 0,
+          dividend_paid: amount,
+        });
+    }
+  }
+
+  // Aggregate salary by month → update expense_monthly_overrides.salary
+  const salaryByMonth = new Map<string, number>();
+  for (const t of salaryRows) {
+    const monthKey = t.date.slice(0, 7);
+    salaryByMonth.set(monthKey, (salaryByMonth.get(monthKey) || 0) + t.amount);
+  }
+
+  for (const [month, amount] of salaryByMonth) {
+    // Upsert expense override with actual salary paid
+    const { error } = await supabase
+      .from('expense_monthly_overrides')
+      .upsert(
+        { user_id: user.id, month, salary: amount, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,month' }
+      );
+    if (error) console.warn('Failed to upsert salary override:', error.message);
+  }
+
+  // Tax and VAT rows → store as expenses with special categories for record-keeping
+  const taxExpenseRows = [...taxRows, ...vatRows, ...pensionRows];
+  if (taxExpenseRows.length > 0) {
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < taxExpenseRows.length; i += BATCH_SIZE) {
+      const batch = taxExpenseRows.slice(i, i + BATCH_SIZE);
+      const rows = batch.map(t => ({
+        user_id: user.id,
+        description: t.description,
+        amount: t.amount,
+        category: t.type === 'vat' ? 'vat' : t.type === 'pension' ? 'pension' : 'tax',
+        date: t.date,
+        is_recurring: false,
+        expense_type: 'business' as const,
+      }));
+
+      const { error } = await supabase.from('expenses').insert(rows);
+      if (error) {
+        // Fallback without expense_type
+        await supabase.from('expenses').insert(rows.map(({ expense_type: _et, ...rest }) => rest));
+      }
+    }
+  }
+
   // Aggregate imported expenses by month and update snapshot expense totals only.
   // Revenue is always calculated live from client retainers — bank imports should not touch total_revenue.
+  // Only count actual expenses + tax/vat/pension (NOT dividends or salary — those are tracked separately).
+  const allExpenseRows = [...expenseRows, ...taxExpenseRows];
   const expensesByMonth = new Map<string, number>();
 
-  for (const t of expenseRows) {
+  for (const t of allExpenseRows) {
     const monthKey = t.date.slice(0, 7) + '-01';
     expensesByMonth.set(monthKey, (expensesByMonth.get(monthKey) || 0) + t.amount);
   }
@@ -716,7 +847,13 @@ export async function importTransactions(
   }
 
   revalidatePath('/finance');
-  return { importedExpenses: expenseRows.length, importedIncome: incomeRows.length };
+  return {
+    importedExpenses: expenseRows.length,
+    importedDividends: dividendRows.length,
+    importedSalary: salaryRows.length,
+    importedTax: taxRows.length + vatRows.length + pensionRows.length,
+    importedIncome: transactions.filter(t => t.type === 'income').length,
+  };
 }
 
 

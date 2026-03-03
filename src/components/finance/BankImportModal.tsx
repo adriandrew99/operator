@@ -4,7 +4,7 @@ import { useState, useRef, useTransition } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { parseBankStatement, importTransactions, resetMonthData, importIncomeAsOverrides, importOneoffPayments, type ParsedTransaction } from '@/actions/bank-import';
+import { parseBankStatement, importTransactions, resetMonthData, importIncomeAsOverrides, importOneoffPayments, type ParsedTransaction, type TransactionType } from '@/actions/bank-import';
 import { createClientAction } from '@/actions/finance';
 import { EXPENSE_CATEGORIES } from '@/lib/constants';
 import type { Client } from '@/lib/types/database';
@@ -19,6 +19,18 @@ type ReviewTransaction = ParsedTransaction & {
   include: boolean;
   category: string;
   expenseType: 'business' | 'personal';
+};
+
+/** Special types that are NOT regular business expenses */
+const SPECIAL_TYPES: TransactionType[] = ['transfer', 'dividend', 'salary', 'tax', 'vat', 'pension'];
+
+const TYPE_LABELS: Record<string, { label: string; color: string; description: string }> = {
+  transfer: { label: 'TRANSFER', color: 'bg-blue-500/15 text-blue-400', description: 'Internal transfer — excluded' },
+  dividend: { label: 'DIVIDEND', color: 'bg-purple-500/15 text-purple-400', description: 'Updates dividend paid on snapshot' },
+  salary: { label: 'SALARY', color: 'bg-amber-500/15 text-amber-400', description: 'Updates salary override for the month' },
+  tax: { label: 'TAX', color: 'bg-red-500/15 text-red-400', description: 'Recorded as tax expense' },
+  vat: { label: 'VAT', color: 'bg-orange-500/15 text-orange-400', description: 'Recorded as VAT expense' },
+  pension: { label: 'PENSION', color: 'bg-teal-500/15 text-teal-400', description: 'Recorded as pension expense' },
 };
 
 type IncomeMapping = {
@@ -77,7 +89,7 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
   const [step, setStep] = useState<'upload' | 'review' | 'map-income' | 'importing' | 'done'>('upload');
   const [transactions, setTransactions] = useState<ReviewTransaction[]>([]);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<{ importedExpenses: number; mappedToClients: number; oneoffPayments: number; skippedIncome: number; monthsReset: number } | null>(null);
+  const [result, setResult] = useState<{ importedExpenses: number; importedDividends: number; importedSalary: number; importedTax: number; mappedToClients: number; oneoffPayments: number; skippedIncome: number; monthsReset: number } | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const [resetMonths, setResetMonths] = useState(true);
@@ -135,7 +147,7 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
 
       setTransactions(parsed.map(t => ({
         ...t,
-        include: t.type !== 'transfer', // Auto-exclude transfers
+        include: t.type !== 'transfer', // Auto-exclude transfers; all others included by default
         category: t.suggestedCategory || 'other',
         expenseType: 'business' as const,
       })));
@@ -159,6 +171,10 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
 
   function updateExpenseType(index: number, expenseType: 'business' | 'personal') {
     setTransactions(prev => prev.map((t, i) => i === index ? { ...t, expenseType } : t));
+  }
+
+  function updateTransactionType(index: number, type: TransactionType) {
+    setTransactions(prev => prev.map((t, i) => i === index ? { ...t, type, include: type !== 'transfer' } : t));
   }
 
   function handleReviewNext() {
@@ -214,19 +230,10 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
   }
 
   function handleImport() {
-    // Only import expenses and income — transfers are excluded
-    const toImport = transactions
-      .filter(t => t.include && t.type !== 'transfer')
-      .map(t => ({
-        date: t.date,
-        description: t.description,
-        amount: t.amount,
-        type: t.type as 'income' | 'expense',
-        category: t.type === 'expense' ? t.category : undefined,
-        expenseType: t.type === 'expense' ? t.expenseType : undefined,
-      }));
+    // Gather all included transactions except transfers
+    const included = transactions.filter(t => t.include && t.type !== 'transfer');
 
-    if (toImport.length === 0 && Object.keys(incomeMappings).length === 0) {
+    if (included.length === 0 && Object.keys(incomeMappings).length === 0) {
       setError('No transactions selected for import.');
       return;
     }
@@ -246,13 +253,32 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
           }
         }
 
-        // Import expenses
-        const expenseTransactions = toImport.filter(t => t.type === 'expense');
+        // Build import payload — expenses, dividends, salary, tax, vat, pension all go through importTransactions
+        const toImport = included
+          .filter(t => t.type !== 'income') // income handled separately via mappings
+          .map(t => ({
+            date: t.date,
+            description: t.description,
+            amount: t.amount,
+            type: t.type,
+            category: t.type === 'expense' ? t.category : undefined,
+            expenseType: t.type === 'expense' ? t.expenseType : undefined,
+          }));
+
         let importedExpenses = 0;
-        if (expenseTransactions.length > 0) {
-          setImportProgress(`Importing ${expenseTransactions.length} expenses...`);
-          const res = await importTransactions(expenseTransactions);
+        let importedDividends = 0;
+        let importedSalary = 0;
+        let importedTax = 0;
+
+        if (toImport.length > 0) {
+          const expCount = toImport.filter(t => t.type === 'expense').length;
+          const specialCount = toImport.filter(t => t.type !== 'expense').length;
+          setImportProgress(`Importing ${expCount} expenses${specialCount > 0 ? ` + ${specialCount} special items` : ''}...`);
+          const res = await importTransactions(toImport);
           importedExpenses = res.importedExpenses;
+          importedDividends = res.importedDividends;
+          importedSalary = res.importedSalary;
+          importedTax = res.importedTax;
         }
 
         // Process income mappings
@@ -297,7 +323,16 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
           oneoffCount = res.imported;
         }
 
-        setResult({ importedExpenses, mappedToClients, oneoffPayments: oneoffCount, skippedIncome, monthsReset: monthsResetCount });
+        setResult({
+          importedExpenses,
+          importedDividends,
+          importedSalary,
+          importedTax,
+          mappedToClients,
+          oneoffPayments: oneoffCount,
+          skippedIncome,
+          monthsReset: monthsResetCount,
+        });
         setStep('done');
       } catch (e) {
         setError(`Import failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
@@ -309,9 +344,14 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
   const includedCount = transactions.filter(t => t.include).length;
   const includedExpenses = transactions.filter(t => t.include && t.type === 'expense');
   const includedIncome = transactions.filter(t => t.include && t.type === 'income');
+  const includedDividends = transactions.filter(t => t.include && t.type === 'dividend');
+  const includedSalary = transactions.filter(t => t.include && t.type === 'salary');
+  const includedTaxVatPension = transactions.filter(t => t.include && (t.type === 'tax' || t.type === 'vat' || t.type === 'pension'));
   const transferCount = transactions.filter(t => t.type === 'transfer').length;
   const totalExpenses = includedExpenses.reduce((s, t) => s + t.amount, 0);
   const totalIncome = includedIncome.reduce((s, t) => s + t.amount, 0);
+  const totalDividends = includedDividends.reduce((s, t) => s + t.amount, 0);
+  const totalSalary = includedSalary.reduce((s, t) => s + t.amount, 0);
   const affectedMonths = getMonthsFromTransactions(transactions.filter(t => t.include));
 
   // Income mapping stats
@@ -371,19 +411,31 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
             </div>
 
             {/* Summary bar */}
-            <div className="flex gap-2">
-              <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+            <div className="flex flex-wrap gap-2">
+              <div className="flex-1 min-w-[100px] rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
                 <p className="text-xs text-text-tertiary uppercase">Income ({includedIncome.length})</p>
                 <p className="text-sm font-bold text-text-primary">{'\u00A3'}{totalIncome.toFixed(2)}</p>
               </div>
-              <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+              <div className="flex-1 min-w-[100px] rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
                 <p className="text-xs text-text-tertiary uppercase">Expenses ({includedExpenses.length})</p>
                 <p className="text-sm font-bold text-text-primary">{'\u00A3'}{totalExpenses.toFixed(2)}</p>
               </div>
-              {transferCount > 0 && (
-                <div className="flex-1 rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
-                  <p className="text-xs text-text-tertiary uppercase">Transfers ({transferCount})</p>
-                  <p className="text-xs text-text-tertiary mt-1">Auto-excluded</p>
+              {includedDividends.length > 0 && (
+                <div className="flex-1 min-w-[100px] rounded-lg bg-purple-500/10 border border-purple-500/20 px-3 py-2 text-center">
+                  <p className="text-xs text-purple-400 uppercase">Dividends ({includedDividends.length})</p>
+                  <p className="text-sm font-bold text-purple-300">{'\u00A3'}{totalDividends.toFixed(2)}</p>
+                </div>
+              )}
+              {includedSalary.length > 0 && (
+                <div className="flex-1 min-w-[100px] rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-center">
+                  <p className="text-xs text-amber-400 uppercase">Salary ({includedSalary.length})</p>
+                  <p className="text-sm font-bold text-amber-300">{'\u00A3'}{totalSalary.toFixed(2)}</p>
+                </div>
+              )}
+              {(includedTaxVatPension.length > 0 || transferCount > 0) && (
+                <div className="flex-1 min-w-[100px] rounded-lg bg-surface-tertiary border border-border px-3 py-2 text-center">
+                  {includedTaxVatPension.length > 0 && <p className="text-xs text-text-tertiary">Tax/VAT/Pension: {includedTaxVatPension.length}</p>}
+                  {transferCount > 0 && <p className="text-xs text-text-tertiary">Transfers: {transferCount} (excluded)</p>}
                 </div>
               )}
             </div>
@@ -442,6 +494,32 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
                   <span className="text-xs text-text-tertiary font-mono flex-shrink-0 w-16">{formatDateLabel(t.date)}</span>
                   <span className="text-text-primary truncate flex-1 min-w-0">{t.description}</span>
 
+                  {/* Type selector for outgoing transactions */}
+                  {t.type !== 'income' && t.include && (
+                    <select
+                      value={t.type}
+                      onChange={(e) => updateTransactionType(i, e.target.value as TransactionType)}
+                      className={cn(
+                        'text-xs border rounded px-1.5 py-0.5 cursor-pointer flex-shrink-0',
+                        t.type === 'expense' ? 'bg-surface-secondary border-border text-text-secondary'
+                          : t.type === 'dividend' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
+                          : t.type === 'salary' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                          : t.type === 'tax' ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                          : t.type === 'vat' ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                          : t.type === 'pension' ? 'bg-teal-500/10 border-teal-500/30 text-teal-400'
+                          : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                      )}
+                    >
+                      <option value="expense">Expense</option>
+                      <option value="dividend">Dividend</option>
+                      <option value="salary">Salary</option>
+                      <option value="tax">Corp Tax</option>
+                      <option value="vat">VAT</option>
+                      <option value="pension">Pension</option>
+                      <option value="transfer">Transfer</option>
+                    </select>
+                  )}
+
                   {t.type === 'expense' && t.include && (
                     <select
                       value={t.category}
@@ -470,15 +548,11 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
                     <span className="text-xs text-text-tertiary flex-shrink-0 italic">Map next →</span>
                   )}
 
-                  {t.type === 'transfer' && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-semibold flex-shrink-0">
-                      TRANSFER
-                    </span>
-                  )}
-
                   <span className={cn(
                     'font-mono font-medium flex-shrink-0 text-right w-16',
-                    t.type === 'income' ? 'text-text-primary' : t.type === 'transfer' ? 'text-blue-400/60' : 'text-text-secondary'
+                    t.type === 'income' ? 'text-text-primary'
+                      : SPECIAL_TYPES.includes(t.type) ? 'text-text-tertiary'
+                      : 'text-text-secondary'
                   )}>
                     {t.type === 'income' ? '+' : '-'}{'\u00A3'}{t.amount.toFixed(2)}
                   </span>
@@ -636,14 +710,17 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
             </div>
             <div>
               <p className="text-sm font-medium text-text-primary">Import Complete</p>
-              <p className="text-xs text-text-tertiary mt-1">
-                {result.monthsReset > 0 && `${result.monthsReset} month(s) reset. `}
-                {result.importedExpenses > 0 && `${result.importedExpenses} expenses added. `}
-                {result.mappedToClients > 0 && `${result.mappedToClients} income mapped to clients. `}
-                {result.oneoffPayments > 0 && `${result.oneoffPayments} one-off payments created. `}
-                {result.skippedIncome > 0 && `${result.skippedIncome} income skipped. `}
-                {result.importedExpenses === 0 && result.mappedToClients === 0 && result.oneoffPayments === 0 && 'No transactions imported.'}
-              </p>
+              <div className="text-xs text-text-tertiary mt-1 space-y-0.5">
+                {result.monthsReset > 0 && <p>{result.monthsReset} month(s) reset</p>}
+                {result.importedExpenses > 0 && <p>{result.importedExpenses} expenses added</p>}
+                {result.importedDividends > 0 && <p className="text-purple-400">{result.importedDividends} dividend(s) → snapshot</p>}
+                {result.importedSalary > 0 && <p className="text-amber-400">{result.importedSalary} salary payment(s) → monthly override</p>}
+                {result.importedTax > 0 && <p>{result.importedTax} tax/VAT/pension → expenses</p>}
+                {result.mappedToClients > 0 && <p>{result.mappedToClients} income mapped to clients</p>}
+                {result.oneoffPayments > 0 && <p>{result.oneoffPayments} one-off payments created</p>}
+                {result.skippedIncome > 0 && <p>{result.skippedIncome} income skipped</p>}
+                {result.importedExpenses === 0 && result.importedDividends === 0 && result.importedSalary === 0 && result.importedTax === 0 && result.mappedToClients === 0 && result.oneoffPayments === 0 && <p>No transactions imported.</p>}
+              </div>
             </div>
             <Button size="sm" onClick={handleClose}>Done</Button>
           </div>

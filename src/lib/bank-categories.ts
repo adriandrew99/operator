@@ -5,9 +5,12 @@ export const CATEGORY_KEYWORDS: Record<string, string[]> = {
   marketing: ['facebook ads', 'google ads', 'linkedin', 'mailchimp', 'convertkit', 'advertising', 'sponsor', 'meta ads'],
   office: ['office', 'desk', 'chair', 'monitor', 'keyboard', 'stationery', 'amazon', 'equipment', 'laptop', 'apple store'],
   travel: ['uber', 'lyft', 'train', 'flight', 'hotel', 'airbnb', 'travel', 'parking', 'fuel', 'petrol', 'tfl', 'national rail'],
-  professional: ['accountant', 'lawyer', 'solicitor', 'consultant', 'hmrc', 'companies house'],
+  professional: ['accountant', 'lawyer', 'solicitor', 'consultant', 'companies house'],
   subscriptions: ['subscription', 'spotify', 'netflix', 'gym', 'membership', 'apple.com', 'icloud', 'openai', 'chatgpt'],
   insurance: ['insurance', 'indemnity', 'liability', 'hiscox'],
+  tax: ['hmrc', 'corporation tax', 'corp tax', 'self assessment'],
+  vat: ['vat payment', 'vat return'],
+  pension: ['pension', 'nest', 'workplace pension', 'auto enrolment'],
 };
 
 export function suggestCategory(description: string): string {
