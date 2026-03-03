@@ -8,13 +8,13 @@ export function Badge({ className, variant = 'default', children, ...props }: Ba
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md transition-colors',
+        'inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full transition-colors',
         {
           'bg-surface-tertiary text-text-secondary': variant === 'default',
-          'bg-surface-tertiary text-text-primary': variant === 'accent',
-          'bg-surface-tertiary text-danger/80': variant === 'danger',
-          'bg-surface-tertiary text-warning/80': variant === 'warning',
-          'bg-surface-tertiary text-success/80': variant === 'success',
+          'bg-accent-muted text-accent': variant === 'accent',
+          'bg-danger/10 text-danger': variant === 'danger',
+          'bg-warning/10 text-warning': variant === 'warning',
+          'bg-success/10 text-accent-green': variant === 'success',
         },
         className
       )}

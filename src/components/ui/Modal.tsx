@@ -56,14 +56,16 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="fixed inset-0 bg-black/70" />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
       <div
         className={cn(
-          'relative z-10 w-full max-w-lg bg-surface-secondary border border-border',
-          'rounded-t-xl sm:rounded-xl animate-slide-up max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
+          'relative z-10 w-full max-w-lg bg-surface-elevated border border-border overflow-hidden',
+          'rounded-t-2xl sm:rounded-2xl animate-slide-up max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
           className
         )}
       >
+        {/* Subtle accent gradient line at top */}
+        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
         {title && (
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
             <h2 className="text-section-heading text-text-primary">{title}</h2>

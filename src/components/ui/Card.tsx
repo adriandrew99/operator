@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils/cn';
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
   glow?: boolean;
-  variant?: 'default' | 'elevated' | 'inset' | 'glass' | 'accent' | 'flat';
+  variant?: 'default' | 'elevated' | 'inset' | 'glass' | 'accent' | 'flat' | 'gradient';
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
@@ -26,16 +26,17 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-2xl transition-all duration-200',
+        'rounded-[14px] transition-all duration-200',
         {
           'card-elevated': variant === 'default' || variant === 'elevated',
           'card-inset': variant === 'inset',
           'card-glass': variant === 'glass',
           'card-accent': variant === 'accent',
-          'bg-surface-secondary rounded-2xl': variant === 'flat',
+          'bg-surface-secondary rounded-[14px]': variant === 'flat',
+          'card-gradient': variant === 'gradient',
         },
         paddingClasses[padding],
-        hover && 'cursor-pointer hover:scale-[1.01] hover:shadow-lg',
+        hover && 'cursor-pointer hover:scale-[1.005] hover:shadow-lg',
         glow && 'card-hover-glow',
         className
       )}

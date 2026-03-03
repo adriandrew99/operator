@@ -1,6 +1,5 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 interface Tab<T extends string> {
@@ -17,51 +16,22 @@ interface TabBarProps<T extends string> {
 }
 
 export function TabBar<T extends string>({ tabs, active, onChange, className }: TabBarProps<T>) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
-
-  const updateIndicator = useCallback(() => {
-    const activeEl = tabRefs.current.get(active);
-    const container = containerRef.current;
-    if (activeEl && container) {
-      const containerRect = container.getBoundingClientRect();
-      const tabRect = activeEl.getBoundingClientRect();
-      setIndicator({
-        left: tabRect.left - containerRect.left + container.scrollLeft,
-        width: tabRect.width,
-      });
-    }
-  }, [active]);
-
-  useEffect(() => {
-    updateIndicator();
-  }, [updateIndicator]);
-
-  // Also update on resize
-  useEffect(() => {
-    window.addEventListener('resize', updateIndicator);
-    return () => window.removeEventListener('resize', updateIndicator);
-  }, [updateIndicator]);
-
   return (
     <div
-      ref={containerRef}
       className={cn(
-        'relative flex overflow-x-auto scrollbar-none border-b border-border',
+        'flex gap-1 overflow-x-auto scrollbar-none p-1 rounded-lg bg-surface-inset',
         className
       )}
     >
       {tabs.map(tab => (
         <button
           key={tab.key}
-          ref={el => { if (el) tabRefs.current.set(tab.key, el); }}
           onClick={() => onChange(tab.key)}
           title={tab.label}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap transition-colors duration-150 relative',
+            'flex items-center gap-2 px-3.5 py-2 text-sm whitespace-nowrap transition-all duration-200 rounded-md',
             active === tab.key
-              ? 'text-accent font-medium'
+              ? 'bg-surface-tertiary text-text-primary font-medium shadow-sm'
               : 'text-text-tertiary hover:text-text-secondary'
           )}
         >
@@ -69,12 +39,6 @@ export function TabBar<T extends string>({ tabs, active, onChange, className }: 
           {tab.label}
         </button>
       ))}
-
-      {/* Sliding indicator */}
-      <div
-        className="tab-indicator"
-        style={{ left: indicator.left, width: indicator.width }}
-      />
     </div>
   );
 }

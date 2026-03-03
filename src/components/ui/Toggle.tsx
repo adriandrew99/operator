@@ -29,7 +29,7 @@ export function Toggle({ checked, onChange, label, disabled, className }: Toggle
         className={cn(
           'relative w-10 h-6 rounded-full transition-all duration-150 flex-shrink-0',
           checked
-            ? 'bg-text-primary'
+            ? 'bg-accent'
             : 'bg-surface-tertiary border border-border'
         )}
       >

@@ -22,7 +22,7 @@ export function ProgressBar({ value, max, label, showPercentage = true, classNam
       )}
       <div className={cn('w-full bg-surface-tertiary overflow-hidden rounded-full', size === 'sm' ? 'h-1' : 'h-1.5')}>
         <div
-          className="h-full rounded-full progress-fill bg-text-secondary"
+          className="h-full rounded-full progress-fill bg-accent"
           style={{ width: `${percentage}%` }}
         />
       </div>

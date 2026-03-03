@@ -147,15 +147,14 @@ export function Sidebar({ debriefReady }: SidebarProps) {
     <aside
       className={cn(
         'hidden md:flex flex-col h-screen border-r border-border overflow-y-auto overflow-x-hidden',
-        'transition-[width] duration-300 ease-out',
-        collapsed ? 'w-[60px]' : 'w-[240px]'
+        'transition-[width] duration-300 ease-out bg-surface-primary',
+        collapsed ? 'w-[68px]' : 'w-[220px]'
       )}
-      style={{ background: 'var(--surface-primary)' }}
     >
       {/* Logo — drag region for Tauri */}
       <div
         className={cn(
-          'pt-12 pb-8 transition-all duration-300 relative',
+          'pt-10 pb-6 transition-all duration-300 relative',
           collapsed ? 'px-0 flex justify-center' : 'px-5'
         )}
         onMouseDown={handleDrag}
@@ -167,7 +166,7 @@ export function Sidebar({ debriefReady }: SidebarProps) {
             'transition-all duration-300 overflow-hidden whitespace-nowrap',
             collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'
           )}>
-            <h1 className="text-section-heading text-text-primary">
+            <h1 className="text-[15px] font-semibold text-text-primary tracking-tight">
               Nexus
             </h1>
           </div>
@@ -177,18 +176,10 @@ export function Sidebar({ debriefReady }: SidebarProps) {
       {/* Navigation */}
       <nav className={cn(
         'flex-1 py-1',
-        collapsed ? 'px-1.5' : 'px-3'
+        collapsed ? 'px-2' : 'px-3'
       )}>
         {NAV_SECTIONS.map((section, sectionIdx) => (
-          <div key={section.title} className={sectionIdx > 0 ? 'mt-3' : ''}>
-            {/* Section divider (replaces uppercase labels) */}
-            {sectionIdx > 0 && (
-              <div className={cn(
-                'mb-3',
-                collapsed ? 'mx-2 border-t border-border' : 'mx-2 border-t border-border'
-              )} />
-            )}
-
+          <div key={section.title} className={sectionIdx > 0 ? 'mt-5' : ''}>
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = pathname.startsWith(item.href);
@@ -198,30 +189,23 @@ export function Sidebar({ debriefReady }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center text-[14px] rounded-xl transition-all duration-200 relative group',
-                      collapsed ? 'justify-center px-0 py-2.5 h-10' : 'gap-3 px-3 py-2.5 h-10',
+                      'flex items-center text-[13px] rounded-lg transition-all duration-200 relative group',
+                      collapsed ? 'justify-center px-0 py-2.5 h-10' : 'gap-3 px-3 py-2 h-9',
                       isActive
-                        ? 'text-text-primary'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary'
+                        ? 'bg-accent-muted text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
                     )}
-                    style={isActive ? {
-                      background: 'linear-gradient(90deg, rgba(216, 136, 91, 0.12), rgba(216, 136, 91, 0.03))',
-                    } : undefined}
                     title={item.label}
                   >
-                    {/* Active indicator — accent left bar */}
-                    {isActive && (
-                      <div className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full bg-accent" />
-                    )}
-
                     {/* Icon */}
                     <div className={cn(
-                      'flex items-center justify-center w-7 h-7 flex-shrink-0 transition-colors duration-200',
+                      'flex items-center justify-center flex-shrink-0 transition-colors duration-200',
+                      collapsed ? 'w-7 h-7' : 'w-5 h-5',
                       isActive ? 'text-accent' : 'text-text-tertiary group-hover:text-text-secondary'
                     )}>
                       <svg
-                        width="16"
-                        height="16"
+                        width={collapsed ? '18' : '16'}
+                        height={collapsed ? '18' : '16'}
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -269,12 +253,12 @@ export function Sidebar({ debriefReady }: SidebarProps) {
       {/* Collapse toggle */}
       <div className={cn(
         'py-3 border-t border-border',
-        collapsed ? 'px-1.5' : 'px-3'
+        collapsed ? 'px-2' : 'px-3'
       )}>
         <button
           onClick={toggle}
           className={cn(
-            'flex items-center w-full rounded-xl py-2.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary transition-all duration-200',
+            'flex items-center w-full rounded-lg py-2 text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-all duration-200',
             collapsed ? 'justify-center px-0' : 'gap-3 px-3'
           )}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
