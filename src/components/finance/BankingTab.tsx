@@ -47,9 +47,11 @@ function timeAgo(dateStr: string | null): string {
   return `${days}d ago`;
 }
 
+interface BankOption { id: string; name: string; logo?: string | null }
+
 export function BankingTab({ connections, transactions }: BankingTabProps) {
   const [showBankPicker, setShowBankPicker] = useState(false);
-  const [banks, setBanks] = useState<any[]>([]);
+  const [banks, setBanks] = useState<BankOption[]>([]);
   const [bankSearch, setBankSearch] = useState('');
   const [loadingBanks, setLoadingBanks] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export function BankingTab({ connections, transactions }: BankingTabProps) {
     }
   }
 
-  async function handleSelectBank(bank: any) {
+  async function handleSelectBank(bank: BankOption) {
     try {
       const authUrl = await connectBank(bank.id, bank.name, bank.logo || null);
       // Redirect to GoCardless consent page
@@ -97,7 +99,7 @@ export function BankingTab({ connections, transactions }: BankingTabProps) {
   async function handleSync(connectionId: string) {
     setSyncingId(connectionId);
     try {
-      const result = await syncBankTransactions(connectionId);
+      await syncBankTransactions(connectionId);
       // Revalidation happens in the action
     } catch (err) {
       console.error('Sync failed:', err);

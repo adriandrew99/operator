@@ -9,13 +9,14 @@ interface EarningsByClientProps {
   clients: Client[];
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipPayloadItem { name?: string; value?: number; color?: string }
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadItem[]; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">
       {label && <p className="chart-tooltip-label">{label}</p>}
       <div className="space-y-1.5">
-        {payload.map((entry: any, i: number) => (
+        {payload.map((entry: TooltipPayloadItem, i: number) => (
           <div key={i} className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full flex-shrink-0 bg-accent" />

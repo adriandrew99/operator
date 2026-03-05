@@ -318,7 +318,7 @@ export function FinanceChat() {
               </div>
             )}
 
-            {messages.map((msg, i) => (
+            {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={cn(

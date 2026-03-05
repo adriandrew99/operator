@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+function getWeekId(date: Date): string {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay() + 1);
+  return d.toISOString().split('T')[0];
+}
+
 export function DebriefBanner() {
   const [dismissed, setDismissed] = useState(true); // start hidden to avoid flash
 
@@ -10,15 +16,8 @@ export function DebriefBanner() {
     const weekId = getWeekId(new Date());
     const bannerDismissed = localStorage.getItem('debrief-banner-dismissed');
     const viewed = localStorage.getItem('debrief-viewed');
-    // Hide if explicitly dismissed OR already viewed the debrief this week
-    setDismissed(bannerDismissed === weekId || viewed === weekId);
+    setDismissed(bannerDismissed === weekId || viewed === weekId); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
-
-  function getWeekId(date: Date): string {
-    const d = new Date(date);
-    d.setDate(d.getDate() - d.getDay() + 1);
-    return d.toISOString().split('T')[0];
-  }
 
   function handleView() {
     const weekId = getWeekId(new Date());

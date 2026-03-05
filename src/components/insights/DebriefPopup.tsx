@@ -8,6 +8,12 @@ interface DebriefPopupProps {
   debriefReady: boolean;
 }
 
+function getWeekId(date: Date): string {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay() + 1); // Monday of this week
+  return d.toISOString().split('T')[0];
+}
+
 export function DebriefPopup({ debriefReady }: DebriefPopupProps) {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -39,12 +45,6 @@ export function DebriefPopup({ debriefReady }: DebriefPopupProps) {
     const interval = setInterval(checkTime, 60000); // re-check every minute
     return () => clearInterval(interval);
   }, [debriefReady, dismissed, pathname]);
-
-  function getWeekId(date: Date): string {
-    const d = new Date(date);
-    d.setDate(d.getDate() - d.getDay() + 1); // Monday of this week
-    return d.toISOString().split('T')[0];
-  }
 
   function handleDismiss() {
     const weekId = getWeekId(new Date());

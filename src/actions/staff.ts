@@ -116,8 +116,7 @@ export async function deleteStaffMember(id: string): Promise<void> {
  * Keep the legacy profiles.staff_cost field in sync with sum of active staff members.
  * This ensures backward compat with existing finance calculations.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function syncLegacyStaffCost(supabase: any, userId: string) {
+async function syncLegacyStaffCost(supabase: import('@supabase/supabase-js').SupabaseClient, userId: string) {
   try {
     const { data } = await supabase
       .from('staff_members')

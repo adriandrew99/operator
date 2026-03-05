@@ -56,8 +56,8 @@ export default async function ScorePage() {
 
   // Calculate today's auto metrics for display
   const allTasks = [...todayTasks, ...completedTasks];
-  const nonPersonalTasks = allTasks.filter((t: any) => !t.is_personal);
-  const completedNonPersonal = completedTasks.filter((t: any) => !t.is_personal);
+  const nonPersonalTasks = allTasks.filter((t: { is_personal: boolean }) => !t.is_personal);
+  const completedNonPersonal = completedTasks.filter((t: { is_personal: boolean }) => !t.is_personal);
 
   const completionsMap: Record<string, boolean> = {};
   fundamentalCompletions.forEach((c) => {

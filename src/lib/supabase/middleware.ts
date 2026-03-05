@@ -33,6 +33,11 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // API routes handle their own auth (token, Bearer, etc.); don't redirect
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return supabaseResponse;
+  }
+
   // Redirect unauthenticated users to login (except auth routes)
   if (
     !user &&

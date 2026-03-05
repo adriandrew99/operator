@@ -132,7 +132,7 @@ export async function getReminders(): Promise<Reminder[]> {
   // Flatten the joined client name
   return data.map((r: Record<string, unknown>) => {
     const clientName = (r.clients as { name: string } | null)?.name || undefined;
-    const { clients: _clients, ...rest } = r;
+    const { clients: _, ...rest } = r;
     return { ...rest, client_name: clientName } as unknown as Reminder;
   });
 }

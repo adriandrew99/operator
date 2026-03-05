@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -27,63 +26,23 @@ type FilterCategory = 'all' | 'strategy' | 'clients' | 'content' | 'personal' | 
 type QuickFilter = 'none' | 'high' | 'medium' | 'low';
 type SortOption = 'default' | 'deadline' | 'weight' | 'category' | 'client' | 'newest';
 
-const ENERGY_COLORS: Record<string, string> = {
-  deep: 'bg-surface-tertiary text-text-secondary',
-  admin: 'bg-surface-tertiary text-text-secondary',
-  creative: 'bg-surface-tertiary text-text-secondary',
+const WEIGHT_DOT: Record<string, string> = {
+  high: 'bg-red-400',
+  medium: 'bg-amber-400',
+  low: 'bg-text-tertiary',
 };
 
-const WEIGHT_COLORS: Record<string, string> = {
-  low: 'bg-surface-tertiary text-text-secondary',
-  medium: 'bg-surface-tertiary text-text-secondary',
-  high: 'bg-surface-tertiary text-text-secondary',
+const _WEIGHT_BADGE: Record<string, string> = {
+  high: 'bg-red-500/10 text-red-400 border-red-500/20',
+  medium: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  low: 'bg-surface-tertiary text-text-secondary border-border',
 };
 
-/* ━━━ Hover Tooltip for Tags ━━━ */
-function TagWithTooltip({ label, colorClass, tasks }: { label: string; colorClass: string; tasks: Task[] }) {
-  const [show, setShow] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  function handleEnter() {
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setShow(true), 300);
-  }
-  function handleLeave() {
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setShow(false), 150);
-  }
-
-  useEffect(() => () => clearTimeout(timeoutRef.current), []);
-
-  return (
-    <span
-      ref={ref}
-      className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium relative cursor-default', colorClass)}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-    >
-      {label}
-      {show && tasks.length > 0 && (
-        <div className="absolute z-50 left-0 top-full mt-1.5 bg-surface-secondary border border-border rounded-2xl p-3 min-w-[200px] max-w-[280px] animate-fade-in"
-          onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
-        >
-          <p className="text-xs text-text-tertiary  mb-2">{label} tasks ({tasks.length})</p>
-          <div className="space-y-1.5 max-h-[180px] overflow-y-auto">
-            {tasks.slice(0, 8).map(t => (
-              <div key={t.id} className="flex items-center gap-2">
-                <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', WEIGHT_COLORS[t.weight]?.replace(/text-\S+/, '') || 'bg-text-tertiary')} />
-                <span className="text-xs text-text-primary truncate">{t.title}</span>
-              </div>
-            ))}
-            {tasks.length > 8 && <p className="text-xs text-text-tertiary">+{tasks.length - 8} more</p>}
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
+const _ENERGY_BADGE: Record<string, string> = {
+  creative: 'bg-purple-500/10 text-purple-400',
+  admin: 'bg-surface-tertiary text-text-tertiary',
+  deep: 'bg-blue-500/10 text-blue-400',
+};
 
 export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, hadGoodSleep }: TasksDashboardProps) {
   const [viewTab, setViewTab] = useState<ViewTab>('active');
@@ -95,19 +54,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
   const [selectedArchived, setSelectedArchived] = useState<Set<string>>(new Set());
-  const [isPending, setIsPending] = useState(false);
-
-  // Group tasks by energy/weight for tooltips
-  const tasksByWeight = useMemo(() => ({
-    high: tasks.filter(t => t.weight === 'high'),
-    medium: tasks.filter(t => t.weight === 'medium'),
-    low: tasks.filter(t => t.weight === 'low'),
-  }), [tasks]);
-
-  const tasksByEnergy = useMemo(() => ({
-    creative: tasks.filter(t => t.energy === 'creative'),
-    admin: tasks.filter(t => t.energy === 'admin'),
-  }), [tasks]);
+  const [isPending, _setIsPending] = useState(false);
 
   // Stats
   const stats = useMemo(() => {
@@ -115,13 +62,11 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
     const dueToday = tasks.filter(t => t.deadline && isDueToday(t.deadline)).length;
     const flaggedToday = tasks.filter(t => t.flagged_for_today).length;
     const urgent = tasks.filter(t => t.is_urgent).length;
-    const withClient = tasks.filter(t => t.client_id).length;
-    return { overdue, dueToday, flaggedToday, urgent, withClient };
+    return { overdue, dueToday, flaggedToday, urgent };
   }, [tasks]);
 
   const filtered = useMemo(() => {
     let result = tasks;
-    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(t =>
@@ -136,7 +81,6 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
     if (quickFilter !== 'none') {
       result = result.filter((t) => t.weight === quickFilter);
     }
-    // Sorting
     if (sortBy !== 'default') {
       result = [...result].sort((a, b) => {
         switch (sortBy) {
@@ -163,7 +107,6 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
     return result;
   }, [tasks, category, quickFilter, searchQuery, sortBy]);
 
-  // Group by category
   const grouped = useMemo(() => {
     const groups: Record<string, Task[]> = {};
     filtered.forEach((t) => {
@@ -173,7 +116,6 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
     return groups;
   }, [filtered]);
 
-  // Create client lookup
   const clientMap = useMemo(() => {
     const map: Record<string, Client> = {};
     clients.forEach((c) => { map[c.id] = c; });
@@ -230,462 +172,455 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {[
-          { label: 'Active', value: tasks.length, color: 'text-text-primary' },
-          { label: 'Flagged Today', value: stats.flaggedToday, color: stats.flaggedToday > 0 ? 'text-accent' : 'text-text-tertiary' },
-          { label: 'Urgent', value: stats.urgent, color: stats.urgent > 0 ? 'text-red-400' : 'text-text-tertiary' },
-          { label: 'Overdue', value: stats.overdue, color: stats.overdue > 0 ? 'text-red-400' : 'text-text-tertiary' },
-          { label: 'Completed', value: completedTasks.length, color: 'text-text-tertiary' },
-        ].map(stat => (
-          <div key={stat.label} className="bg-surface-secondary border border-border rounded-xl px-3 py-2.5 text-center">
-            <p className={cn('text-lg font-bold', stat.color)}>{stat.value}</p>
-            <p className="text-xs text-text-tertiary">{stat.label}</p>
-          </div>
-        ))}
+    <div className="max-w-6xl mx-auto space-y-5">
+
+      {/* ━━━ PAGE HEADER ━━━ */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Tasks</h1>
+          <p className="text-sm text-text-tertiary mt-0.5">
+            {tasks.length} active · {completedTasks.length} completed
+          </p>
+        </div>
+        <Button size="sm" onClick={() => { setEditingTask(null); setShowForm(true); }}>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="mr-1.5">
+            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Add Task
+        </Button>
       </div>
 
-      {/* View Tabs */}
-      <div className="flex items-center gap-1 bg-surface-tertiary p-1 rounded-xl w-fit">
-        {([
-          { key: 'active' as const, label: `Active (${tasks.length})` },
-          { key: 'completed' as const, label: `Completed (${completedTasks.length})` },
-          { key: 'archived' as const, label: `Archive (${archivedTasks.length})` },
-        ]).map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setViewTab(tab.key)}
-            className={cn(
-              'px-4 py-1.5 text-xs font-medium rounded-lg transition-all',
-              viewTab === tab.key
-                ? 'bg-surface-secondary text-text-primary'
-                : 'text-text-tertiary hover:text-text-secondary'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* ━━━ STATUS PILLS ━━━ */}
+      <div className="flex flex-wrap items-center gap-2">
+        {stats.urgent > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+            <span className="text-xs font-medium text-red-400">{stats.urgent} urgent</span>
+          </div>
+        )}
+        {stats.overdue > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-danger/10 border border-danger/20">
+            <span className="text-xs font-medium text-danger">{stats.overdue} overdue</span>
+          </div>
+        )}
+        {stats.flaggedToday > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
+            <span className="text-xs font-medium text-accent">{stats.flaggedToday} flagged today</span>
+          </div>
+        )}
+        {stats.dueToday > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20">
+            <span className="text-xs font-medium text-warning">{stats.dueToday} due today</span>
+          </div>
+        )}
+        {!hadGoodSleep && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/5 border border-amber-500/10">
+            <span className="text-xs text-amber-400">💤 Low sleep — consider lighter tasks</span>
+          </div>
+        )}
       </div>
 
-      {viewTab === 'active' ? (
-        <>
-          {/* Energy Suggestion */}
-          {!hadGoodSleep && (
-            <div className="bg-warning/5 border border-warning/20 rounded-xl px-4 py-3 text-xs text-warning">
-              Low sleep detected. Consider admin tasks today.
-            </div>
-          )}
+      {/* ━━━ VIEW TABS + TOOLBAR ━━━ */}
+      <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
 
-          {/* Search + Sort + Add */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search tasks..."
-                className="w-full text-sm bg-surface-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-light transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                </button>
-              )}
-            </div>
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as SortOption)}
-              className="text-xs bg-surface-secondary border border-border rounded-xl px-3 py-2 text-text-secondary outline-none focus:border-border-light transition-colors cursor-pointer"
-            >
-              <option value="default">Sort: Default</option>
-              <option value="deadline">Sort: Deadline</option>
-              <option value="weight">Sort: Energy (High first)</option>
-              <option value="category">Sort: Category</option>
-              <option value="client">Sort: Client</option>
-              <option value="newest">Sort: Newest</option>
-            </select>
-            <Button size="sm" onClick={() => { setEditingTask(null); setShowForm(true); }}>
-              + Add Task
-            </Button>
-          </div>
-
-          {/* Category Filters */}
-          <div className="flex flex-wrap gap-2">
-            {[{ value: 'all' as const, label: 'All' }, ...TASK_CATEGORIES.map(c => ({ value: c.value as FilterCategory, label: c.label }))].map((cat) => (
+        {/* Tab header */}
+        <div className="flex items-center justify-between border-b border-border px-4 py-2">
+          <div className="flex items-center gap-1">
+            {([
+              { key: 'active' as const, label: 'Active', count: tasks.length },
+              { key: 'completed' as const, label: 'Completed', count: completedTasks.length },
+              { key: 'archived' as const, label: 'Archive', count: archivedTasks.length },
+            ]).map(tab => (
               <button
-                key={cat.value}
-                onClick={() => setCategory(cat.value)}
+                key={tab.key}
+                onClick={() => setViewTab(tab.key)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
-                  category === cat.value
-                    ? 'bg-surface-tertiary text-text-primary border border-text-primary/20'
-                    : 'bg-surface-secondary text-text-secondary hover:text-text-primary border border-border'
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Mental Energy Filters */}
-          <div className="flex gap-2">
-            {[
-              { value: 'none' as const, label: 'All Energy' },
-              { value: 'high' as const, label: 'High', color: 'text-red-400' },
-              { value: 'medium' as const, label: 'Medium', color: 'text-amber-400' },
-              { value: 'low' as const, label: 'Low', color: 'text-text-secondary' },
-            ].map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setQuickFilter(f.value === quickFilter ? 'none' : f.value)}
-                className={cn(
-                  'px-2.5 py-1 text-xs  font-medium rounded-lg transition-colors',
-                  quickFilter === f.value
+                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
+                  viewTab === tab.key
                     ? 'bg-surface-tertiary text-text-primary'
                     : 'text-text-tertiary hover:text-text-secondary'
                 )}
               >
-                {f.label}
+                {tab.label}
+                <span className={cn(
+                  'ml-1.5 tabular-nums',
+                  viewTab === tab.key ? 'text-text-secondary' : 'text-text-tertiary/60'
+                )}>{tab.count}</span>
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Task Groups */}
-          {filtered.length === 0 ? (
-            <p className="text-center text-sm text-text-tertiary py-12">
-              {searchQuery ? `No tasks matching "${searchQuery}"` : 'No tasks. Add one to get started.'}
-            </p>
-          ) : (
-            Object.entries(grouped).map(([cat, catTasks]) => {
-              const catInfo = TASK_CATEGORIES.find((c) => c.value === cat);
-              return (
-                <div key={cat} className="space-y-2">
-                  <p className="text-xs font-medium text-text-tertiary ">
-                    {catInfo?.label || cat} ({catTasks.length})
+        {viewTab === 'active' && (
+          <>
+            {/* Search + Filter bar */}
+            <div className="px-4 py-3 border-b border-border/50 space-y-3">
+              {/* Search row */}
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search tasks..."
+                    className="w-full text-sm bg-surface-inset border border-border rounded-lg pl-9 pr-3 py-2 text-text-primary placeholder:text-text-tertiary/60 outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 transition-all"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary">
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as SortOption)}
+                  className="text-xs bg-surface-inset border border-border rounded-lg px-3 py-2 text-text-secondary outline-none focus:border-accent/30 transition-colors cursor-pointer"
+                >
+                  <option value="default">Default</option>
+                  <option value="deadline">Deadline</option>
+                  <option value="weight">Energy ↓</option>
+                  <option value="category">Category</option>
+                  <option value="client">Client</option>
+                  <option value="newest">Newest</option>
+                </select>
+              </div>
+
+              {/* Filter chips */}
+              <div className="flex flex-wrap gap-1.5">
+                {/* Category filters */}
+                {[{ value: 'all' as const, label: 'All' }, ...TASK_CATEGORIES.map(c => ({ value: c.value as FilterCategory, label: c.label }))].map((cat) => (
+                  <button
+                    key={cat.value}
+                    onClick={() => setCategory(cat.value)}
+                    className={cn(
+                      'px-2.5 py-1 text-[11px] font-medium rounded-full transition-all border',
+                      category === cat.value
+                        ? 'bg-accent/10 text-accent border-accent/20'
+                        : 'bg-transparent text-text-tertiary border-border hover:text-text-secondary hover:border-border-light'
+                    )}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+                <div className="w-px bg-border mx-1" />
+                {/* Weight filters */}
+                {[
+                  { value: 'high' as const, label: 'High', dot: 'bg-red-400' },
+                  { value: 'medium' as const, label: 'Med', dot: 'bg-amber-400' },
+                  { value: 'low' as const, label: 'Low', dot: 'bg-text-tertiary' },
+                ].map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setQuickFilter(f.value === quickFilter ? 'none' : f.value)}
+                    className={cn(
+                      'flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-full transition-all border',
+                      quickFilter === f.value
+                        ? 'bg-surface-tertiary text-text-primary border-border-light'
+                        : 'text-text-tertiary border-transparent hover:text-text-secondary'
+                    )}
+                  >
+                    <div className={cn('w-1.5 h-1.5 rounded-full', f.dot)} />
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Task list */}
+            <div className="divide-y divide-border/50">
+              {filtered.length === 0 ? (
+                <div className="py-16 text-center">
+                  <p className="text-sm text-text-tertiary">
+                    {searchQuery ? `No tasks matching "${searchQuery}"` : 'No tasks. Add one to get started.'}
                   </p>
-                  <div className="space-y-2">
-                    {catTasks.map((task) => {
-                      const isCompleting = completingIds.has(task.id);
-                      return (
-                        <div
-                          key={task.id}
-                          className={cn(
-                            'bg-surface-secondary border border-border rounded-xl p-3 flex items-start gap-3 task-row group',
-                            isCompleting && 'animate-task-complete'
-                          )}
-                        >
-                          <div className="mt-0.5">
+                </div>
+              ) : (
+                Object.entries(grouped).map(([cat, catTasks]) => {
+                  const catInfo = TASK_CATEGORIES.find((c) => c.value === cat);
+                  return (
+                    <div key={cat}>
+                      <div className="px-4 py-2 bg-surface-tertiary/30">
+                        <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-[0.08em]">
+                          {catInfo?.label || cat}
+                          <span className="ml-1.5 text-text-tertiary/60">{catTasks.length}</span>
+                        </p>
+                      </div>
+                      {catTasks.map((task) => {
+                        const isCompleting = completingIds.has(task.id);
+                        return (
+                          <div
+                            key={task.id}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-3 group hover:bg-surface-tertiary/30 transition-colors',
+                              isCompleting && 'animate-task-complete'
+                            )}
+                          >
+                            {/* Checkbox */}
                             <AnimatedCheckbox
                               checked={isCompleting}
                               onChange={() => handleComplete(task.id)}
                               disabled={isPending}
                               size="sm"
                             />
-                          </div>
-                          <div
-                            className="flex-1 min-w-0 cursor-pointer"
-                            onClick={() => { setEditingTask(task); setShowForm(true); }}
-                          >
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className={cn(
-                                'text-sm font-medium truncate',
-                                isCompleting ? 'text-text-tertiary line-through' : 'text-text-primary'
-                              )}>
-                                {task.title}
-                              </p>
-                              {task.is_urgent && (
-                                <span className="text-xs px-1.5 py-0.5 rounded-md font-semibold bg-surface-tertiary text-text-secondary">
-                                  URGENT
-                                </span>
-                              )}
-                              <TagWithTooltip
-                                label={task.energy}
-                                colorClass={ENERGY_COLORS[task.energy]}
-                                tasks={tasksByEnergy[task.energy as keyof typeof tasksByEnergy] || []}
-                              />
-                              {task.weight && (
-                                <TagWithTooltip
-                                  label={task.weight}
-                                  colorClass={WEIGHT_COLORS[task.weight]}
-                                  tasks={tasksByWeight[task.weight as keyof typeof tasksByWeight] || []}
-                                />
-                              )}
+
+                            {/* Weight indicator dot */}
+                            <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', WEIGHT_DOT[task.weight] || 'bg-text-tertiary')} />
+
+                            {/* Task content */}
+                            <div
+                              className="flex-1 min-w-0 cursor-pointer"
+                              onClick={() => { setEditingTask(task); setShowForm(true); }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <p className={cn(
+                                  'text-sm truncate',
+                                  isCompleting ? 'text-text-tertiary line-through' : 'text-text-primary'
+                                )}>
+                                  {task.title}
+                                </p>
+                                {task.is_urgent && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 font-semibold border border-red-500/20">
+                                    URGENT
+                                  </span>
+                                )}
+                                {task.flagged_for_today && (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3 mt-1">
+
+                            {/* Metadata chips */}
+                            <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
                               {task.deadline && (
                                 <span className={cn(
-                                  'text-xs',
-                                  isOverdue(task.deadline) ? 'text-danger' :
-                                  isDueToday(task.deadline) ? 'text-warning' :
-                                  'text-text-tertiary'
+                                  'text-[10px] px-2 py-0.5 rounded-full border',
+                                  isOverdue(task.deadline)
+                                    ? 'bg-danger/10 text-danger border-danger/20'
+                                    : isDueToday(task.deadline)
+                                    ? 'bg-warning/10 text-warning border-warning/20'
+                                    : 'bg-surface-tertiary text-text-tertiary border-border'
                                 )}>
                                   {isOverdue(task.deadline) ? 'Overdue' : formatDate(task.deadline)}
                                 </span>
                               )}
-                              {task.estimated_minutes && (
-                                <span className="text-xs text-text-tertiary">
-                                  {task.estimated_minutes}m
-                                </span>
-                              )}
-                              {task.project && (
-                                <span className="text-xs text-text-tertiary">
-                                  {task.project}
-                                </span>
-                              )}
                               {task.client_id && clientMap[task.client_id] && (
-                                <span className="text-xs text-text-tertiary">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/5 text-text-tertiary border border-accent/10">
                                   {clientMap[task.client_id].name}
                                 </span>
                               )}
+                              {task.estimated_minutes && (
+                                <span className="text-[10px] text-text-tertiary tabular-nums">{task.estimated_minutes}m</span>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                              <button
+                                onClick={() => handleFlagForToday(task.id, !task.flagged_for_today)}
+                                className={cn(
+                                  'p-1.5 rounded-lg transition-all',
+                                  task.flagged_for_today ? 'text-accent bg-accent/10' : 'text-text-tertiary hover:text-accent hover:bg-accent/10'
+                                )}
+                                title={task.flagged_for_today ? 'Remove from today' : 'Flag for today'}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill={task.flagged_for_today ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => updateTask(task.id, { is_urgent: !task.is_urgent }).catch(e => console.error(e))}
+                                className={cn(
+                                  'p-1.5 rounded-lg transition-all',
+                                  task.is_urgent ? 'text-red-400 bg-red-400/10' : 'text-text-tertiary hover:text-red-400 hover:bg-red-400/10'
+                                )}
+                                title={task.is_urgent ? 'Remove urgent' : 'Mark urgent'}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill={task.is_urgent ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => { setEditingTask(task); setShowForm(true); }}
+                                className="p-1.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary transition-all"
+                                title="Edit"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleArchive(task.id)}
+                                className="p-1.5 rounded-lg text-text-tertiary hover:text-amber-400 hover:bg-amber-400/10 transition-all"
+                                title="Archive"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 8v13H3V8" /><path d="M1 3h22v5H1z" /><path d="M10 12h4" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => deleteTask(task.id).catch(e => console.error(e))}
+                                className="p-1.5 rounded-lg text-text-tertiary hover:text-danger hover:bg-danger/10 transition-all"
+                                title="Delete"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                  <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                </svg>
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => { setEditingTask(task); setShowForm(true); }}
-                              className="text-text-tertiary hover:text-text-primary transition-all p-1 rounded-lg hover:bg-surface-tertiary"
-                              title="Edit task"
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => updateTask(task.id, { is_urgent: !task.is_urgent }).catch(e => console.error(e))}
-                              className={cn(
-                                'transition-all p-1 rounded-lg',
-                                task.is_urgent
-                                  ? 'text-red-400 bg-red-400/10'
-                                  : 'text-text-tertiary hover:text-red-400 hover:bg-red-400/10'
-                              )}
-                              title={task.is_urgent ? 'Remove urgent' : 'Mark as urgent'}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill={task.is_urgent ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="8" x2="12" y2="12" />
-                                <line x1="12" y1="16" x2="12.01" y2="16" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleFlagForToday(task.id, !task.flagged_for_today)}
-                              className={cn(
-                                'transition-all p-1 rounded-lg',
-                                task.flagged_for_today
-                                  ? 'text-text-primary bg-surface-tertiary'
-                                  : 'text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary'
-                              )}
-                              title={task.flagged_for_today ? 'Remove from today' : 'Add to today'}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill={task.flagged_for_today ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleArchive(task.id)}
-                              className="text-text-tertiary hover:text-amber-400 transition-all p-1 rounded-lg hover:bg-amber-400/10"
-                              title="Archive task"
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 8v13H3V8" /><path d="M1 3h22v5H1z" /><path d="M10 12h4" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => deleteTask(task.id).catch(e => console.error(e))}
-                              className="text-text-tertiary hover:text-danger transition-all p-1 rounded-lg hover:bg-danger/10"
-                              title="Delete task"
-                            >
-                              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                                <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </>
-      ) : viewTab === 'completed' ? (
-        /* Completed Tasks View */
-        <div className="space-y-3">
-          {completedTasks.length > 0 && (
-            <div className="flex items-center justify-end">
-              <button
-                onClick={() => handleBulkArchiveCompleted(completedTasks.map(t => t.id))}
-                disabled={isPending}
-                className="text-xs text-text-tertiary hover:text-amber-400 transition-colors font-medium disabled:opacity-40"
-              >
-                Archive all completed →
-              </button>
-            </div>
-          )}
-          {completedTasks.length === 0 ? (
-            <div className="empty-state py-10">
-              <div className="empty-state-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <p className="text-sm text-text-tertiary">No completed tasks yet.</p>
-            </div>
-          ) : (
-            completedTasks.map((task) => (
-              <div
-                key={task.id}
-                className="bg-surface-secondary/50 border border-border rounded-xl p-3 flex items-start gap-3 group"
-              >
-                <div className="mt-0.5 w-5 h-5 rounded-lg bg-surface-tertiary flex items-center justify-center flex-shrink-0">
-                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-secondary line-through">{task.title}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    {task.completed_at && (
-                      <span className="text-xs text-text-tertiary">
-                        {new Date(task.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
-                    )}
-                    {task.weight && (
-                      <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium', WEIGHT_COLORS[task.weight])}>
-                        {task.weight}
-                      </span>
-                    )}
-                    {task.project && (
-                      <span className="text-xs text-text-tertiary">{task.project}</span>
-                    )}
-                    {task.client_id && clientMap[task.client_id] && (
-                      <span className="text-xs text-text-tertiary">{clientMap[task.client_id].name}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleReactivate(task.id)}
-                    className="text-xs text-text-tertiary hover:text-text-primary transition-all px-2 py-1"
-                  >
-                    Reactivate
-                  </button>
-                  <button
-                    onClick={() => handleArchive(task.id)}
-                    className="text-xs text-text-tertiary hover:text-amber-400 transition-all px-2 py-1"
-                    title="Move to archive"
-                  >
-                    Archive
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      ) : (
-        /* Archived Tasks View */
-        <div className="space-y-3">
-          {archivedTasks.length > 0 && (
-            <div className="flex items-center justify-between">
-              <button
-                onClick={selectAllArchived}
-                className="text-xs text-text-tertiary hover:text-text-secondary transition-colors font-medium"
-              >
-                {selectedArchived.size === archivedTasks.length ? 'Deselect all' : 'Select all'}
-              </button>
-              {selectedArchived.size > 0 && (
-                <button
-                  onClick={handleBulkDeleteArchived}
-                  disabled={isPending}
-                  className="text-xs text-danger hover:text-red-300 transition-colors font-medium disabled:opacity-40"
-                >
-                  Permanently delete {selectedArchived.size} task{selectedArchived.size !== 1 ? 's' : ''}
-                </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })
               )}
             </div>
-          )}
-          {archivedTasks.length === 0 ? (
-            <div className="text-center py-12 space-y-2">
-              <p className="text-sm text-text-tertiary">Archive is empty.</p>
-              <p className="text-xs text-text-tertiary/60">Move tasks here to remove them from scores without deleting data.</p>
-            </div>
-          ) : (
-            archivedTasks.map((task) => (
-              <div
-                key={task.id}
-                className={cn(
-                  'border rounded-xl p-3 flex items-start gap-3 group transition-colors',
-                  selectedArchived.has(task.id)
-                    ? 'bg-danger/5 border-danger/20'
-                    : 'bg-surface-secondary/30 border-border'
-                )}
-              >
+          </>
+        )}
+
+        {viewTab === 'completed' && (
+          <div>
+            {completedTasks.length > 0 && (
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
+                <span className="text-xs text-text-tertiary">{completedTasks.length} completed task{completedTasks.length !== 1 ? 's' : ''}</span>
                 <button
-                  onClick={() => toggleArchivedSelection(task.id)}
-                  className={cn(
-                    'mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center flex-shrink-0 transition-colors',
-                    selectedArchived.has(task.id)
-                      ? 'bg-danger/20 border-danger/40'
-                      : 'border-border hover:border-text-tertiary'
-                  )}
+                  onClick={() => handleBulkArchiveCompleted(completedTasks.map(t => t.id))}
+                  disabled={isPending}
+                  className="text-xs text-text-tertiary hover:text-amber-400 transition-colors font-medium disabled:opacity-40"
                 >
-                  {selectedArchived.has(task.id) && (
-                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-danger" />
-                    </svg>
-                  )}
+                  Archive all →
                 </button>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-tertiary">{task.title}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    {task.updated_at && (
-                      <span className="text-xs text-text-tertiary/60">
-                        Archived {new Date(task.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </span>
-                    )}
-                    {task.weight && (
-                      <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium opacity-50', WEIGHT_COLORS[task.weight])}>
-                        {task.weight}
-                      </span>
-                    )}
-                    {task.category && (
-                      <span className="text-xs text-text-tertiary/50">
-                        {TASK_CATEGORIES.find(c => c.value === task.category)?.label || task.category}
-                      </span>
-                    )}
-                    {task.client_id && clientMap[task.client_id] && (
-                      <span className="text-xs text-text-tertiary/50">{clientMap[task.client_id].name}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleReactivate(task.id)}
-                    className="text-xs text-text-tertiary hover:text-text-primary transition-all px-2 py-1"
-                  >
-                    Restore
-                  </button>
-                  <button
-                    onClick={() => handlePermanentDelete(task.id)}
-                    disabled={isPending}
-                    className="text-xs text-text-tertiary hover:text-danger transition-all px-2 py-1 disabled:opacity-40"
-                  >
-                    Delete
-                  </button>
-                </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            )}
+            {completedTasks.length === 0 ? (
+              <div className="py-16 text-center">
+                <p className="text-sm text-text-tertiary">No completed tasks yet.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/30">
+                {completedTasks.map((task) => (
+                  <div key={task.id} className="flex items-center gap-3 px-4 py-3 group hover:bg-surface-tertiary/20 transition-colors">
+                    <div className="w-5 h-5 rounded-full bg-accent-green/10 flex items-center justify-center flex-shrink-0">
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6L5 9L10 3" stroke="var(--accent-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0 opacity-30', WEIGHT_DOT[task.weight] || 'bg-text-tertiary')} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-tertiary line-through truncate">{task.title}</p>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                      {task.completed_at && (
+                        <span className="text-[10px] text-text-tertiary/60">
+                          {new Date(task.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                      {task.client_id && clientMap[task.client_id] && (
+                        <span className="text-[10px] text-text-tertiary/50">{clientMap[task.client_id].name}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <button onClick={() => handleReactivate(task.id)} className="text-[11px] text-text-tertiary hover:text-text-primary transition-all px-2 py-1 rounded-lg hover:bg-surface-tertiary">
+                        Reactivate
+                      </button>
+                      <button onClick={() => handleArchive(task.id)} className="text-[11px] text-text-tertiary hover:text-amber-400 transition-all px-2 py-1 rounded-lg hover:bg-amber-400/10">
+                        Archive
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {viewTab === 'archived' && (
+          <div>
+            {archivedTasks.length > 0 && (
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
+                <button
+                  onClick={selectAllArchived}
+                  className="text-xs text-text-tertiary hover:text-text-secondary transition-colors font-medium"
+                >
+                  {selectedArchived.size === archivedTasks.length ? 'Deselect all' : 'Select all'}
+                </button>
+                {selectedArchived.size > 0 && (
+                  <button
+                    onClick={handleBulkDeleteArchived}
+                    disabled={isPending}
+                    className="text-xs text-danger hover:text-red-300 transition-colors font-medium disabled:opacity-40"
+                  >
+                    Delete {selectedArchived.size} selected
+                  </button>
+                )}
+              </div>
+            )}
+            {archivedTasks.length === 0 ? (
+              <div className="py-16 text-center space-y-1">
+                <p className="text-sm text-text-tertiary">Archive is empty.</p>
+                <p className="text-xs text-text-tertiary/60">Archive tasks to remove from scores without deleting data.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/30">
+                {archivedTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 group transition-colors',
+                      selectedArchived.has(task.id) ? 'bg-danger/5' : 'hover:bg-surface-tertiary/20'
+                    )}
+                  >
+                    <button
+                      onClick={() => toggleArchivedSelection(task.id)}
+                      className={cn(
+                        'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors',
+                        selectedArchived.has(task.id)
+                          ? 'bg-danger/20 border-danger/40'
+                          : 'border-border hover:border-text-tertiary'
+                      )}
+                    >
+                      {selectedArchived.has(task.id) && (
+                        <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-danger" />
+                        </svg>
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-tertiary truncate">{task.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {task.updated_at && (
+                          <span className="text-[10px] text-text-tertiary/50">
+                            {new Date(task.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                        {task.category && (
+                          <span className="text-[10px] text-text-tertiary/40">
+                            {TASK_CATEGORIES.find(c => c.value === task.category)?.label || task.category}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <button onClick={() => handleReactivate(task.id)} className="text-[11px] text-text-tertiary hover:text-text-primary transition-all px-2 py-1 rounded-lg hover:bg-surface-tertiary">
+                        Restore
+                      </button>
+                      <button onClick={() => handlePermanentDelete(task.id)} className="text-[11px] text-text-tertiary hover:text-danger transition-all px-2 py-1 rounded-lg hover:bg-danger/10">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Task Form Modal */}
       <TaskFormModal
@@ -702,7 +637,9 @@ function TaskFormModal({ open, onClose, task, clients }: { open: boolean; onClos
   const [loading, setLoading] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
-  const [localClients, setLocalClients] = useState(clients);
+  const [_localClients, _setLocalClients] = useState(clients);
+  void _localClients;
+  void _setLocalClients;
 
   function handleAddClient() {
     if (!newClientName.trim()) return;
@@ -796,7 +733,7 @@ function TaskFormModal({ open, onClose, task, clients }: { open: boolean; onClos
                 onChange={(e) => setNewClientName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddClient())}
                 placeholder="Client name..."
-                className="flex-1 text-sm bg-surface-tertiary border border-border rounded-xl px-2.5 py-1.5 text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-light transition-colors"
+                className="flex-1 text-sm bg-surface-inset border border-border rounded-lg px-2.5 py-1.5 text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/30 transition-colors"
                 autoFocus
               />
               <button

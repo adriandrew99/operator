@@ -141,7 +141,7 @@ export async function handleBankCallback(requisitionId: string): Promise<void> {
 // ━━━ Transaction Sync ━━━
 
 async function syncBankTransactionsInternal(
-  supabase: any,
+  supabase: import('@supabase/supabase-js').SupabaseClient,
   userId: string,
   connectionId: string,
   accountId: string,

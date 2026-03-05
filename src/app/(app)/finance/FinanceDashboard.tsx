@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useState, useEffect, useMemo, useTransition, useRef } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -88,6 +88,8 @@ function shiftMonth(monthStr: string, delta: number): string {
 }
 
 export function FinanceDashboard({ clients, expenses, snapshot, history, pipelineLeads, savingsGoals, currentMonth, clientOverrides = [], clientEnergyProfiles = [], insights = [], monthlySalary = 0, staffCost = 0, staffMembers = [], bankConnections = [], bankTransactions = [], oneoffPayments = [], expenseOverrides = [], allClientOverrides = [] }: FinanceDashboardProps) {
+  const sixtyDaysFromNowRef = useRef(0);
+  useEffect(() => { sixtyDaysFromNowRef.current = Date.now() + 60 * 86400000; }, []);
   const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'expenses' | 'forecast' | 'personal' | 'year' | 'banking'>('overview');
   const [showClientModal, setShowClientModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -509,12 +511,8 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   // ━━━ Salary Allowance Tracker ━━━
   // UK personal allowance: £12,570/year — salary above this is taxable (effectively a dividend for the company)
   const annualSalaryProjected = monthlySalary * 12;
-  const salaryAllowanceUsedPct = annualSalaryProjected > 0 ? Math.min(100, (annualSalaryProjected / UK_PERSONAL_ALLOWANCE) * 100) : 0;
   const salaryExceedsAllowance = annualSalaryProjected > UK_PERSONAL_ALLOWANCE;
   const salaryExcess = Math.max(0, annualSalaryProjected - UK_PERSONAL_ALLOWANCE);
-  // How many months of current salary until allowance is hit
-  const monthsUntilAllowanceHit = monthlySalary > 0 ? Math.floor(UK_PERSONAL_ALLOWANCE / monthlySalary) : Infinity;
-  const monthlyAllowanceLimit = Math.floor(UK_PERSONAL_ALLOWANCE / 12); // £1,047/month
 
   // Revenue stability — Herfindahl-Hirschman Index weighted by renewal probability
   const { stabilityScore, stabilityInsights } = useMemo(() => {
@@ -562,8 +560,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
       insights.push(`Average renewal probability is low at ${avgRenewal.toFixed(0)}% — focus on retention.`);
     }
 
+    // Use current time for "expiring within 90 days" (stable per useMemo run)
+    // eslint-disable-next-line react-hooks/purity -- intentional: expiring threshold is "now"
+    const ninetyDaysFromNow = Date.now() + 90 * 86400000;
     const expiringClients = activeClients.filter(c =>
-      c.contract_end && new Date(c.contract_end) < new Date(Date.now() + 90 * 86400000)
+      c.contract_end && new Date(c.contract_end).getTime() < ninetyDaysFromNow
     );
     if (expiringClients.length > 0) {
       insights.push(`${expiringClients.length} contract${expiringClients.length === 1 ? '' : 's'} expiring within 90 days.`);
@@ -589,11 +590,11 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 relative z-0">
-      <div className="flex items-center justify-between gap-2">
+    <div className="max-w-6xl mx-auto space-y-5 relative z-0">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-page-title text-text-primary">Finance</h1>
-          <p className="text-xs sm:text-sm text-text-tertiary mt-0.5 sm:mt-1">Revenue, expenses & projections</p>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Finance</h1>
+          <p className="text-sm text-text-tertiary mt-0.5">Revenue, expenses & projections</p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Month Navigator */}
@@ -997,16 +998,16 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 sm:gap-1 border-b border-border overflow-x-auto scrollbar-none overscroll-x-contain touch-pan-x">
+      <div className="flex gap-1 bg-surface-secondary border border-border rounded-xl p-1 overflow-x-auto scrollbar-none overscroll-x-contain touch-pan-x">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              'px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all duration-200 border-b-2 -mb-px cursor-pointer whitespace-nowrap flex-shrink-0',
+              'px-3 sm:px-4 py-2 text-xs font-medium transition-all duration-200 rounded-lg cursor-pointer whitespace-nowrap flex-shrink-0',
               activeTab === tab.key
-                ? 'text-accent border-accent'
-                : 'text-text-tertiary border-transparent hover:text-text-secondary'
+                ? 'bg-surface-tertiary text-text-primary shadow-sm'
+                : 'text-text-tertiary hover:text-text-secondary'
             )}
           >
             {tab.label}
@@ -1063,25 +1064,34 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
-              <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'ring-1 ring-accent/20' : '')}>
-                <p className="text-xs font-semibold text-text-tertiary mb-1 flex items-center gap-1">Revenue <InfoTip text="Total monthly income from all active client retainers plus any one-off payments. Tap for breakdown." position="bottom" /></p>
-                <p className="text-xl sm:text-2xl font-bold text-text-primary display-number">{formatCurrency(monthlyRevenue)}</p>
-                {hasOverrides && monthlyRevenue !== confirmedMRR ? (
-                  <p className="text-xs text-text-tertiary mt-1">{formatCurrency(confirmedMRR)} MRR · {activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
-                ) : (
-                  <p className="text-xs text-text-tertiary mt-1">{activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
-                )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Revenue - Hero card with gradient */}
+              <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('relative overflow-hidden rounded-xl bg-surface-secondary border p-5 text-left transition-all cursor-pointer group hover:border-border-light', expandedBox === 'revenue' ? 'border-accent/30 ring-1 ring-accent/10' : 'border-border')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-accent-green/[0.04] to-transparent pointer-events-none" />
+                <div className="relative">
+                  <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.08em] mb-2 flex items-center gap-1">Revenue <InfoTip text="Total monthly income from all active client retainers plus any one-off payments. Tap for breakdown." position="bottom" /></p>
+                  <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(monthlyRevenue)}</p>
+                  {hasOverrides && monthlyRevenue !== confirmedMRR ? (
+                    <p className="text-[10px] text-text-tertiary mt-2">{formatCurrency(confirmedMRR)} MRR · {activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
+                  ) : (
+                    <p className="text-[10px] text-text-tertiary mt-2">{activeClients.length} client{activeClients.length !== 1 ? 's' : ''}</p>
+                  )}
+                </div>
               </button>
-              <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'ring-1 ring-accent/20' : '')}>
-                <p className="text-xs font-semibold text-text-tertiary mb-1 flex items-center gap-1">Expenses <InfoTip text="All business costs: your expenses, director salary, and staff costs. Tap for breakdown." position="bottom" /></p>
-                <p className="text-xl sm:text-2xl font-bold text-text-secondary display-number">{formatCurrency(monthlyExpenses)}</p>
-                <p className="text-xs text-text-tertiary mt-1">Inc. salary & staff</p>
+              {/* Expenses */}
+              <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('relative overflow-hidden rounded-xl bg-surface-secondary border p-5 text-left transition-all cursor-pointer group hover:border-border-light', expandedBox === 'expenses' ? 'border-accent/30 ring-1 ring-accent/10' : 'border-border')}>
+                <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.08em] mb-2 flex items-center gap-1">Expenses <InfoTip text="All business costs: your expenses, director salary, and staff costs. Tap for breakdown." position="bottom" /></p>
+                <p className="text-2xl font-bold text-text-secondary tabular-nums">{formatCurrency(monthlyExpenses)}</p>
+                <p className="text-[10px] text-text-tertiary mt-2">Inc. salary & staff</p>
               </button>
-              <button onClick={() => setExpandedBox(expandedBox === 'net' ? null : 'net')} className={cn('card-elevated rounded-2xl card-hover p-4 sm:p-5 text-left transition-all cursor-pointer', expandedBox === 'net' ? 'ring-1 ring-accent/20' : '')}>
-                <p className="text-xs font-semibold text-text-primary mb-1 flex items-center gap-1">Left in Company <InfoTip text="Revenue minus expenses. This is what stays in the business before corporation tax (19%, paid at year-end)." position="bottom" /></p>
-                <p className="text-xl sm:text-2xl font-bold text-text-primary display-number">{formatCurrency(leftInCompany)}</p>
-                <p className="text-xs text-amber-400/60 mt-1">~{formatCurrency(taxReserve)} tax</p>
+              {/* Net / Left in Company - Hero */}
+              <button onClick={() => setExpandedBox(expandedBox === 'net' ? null : 'net')} className={cn('relative overflow-hidden rounded-xl bg-surface-secondary border p-5 text-left transition-all cursor-pointer group hover:border-border-light', expandedBox === 'net' ? 'border-accent/30 ring-1 ring-accent/10' : 'border-border')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.04] to-transparent pointer-events-none" />
+                <div className="relative">
+                  <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.08em] mb-2 flex items-center gap-1">Left in Company <InfoTip text="Revenue minus expenses. This is what stays in the business before corporation tax (19%, paid at year-end)." position="bottom" /></p>
+                  <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(leftInCompany)}</p>
+                  <p className="text-[10px] text-amber-400/60 mt-2">~{formatCurrency(taxReserve)} corp tax reserve</p>
+                </div>
               </button>
             </div>
           )}
@@ -2454,7 +2464,7 @@ function RevenueRecordsContent({
 
 // ━━━ FORECAST TAB ━━━
 function ForecastTab({
-  monthlyRevenue, monthlyExpenses, leftInCompany, pipelineRevenue, pipelineLeads, history, activeClients, snapshot, overrideMap = {}, liveExpenses = 0, currentMonth, oneoffPayments = [],
+  monthlyRevenue, monthlyExpenses, leftInCompany, pipelineRevenue: _pipelineRevenue, pipelineLeads, history, activeClients, snapshot, overrideMap = {}, liveExpenses: _liveExpenses = 0, currentMonth, oneoffPayments = [],
   expenseOverrideMap = {}, defaultStaffCost = 0, defaultMonthlySalary = 0, liveBusinessExpenses = 0,
 }: {
   monthlyRevenue: number; monthlyExpenses: number; leftInCompany: number; pipelineRevenue: number;
@@ -2479,9 +2489,9 @@ function ForecastTab({
   const [expOverrideSalary, setExpOverrideSalary] = useState('');
   const [expOverrideError, setExpOverrideError] = useState<string | null>(null);
   const [isPendingExpOverride, startExpOverrideTransition] = useTransition();
-  // Sync starting balance when snapshot data changes from server
+  // Sync starting balance when snapshot data changes from server (controlled sync from server state)
   useEffect(() => {
-    setStartingBalance(String(Number(snapshot?.starting_balance) || 0));
+    setStartingBalance(String(Number(snapshot?.starting_balance) || 0)); // eslint-disable-line react-hooks/set-state-in-effect
   }, [snapshot?.starting_balance]);
 
   const startBal = Number(startingBalance) || 0;
@@ -3334,7 +3344,7 @@ function ClientsTab({
                       )}
                       {client.contract_end && (
                         <span className={cn(
-                          new Date(client.contract_end) < new Date(Date.now() + 60 * 86400000) ? 'text-amber-400' : 'text-text-tertiary'
+                          sixtyDaysFromNowRef.current > 0 && new Date(client.contract_end).getTime() < sixtyDaysFromNowRef.current ? 'text-amber-400' : 'text-text-tertiary'
                         )}>
                           Ends {new Date(client.contract_end).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
                         </span>
@@ -4354,22 +4364,22 @@ function ExpenseFormModal({ open, onClose, expense }: {
   const [expenseType, setExpenseType] = useState<'business' | 'personal'>('business');
   const [isPending, setIsPending] = useState(false);
 
-  // Populate form when editing
+  // Populate form when editing (sync prop to local form state)
   useEffect(() => {
     if (expense) {
-      setDescription(expense.description);
-      setAmount(String(expense.amount));
-      setCategory(expense.category);
-      setDate(expense.date);
-      setIsRecurring(expense.is_recurring);
-      setExpenseType(expense.expense_type || 'business');
+      setDescription(expense.description); // eslint-disable-line react-hooks/set-state-in-effect
+      setAmount(String(expense.amount)); // eslint-disable-line react-hooks/set-state-in-effect
+      setCategory(expense.category); // eslint-disable-line react-hooks/set-state-in-effect
+      setDate(expense.date); // eslint-disable-line react-hooks/set-state-in-effect
+      setIsRecurring(expense.is_recurring); // eslint-disable-line react-hooks/set-state-in-effect
+      setExpenseType(expense.expense_type || 'business'); // eslint-disable-line react-hooks/set-state-in-effect
     } else {
-      setDescription('');
-      setAmount('');
-      setCategory('software');
-      setDate(new Date().toISOString().split('T')[0]);
-      setIsRecurring(false);
-      setExpenseType('business');
+      setDescription(''); // eslint-disable-line react-hooks/set-state-in-effect
+      setAmount(''); // eslint-disable-line react-hooks/set-state-in-effect
+      setCategory('software'); // eslint-disable-line react-hooks/set-state-in-effect
+      setDate(new Date().toISOString().split('T')[0]); // eslint-disable-line react-hooks/set-state-in-effect
+      setIsRecurring(false); // eslint-disable-line react-hooks/set-state-in-effect
+      setExpenseType('business'); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [expense]);
 

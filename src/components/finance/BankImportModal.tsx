@@ -24,7 +24,7 @@ type ReviewTransaction = ParsedTransaction & {
 /** Special types that are NOT regular business expenses */
 const SPECIAL_TYPES: TransactionType[] = ['transfer', 'dividend', 'salary', 'tax', 'vat', 'pension'];
 
-const TYPE_LABELS: Record<string, { label: string; color: string; description: string }> = {
+const _TYPE_LABELS: Record<string, { label: string; color: string; description: string }> = {
   transfer: { label: 'TRANSFER', color: 'bg-blue-500/15 text-blue-400', description: 'Internal transfer — excluded' },
   dividend: { label: 'DIVIDEND', color: 'bg-purple-500/15 text-purple-400', description: 'Updates dividend paid on snapshot' },
   salary: { label: 'SALARY', color: 'bg-amber-500/15 text-amber-400', description: 'Updates salary override for the month' },
@@ -90,7 +90,7 @@ export function BankImportModal({ open, onClose, clients = [] }: BankImportModal
   const [transactions, setTransactions] = useState<ReviewTransaction[]>([]);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ importedExpenses: number; importedDividends: number; importedSalary: number; importedTax: number; mappedToClients: number; oneoffPayments: number; skippedIncome: number; monthsReset: number } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [_isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const [resetMonths, setResetMonths] = useState(true);
   const [importProgress, setImportProgress] = useState('');

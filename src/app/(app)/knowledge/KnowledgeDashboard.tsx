@@ -60,9 +60,13 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
   }, [entries, activeTab, searchQuery]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-page-title text-text-primary">Knowledge Vault</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Knowledge Vault</h1>
+          <p className="text-sm text-text-tertiary mt-0.5">Readings, ideas, lessons and mental models</p>
+        </div>
         <Button size="sm" onClick={() => { setEditingEntry(null); setShowModal(true); }}>+ Add Entry</Button>
       </div>
 
@@ -74,86 +78,88 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
             { label: 'Readings', value: stats.readings, color: 'text-text-secondary' },
             { label: 'Completed', value: stats.completed, color: stats.completed > 0 ? 'text-accent' : 'text-text-tertiary' },
             { label: 'Applied', value: stats.applied, color: stats.applied > 0 ? 'text-accent-green' : 'text-text-tertiary' },
-            { label: 'With Takeaways', value: stats.withTakeaways, color: 'text-text-tertiary' },
+            { label: 'Takeaways', value: stats.withTakeaways, color: 'text-text-tertiary' },
           ].map(s => (
-            <div key={s.label} className="bg-surface-secondary border border-border rounded-xl px-3 py-2.5 text-center">
-              <p className={cn('text-lg font-bold', s.color)}>{s.value}</p>
-              <p className="text-xs text-text-tertiary">{s.label}</p>
+            <div key={s.label} className="bg-surface-secondary border border-border rounded-2xl px-3 py-3.5 text-center">
+              <p className={cn('text-xl font-bold tabular-nums', s.color)}>{s.value}</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary mt-1">{s.label}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-        </svg>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search entries, takeaways, tags..."
-          className="w-full text-sm bg-surface-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-light transition-colors"
-        />
-        {searchQuery && (
-          <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-          </button>
-        )}
-      </div>
-
-      {/* Type Tabs */}
-      <div className="flex gap-1 overflow-x-auto border-b border-border pb-px">
-        {TAB_TYPES.map((tab) => {
-          const count = tab.value === 'all' ? entries.length : entries.filter((e) => e.type === tab.value).length;
-          return (
-            <button
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={`px-3 py-2 text-xs whitespace-nowrap transition-colors duration-200 border-b-2 -mb-px cursor-pointer ${
-                activeTab === tab.value
-                  ? 'text-text-primary border-text-primary'
-                  : 'text-text-secondary border-transparent hover:text-text-primary'
-              }`}
-            >
-              {tab.label} ({count})
+      {/* Search + Tabs container */}
+      <div className="bg-surface-secondary border border-border rounded-2xl">
+        {/* Search */}
+        <div className="relative px-4 pt-4">
+          <svg className="absolute left-7 top-1/2 mt-0.5 -translate-y-1/2 text-text-tertiary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search entries, takeaways, tags..."
+            className="w-full text-sm bg-surface-tertiary border border-border rounded-xl pl-9 pr-3 py-2.5 text-text-primary placeholder:text-text-tertiary/60 outline-none focus:border-accent/30 transition-colors"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-7 top-1/2 mt-0.5 -translate-y-1/2 text-text-tertiary hover:text-text-secondary cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
             </button>
-          );
-        })}
-      </div>
+          )}
+        </div>
 
-      {/* Entries */}
-      {filtered.length === 0 ? (
-        <div className="card-elevated rounded-2xl p-10">
-          <div className="empty-state">
-            <div className="empty-state-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {/* Type Tabs — pill style */}
+        <div className="flex gap-1 overflow-x-auto px-4 py-3">
+          {TAB_TYPES.map((tab) => {
+            const count = tab.value === 'all' ? entries.length : entries.filter((e) => e.type === tab.value).length;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={cn(
+                  'px-3 py-1.5 text-xs whitespace-nowrap transition-colors rounded-full cursor-pointer font-medium',
+                  activeTab === tab.value
+                    ? 'bg-surface-tertiary text-text-primary shadow-sm'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary/50'
+                )}
+              >
+                {tab.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Entries */}
+        {filtered.length === 0 ? (
+          <div className="px-4 pb-6 pt-2">
+            <div className="text-center py-10">
+              <svg className="mx-auto mb-3 text-text-tertiary" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
+              <p className="text-sm text-text-tertiary">
+                {searchQuery ? `No entries matching "${searchQuery}"` : 'No entries yet. Start building your knowledge vault.'}
+              </p>
             </div>
-            <p className="text-sm text-text-tertiary">
-              {searchQuery ? `No entries matching "${searchQuery}"` : 'No entries yet. Start building your knowledge vault.'}
-            </p>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((entry) => (
-            <EntryCard
-              key={entry.id}
-              entry={entry}
-              onEdit={() => { setEditingEntry(entry); setShowModal(true); }}
-              onToggleApplied={() => {
-                updateKnowledgeEntry(entry.id, { applied: !entry.applied }).catch(e => console.error(e));
-              }}
-              onDelete={() => {
-                deleteKnowledgeEntry(entry.id).catch(e => console.error(e));
-              }}
-            />
-          ))}
-        </div>
-      )}
+        ) : (
+          <div className="divide-y divide-border">
+            {filtered.map((entry) => (
+              <EntryCard
+                key={entry.id}
+                entry={entry}
+                onEdit={() => { setEditingEntry(entry); setShowModal(true); }}
+                onToggleApplied={() => {
+                  updateKnowledgeEntry(entry.id, { applied: !entry.applied }).catch(e => console.error(e));
+                }}
+                onDelete={() => {
+                  deleteKnowledgeEntry(entry.id).catch(e => console.error(e));
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <EntryFormModal
         open={showModal}
@@ -193,12 +199,12 @@ function EntryCard({
     : 'default' as const;
 
   return (
-    <div className="card-elevated rounded-2xl p-5 space-y-2">
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1 space-y-1">
+    <div className="px-5 py-4 group hover:bg-surface-tertiary/30 transition-colors">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-medium text-text-primary line-clamp-1">{entry.title}</p>
-            <Badge variant="default">{typeLabel}</Badge>
+            <p className="text-sm font-medium text-text-primary">{entry.title}</p>
+            <span className="text-[10px] uppercase tracking-wider text-text-tertiary bg-surface-tertiary rounded-full px-2 py-0.5 font-medium">{typeLabel}</span>
             {entry.type === 'reading' && entry.reading_status && (
               <Badge variant={statusVariant}>{entry.reading_status}</Badge>
             )}
@@ -206,57 +212,49 @@ function EntryCard({
           </div>
 
           {entry.content && (
-            <p className="text-xs text-text-secondary line-clamp-2">{entry.content}</p>
+            <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">{entry.content}</p>
           )}
 
-          {entry.source && (
-            <p className="text-xs text-text-tertiary">Source: {entry.source}</p>
+          <div className="flex items-center gap-3 text-xs text-text-tertiary">
+            {entry.source && <span>Source: {entry.source}</span>}
+            {entry.hook_platform && <span>Platform: {entry.hook_platform}</span>}
+          </div>
+
+          {/* Takeaways */}
+          {(entry.takeaway_1 || entry.takeaway_2 || entry.takeaway_3) && (
+            <div className="space-y-1 pt-1">
+              {[entry.takeaway_1, entry.takeaway_2, entry.takeaway_3].filter(Boolean).map((t, i) => (
+                <p key={i} className="text-xs text-text-secondary pl-3 border-l-2 border-accent/20">{t}</p>
+              ))}
+            </div>
           )}
 
-          {entry.hook_platform && (
-            <p className="text-xs text-text-tertiary">Platform: {entry.hook_platform}</p>
+          {entry.tags && entry.tags.length > 0 && (
+            <div className="flex gap-1 flex-wrap pt-0.5">
+              {entry.tags.map((tag) => (
+                <span key={tag} className="text-xs text-text-tertiary bg-surface-tertiary rounded-full px-2 py-0.5">{tag}</span>
+              ))}
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Takeaways */}
-      {(entry.takeaway_1 || entry.takeaway_2 || entry.takeaway_3) && (
-        <div className="space-y-1 pt-1">
-          <p className="text-xs font-medium text-text-tertiary ">Takeaways</p>
-          {[entry.takeaway_1, entry.takeaway_2, entry.takeaway_3].filter(Boolean).map((t, i) => (
-            <p key={i} className="text-xs text-text-secondary pl-2 border-l border-border">{t}</p>
-          ))}
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity pt-0.5">
+          {entry.type === 'reading' && (
+            <button
+              onClick={onToggleApplied}
+              className="text-xs text-accent hover:text-accent/80 transition-colors px-2 py-1 rounded-md hover:bg-accent/10 cursor-pointer font-medium"
+            >
+              {entry.applied ? 'Unapply' : 'Apply'}
+            </button>
+          )}
+          <button onClick={onEdit} className="text-xs text-text-tertiary hover:text-text-primary transition-colors px-1.5 py-1 cursor-pointer">
+            Edit
+          </button>
+          <button onClick={onDelete} className="text-xs text-text-tertiary hover:text-danger transition-colors px-1.5 py-1 cursor-pointer">
+            ×
+          </button>
         </div>
-      )}
-
-      {entry.tags && entry.tags.length > 0 && (
-        <div className="flex gap-1 flex-wrap">
-          {entry.tags.map((tag) => (
-            <span key={tag} className="text-xs text-text-tertiary bg-surface-tertiary px-1.5 py-0.5">{tag}</span>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center gap-2 pt-1">
-        {entry.type === 'reading' && (
-          <Button size="sm" variant="ghost" onClick={onToggleApplied}>
-            {entry.applied ? 'Mark Unapplied' : 'Mark Applied'}
-          </Button>
-        )}
-        <button
-          onClick={onEdit}
-          className="text-xs text-text-tertiary hover:text-text-primary transition-colors duration-200 ml-auto cursor-pointer"
-          title="Edit entry"
-        >
-          Edit
-        </button>
-        <button
-          onClick={onDelete}
-          className="text-xs text-text-tertiary hover:text-danger transition-colors duration-200 cursor-pointer"
-          title="Delete entry"
-        >
-          Delete
-        </button>
       </div>
     </div>
   );
@@ -288,7 +286,6 @@ function EntryFormModal({
   const [hookPlatform, setHookPlatform] = useState(entry?.hook_platform || '');
 
   // Reset form when entry changes
-  const entryId = entry?.id;
   useState(() => {
     setType(entry?.type || defaultType);
     setTitle(entry?.title || '');

@@ -209,7 +209,7 @@ export async function upsertFinancialSnapshot(updates: Record<string, unknown>) 
 
   // Allow specifying a custom month (for historical entries)
   const month = (updates.month as string) || getMonthStart();
-  const { month: _m, ...rest } = updates;
+  const { month: _, ...rest } = updates;
 
   const { error } = await supabase
     .from('financial_snapshots')

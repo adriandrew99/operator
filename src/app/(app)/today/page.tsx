@@ -27,8 +27,7 @@ export default async function TodayPage() {
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
 
   // Pre-calculate week bounds for parallel fetch
-  const dayOfWeekNum = new Date().getDay();
-  const mondayOffset = dayOfWeekNum === 0 ? -6 : 1 - dayOfWeekNum;
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const mondayDate = new Date();
   mondayDate.setDate(mondayDate.getDate() + mondayOffset);
   const sundayDate = new Date(mondayDate);

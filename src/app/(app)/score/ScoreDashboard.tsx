@@ -59,13 +59,20 @@ export function ScoreDashboard({
   }
 
   // Find missed days (days with a score but no check-in in the last 7 days)
-  const missedDays = scoreHistory
+  const _missedDays = scoreHistory
     .filter(h => h.check_in === null && h.version === 2)
     .slice(-7)
     .map(h => h.date);
+  void _missedDays;
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Operator Score</h1>
+        <p className="text-sm text-text-tertiary mt-0.5">Track daily performance across all dimensions</p>
+      </div>
+
       <BentoGrid columns={4}>
         {/* ━━━ HERO: Score ring + dimension bars ━━━ */}
         <BentoItem span="wide" delay={0}>
@@ -95,8 +102,8 @@ export function ScoreDashboard({
         {/* ━━━ 30-DAY TREND ━━━ */}
         {scoreHistory.length > 0 && (
           <BentoItem span="full" delay={120}>
-            <section className="card-elevated rounded-2xl p-6">
-              <h2 className="text-section-heading text-text-primary mb-4">30-Day Trend</h2>
+            <section className="bg-surface-secondary border border-border rounded-2xl p-6">
+              <h2 className="text-sm font-semibold text-text-primary mb-4">30-Day Trend</h2>
               <ScoreTrendChart history={scoreHistory} />
             </section>
           </BentoItem>
@@ -105,8 +112,8 @@ export function ScoreDashboard({
         {/* ━━━ DIMENSION BREAKDOWN ━━━ */}
         {scoreStats?.dimensionAvgs && (
           <BentoItem span="wide" delay={180}>
-            <section className="card-elevated rounded-2xl p-6 h-full">
-              <h2 className="text-section-heading text-text-primary mb-4">Dimension Averages</h2>
+            <section className="bg-surface-secondary border border-border rounded-2xl p-6 h-full">
+              <h2 className="text-sm font-semibold text-text-primary mb-4">Dimension Averages</h2>
               <DimensionBreakdown averages={scoreStats.dimensionAvgs} />
             </section>
           </BentoItem>
@@ -115,8 +122,8 @@ export function ScoreDashboard({
         {/* ━━━ WEEKLY AVERAGES ━━━ */}
         {scoreStats && scoreStats.weeklyAverages.length > 0 && (
           <BentoItem span="wide" delay={240}>
-            <section className="card-elevated rounded-2xl p-6 h-full">
-              <h2 className="text-section-heading text-text-primary mb-4">Weekly Progress</h2>
+            <section className="bg-surface-secondary border border-border rounded-2xl p-6 h-full">
+              <h2 className="text-sm font-semibold text-text-primary mb-4">Weekly Progress</h2>
               <WeeklyAverages weeks={scoreStats.weeklyAverages} />
             </section>
           </BentoItem>

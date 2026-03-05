@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import {
-  getTransactions,
-  getAccessToken,
-} from '@/lib/gocardless';
+import { getTransactions } from '@/lib/gocardless';
 import { suggestCategory } from '@/lib/bank-categories';
 
 export const dynamic = 'force-dynamic';

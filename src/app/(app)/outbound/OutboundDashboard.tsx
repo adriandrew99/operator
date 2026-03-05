@@ -10,9 +10,9 @@ interface OutboundDashboardProps {
 }
 
 const STATUS_STYLES: Record<OutboundCampaignStatus, { bg: string; text: string; label: string }> = {
-  active: { bg: 'bg-surface-tertiary', text: 'text-text-primary', label: 'Active' },
+  active: { bg: 'bg-accent-green/10', text: 'text-accent-green', label: 'Active' },
   paused: { bg: 'bg-surface-tertiary', text: 'text-text-secondary', label: 'Paused' },
-  completed: { bg: 'bg-surface-tertiary', text: 'text-text-secondary', label: 'Completed' },
+  completed: { bg: 'bg-surface-tertiary', text: 'text-text-tertiary', label: 'Completed' },
 };
 
 export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashboardProps) {
@@ -48,9 +48,23 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
   // ━━━ OVERVIEW ━━━
   if (view === 'overview') {
     return (
-      <div className="space-y-5">
-        {/* Summary strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary tracking-tight">Outbound</h1>
+            <p className="text-sm text-text-tertiary mt-0.5">Track campaigns and conversion funnels</p>
+          </div>
+          <button
+            onClick={() => setShowNewForm(true)}
+            className="text-xs px-3.5 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors cursor-pointer font-medium"
+          >
+            + New Campaign
+          </button>
+        </div>
+
+        {/* Summary metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <MetricPill label="Sends" value={globalTotals.sends} />
           <MetricPill label="Responses" value={globalTotals.responses} />
           <MetricPill label="Response %" value={`${responseRate}%`} accent={Number(responseRate) > 10} />
@@ -59,26 +73,18 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setView('overview')}
-              className="text-xs px-2.5 py-1 rounded-lg font-medium bg-surface-tertiary text-text-primary"
-            >
-              Campaigns
-            </button>
-            <button
-              onClick={() => setView('compare')}
-              className="text-xs px-2.5 py-1 rounded-lg font-medium text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer"
-            >
-              Compare
-            </button>
-          </div>
+        <div className="flex items-center gap-1 bg-surface-secondary border border-border rounded-xl p-1 w-fit">
           <button
-            onClick={() => setShowNewForm(true)}
-            className="text-xs px-3 py-1.5 rounded-lg bg-text-primary text-background hover:bg-text-primary/90 transition-colors cursor-pointer font-medium"
+            onClick={() => setView('overview')}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium bg-surface-tertiary text-text-primary shadow-sm transition-colors"
           >
-            + New Campaign
+            Campaigns
+          </button>
+          <button
+            onClick={() => setView('compare')}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
+          >
+            Compare
           </button>
         </div>
 
@@ -93,11 +99,11 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
 
         {/* Campaign cards */}
         {campaigns.length === 0 && !showNewForm ? (
-          <div className="card-elevated rounded-2xl p-8 text-center">
+          <div className="bg-surface-secondary border border-border rounded-2xl p-10 text-center">
             <p className="text-sm text-text-tertiary mb-3">No campaigns yet</p>
             <button
               onClick={() => setShowNewForm(true)}
-              className="text-xs px-4 py-2 rounded-lg bg-text-primary text-background hover:bg-text-primary/90 transition-colors cursor-pointer font-medium"
+              className="text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors cursor-pointer font-medium"
             >
               Create your first campaign
             </button>
@@ -120,18 +126,20 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
   // ━━━ COMPARE ━━━
   if (view === 'compare') {
     return (
-      <div className="space-y-5">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setView('overview')}
-            className="text-xs text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
-          >
-            ← Back
-          </button>
-          <h2 className="text-section-heading text-text-primary">Compare Campaigns</h2>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setView('overview')}
+              className="text-xs text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
+            >
+              ← Back
+            </button>
+            <h2 className="text-lg font-bold text-text-primary">Compare Campaigns</h2>
+          </div>
         </div>
 
-        <div className="card-elevated rounded-2xl overflow-hidden">
+        <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -200,11 +208,11 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
 // ━━━ Metric Pill ━━━
 function MetricPill({ label, value, accent }: { label: string; value: number | string; accent?: boolean }) {
   return (
-    <div className="card-elevated rounded-2xl p-3 text-center">
-      <p className="text-lg font-bold font-mono leading-none text-text-primary">
+    <div className="bg-surface-secondary border border-border rounded-2xl p-4 text-center">
+      <p className={cn('text-xl font-bold font-mono leading-none tabular-nums', accent ? 'text-accent' : 'text-text-primary')}>
         {value}
       </p>
-      <p className="text-xs text-text-tertiary mt-1">{label}</p>
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary mt-1.5">{label}</p>
     </div>
   );
 }
@@ -217,16 +225,16 @@ function CampaignCard({ campaign, onOpen }: { campaign: OutboundCampaignWithEntr
   return (
     <button
       onClick={onOpen}
-      className="card-elevated rounded-2xl p-6 text-left hover:bg-surface-tertiary transition-colors cursor-pointer w-full"
+      className="bg-surface-secondary border border-border rounded-2xl p-5 text-left hover:border-border-light transition-all cursor-pointer w-full"
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-start justify-between gap-2 mb-4">
         <div className="min-w-0">
-          <h3 className="text-section-heading text-text-primary truncate">{campaign.name}</h3>
+          <h3 className="text-sm font-semibold text-text-primary truncate">{campaign.name}</h3>
           {campaign.target_audience && (
             <p className="text-xs text-text-tertiary mt-0.5 truncate">{campaign.target_audience}</p>
           )}
         </div>
-        <span className={cn('text-xs px-1.5 py-0.5 rounded-md font-medium flex-shrink-0', style.bg, style.text)}>
+        <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0', style.bg, style.text)}>
           {style.label}
         </span>
       </div>
@@ -234,24 +242,24 @@ function CampaignCard({ campaign, onOpen }: { campaign: OutboundCampaignWithEntr
       {/* Mini funnel */}
       <div className="grid grid-cols-4 gap-2 text-center">
         <div>
-          <p className="text-sm font-bold font-mono text-text-primary">{campaign.totals.sends}</p>
-          <p className="text-xs text-text-tertiary">Sends</p>
+          <p className="text-base font-bold font-mono text-text-primary tabular-nums">{campaign.totals.sends}</p>
+          <p className="text-[10px] uppercase tracking-wider text-text-tertiary mt-0.5">Sends</p>
         </div>
         <div>
-          <p className="text-sm font-bold font-mono text-text-primary">{campaign.totals.responses}</p>
-          <p className="text-xs text-text-tertiary">Replies</p>
+          <p className="text-base font-bold font-mono text-text-primary tabular-nums">{campaign.totals.responses}</p>
+          <p className="text-[10px] uppercase tracking-wider text-text-tertiary mt-0.5">Replies</p>
         </div>
         <div>
-          <p className="text-sm font-bold font-mono text-text-primary">{campaign.totals.calls_booked}</p>
-          <p className="text-xs text-text-tertiary">Calls</p>
+          <p className="text-base font-bold font-mono text-text-primary tabular-nums">{campaign.totals.calls_booked}</p>
+          <p className="text-[10px] uppercase tracking-wider text-text-tertiary mt-0.5">Calls</p>
         </div>
         <div>
-          <p className="text-sm font-bold font-mono text-text-primary">{campaign.totals.closes}</p>
-          <p className="text-xs text-text-tertiary">Closes</p>
+          <p className="text-base font-bold font-mono text-text-primary tabular-nums">{campaign.totals.closes}</p>
+          <p className="text-[10px] uppercase tracking-wider text-text-tertiary mt-0.5">Closes</p>
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-text-tertiary">
+      <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-text-tertiary">
         <span>{rr}% response rate</span>
         <span>{campaign.entries.length} entries</span>
       </div>
@@ -289,9 +297,9 @@ function NewCampaignForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card-elevated rounded-2xl p-6 space-y-3">
+    <form onSubmit={handleSubmit} className="bg-surface-secondary border border-border rounded-2xl p-6 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-section-heading text-text-primary">New Campaign</h3>
+        <h3 className="text-sm font-semibold text-text-primary">New Campaign</h3>
         <button type="button" onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
           Cancel
         </button>
@@ -332,7 +340,7 @@ function NewCampaignForm({
           className={cn(
             'px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer',
             name.trim()
-              ? 'bg-text-primary text-background hover:bg-text-primary/90'
+              ? 'bg-accent text-white hover:bg-accent/90'
               : 'bg-surface-tertiary text-text-tertiary cursor-not-allowed'
           )}
         >
@@ -380,14 +388,14 @@ function CampaignDetail({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
           <button onClick={onBack} className="text-xs text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer mb-1">
             ← Campaigns
           </button>
-          <h2 className="text-section-heading text-text-primary">{campaign.name}</h2>
+          <h2 className="text-lg font-bold text-text-primary">{campaign.name}</h2>
           {campaign.target_audience && (
             <p className="text-xs text-text-tertiary mt-0.5">{campaign.target_audience}</p>
           )}
@@ -428,10 +436,10 @@ function CampaignDetail({
 
       {/* Message template (collapsible) */}
       {campaign.message_template && (
-        <div className="card-elevated rounded-2xl">
+        <div className="bg-surface-secondary border border-border rounded-2xl">
           <button
             onClick={() => setShowTemplate(!showTemplate)}
-            className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between px-5 py-3 text-xs text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
           >
             <span className="font-medium">Message Template</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
@@ -448,8 +456,8 @@ function CampaignDetail({
       )}
 
       {/* Conversion funnel */}
-      <div className="card-elevated rounded-2xl p-6">
-        <h3 className="text-xs font-medium text-text-tertiary mb-3">Conversion Funnel</h3>
+      <div className="bg-surface-secondary border border-border rounded-2xl p-6">
+        <h3 className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary mb-4">Conversion Funnel</h3>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <FunnelStep label="Sends" value={campaign.totals.sends} />
           <FunnelArrow pct={rr} />
@@ -463,10 +471,10 @@ function CampaignDetail({
 
       {/* Add entry */}
       <div className="flex items-center justify-between">
-        <h3 className="text-section-heading text-text-primary">Daily Log</h3>
+        <h3 className="text-sm font-semibold text-text-primary">Daily Log</h3>
         <button
           onClick={() => setShowAddEntry(true)}
-          className="text-xs px-3 py-1.5 rounded-lg bg-text-primary text-background hover:bg-text-primary/90 transition-colors cursor-pointer font-medium"
+          className="text-xs px-3 py-1.5 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors cursor-pointer font-medium"
         >
           + Log Activity
         </button>
@@ -483,11 +491,11 @@ function CampaignDetail({
 
       {/* Entry list */}
       {campaign.entries.length === 0 ? (
-        <div className="card-elevated rounded-2xl p-6 text-center">
+        <div className="bg-surface-secondary border border-border rounded-2xl p-6 text-center">
           <p className="text-xs text-text-tertiary">No entries yet. Log your first batch of sends.</p>
         </div>
       ) : (
-        <div className="card-elevated rounded-2xl overflow-hidden">
+        <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -572,7 +580,7 @@ function AddEntryForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card-elevated rounded-2xl p-4 space-y-3">
+    <form onSubmit={handleSubmit} className="bg-surface-secondary border border-border rounded-2xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-medium text-text-primary">Log Activity</h4>
         <button type="button" onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">Cancel</button>
@@ -617,7 +625,7 @@ function AddEntryForm({
         <button
           type="submit"
           disabled={isPending}
-          className="px-4 py-1.5 rounded-lg text-xs font-medium bg-text-primary text-background hover:bg-text-primary/90 transition-all cursor-pointer"
+          className="px-4 py-1.5 rounded-lg text-xs font-medium bg-accent text-white hover:bg-accent/90 transition-all cursor-pointer"
         >
           {isPending ? 'Saving...' : 'Save Entry'}
         </button>

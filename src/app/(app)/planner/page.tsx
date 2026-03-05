@@ -79,8 +79,8 @@ export default async function PlannerPage({
 
   const allTasks = allActiveTasksRes.data || [];
   const clientsList = clientsRes.data || [];
-  const scheduledTaskIds = new Set(scheduledTasks.map((t: any) => t.id));
-  const unscheduledTasks = allTasks.filter((t: any) => !scheduledTaskIds.has(t.id));
+  const scheduledTaskIds = new Set(scheduledTasks.map((t: { id: string }) => t.id));
+  const unscheduledTasks = allTasks.filter((t: { id: string }) => !scheduledTaskIds.has(t.id));
 
   return (
     <div className="space-y-6">

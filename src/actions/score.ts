@@ -5,7 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { getToday } from '@/lib/utils/date';
 import { calculateOperatorScoreV2 } from '@/lib/utils/score';
 import { calculateDailyLoad, DAILY_CAPACITY } from '@/lib/utils/mental-load';
-import type { CheckInRatings, OperatorScore } from '@/lib/types/database';
+import type { CheckInRatings, OperatorScore, ScoreBreakdownV2, Task } from '@/lib/types/database';
+
+interface CompletionRow { fundamental_id: string; completed: boolean }
 
 // ━━━ Save Check-In ━━━
 
@@ -55,13 +57,13 @@ export async function saveCheckIn(
   const completions = completionsRes.data || [];
   const capacity = profileRes?.data?.daily_mlu_capacity ?? DAILY_CAPACITY;
 
-  const completedIds = new Set(completions.filter((c: any) => c.completed).map((c: any) => c.fundamental_id));
-  const fundamentalsHit = fundamentals.filter((f: any) => completedIds.has(f.id)).length;
+  const completedIds = new Set(completions.filter((c: CompletionRow) => c.completed).map((c: CompletionRow) => c.fundamental_id));
+  const fundamentalsHit = fundamentals.filter((f: { id: string }) => completedIds.has(f.id)).length;
 
   // Calculate all tasks for today (active + completed)
   const allTasks = [...todayTasks, ...completedTasks];
-  const nonPersonalTasks = allTasks.filter((t: any) => !t.is_personal);
-  const completedNonPersonal = completedTasks.filter((t: any) => !t.is_personal);
+  const nonPersonalTasks = allTasks.filter((t: Task) => !t.is_personal);
+  const completedNonPersonal = completedTasks.filter((t: Task) => !t.is_personal);
 
   const result = calculateOperatorScoreV2({
     tasksCompleted: completedNonPersonal.length,
@@ -146,12 +148,12 @@ export async function recalculateAutoScore() {
   const completions = completionsRes.data || [];
   const capacity = profileRes?.data?.daily_mlu_capacity ?? DAILY_CAPACITY;
 
-  const completedIds = new Set(completions.filter((c: any) => c.completed).map((c: any) => c.fundamental_id));
-  const fundamentalsHit = fundamentals.filter((f: any) => completedIds.has(f.id)).length;
+  const completedIds = new Set(completions.filter((c: CompletionRow) => c.completed).map((c: CompletionRow) => c.fundamental_id));
+  const fundamentalsHit = fundamentals.filter((f: { id: string }) => completedIds.has(f.id)).length;
 
   const allTasks = [...todayTasks, ...completedTasks];
-  const nonPersonalTasks = allTasks.filter((t: any) => !t.is_personal);
-  const completedNonPersonal = completedTasks.filter((t: any) => !t.is_personal);
+  const nonPersonalTasks = allTasks.filter((t: Task) => !t.is_personal);
+  const completedNonPersonal = completedTasks.filter((t: Task) => !t.is_personal);
 
   // Get streak — use internal function to avoid extra auth call
   const streakDays = await getStreakDaysInternal(supabase, user.id);
@@ -218,7 +220,8 @@ export async function saveCheckInForDate(
 
   // If there's an existing score, recalculate with check-in
   // If no existing score, we create one with just the check-in (auto metrics set to 0)
-  let breakdown: any = existing?.breakdown || { execution: 0, habits: 0, focus: 0, energy: 0, decisions: 0, clarity: 0, stress: 0, momentum: 0 };
+  const existingBreakdown = existing?.breakdown as ScoreBreakdownV2 | undefined;
+  const breakdown: ScoreBreakdownV2 = existingBreakdown && 'execution' in existingBreakdown ? existingBreakdown : { execution: 0, habits: 0, focus: 0, energy: 0, decisions: 0, clarity: 0, stress: 0, momentum: 0 };
 
   // Recalculate self-assessed dimensions with new ratings
   const focus = Math.round((ratings.focus / 5) * 12);
@@ -378,12 +381,12 @@ export async function getScoreStats() {
   // Dimension averages (V2 scores only)
   const v2Scores = data.filter(d => d.version === 2 && d.breakdown);
   const dimensionAvgs = v2Scores.length > 0 ? {
-    execution: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as any)?.execution || 0), 0) / v2Scores.length),
-    habits: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as any)?.habits || 0), 0) / v2Scores.length),
-    focus: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as any)?.focus || 0), 0) / v2Scores.length),
-    energy: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as any)?.energy || 0), 0) / v2Scores.length),
-    decisions: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as any)?.decisions || 0), 0) / v2Scores.length),
-    momentum: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as any)?.momentum || 0), 0) / v2Scores.length),
+    execution: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as ScoreBreakdownV2)?.execution || 0), 0) / v2Scores.length),
+    habits: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as ScoreBreakdownV2)?.habits || 0), 0) / v2Scores.length),
+    focus: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as ScoreBreakdownV2)?.focus || 0), 0) / v2Scores.length),
+    energy: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as ScoreBreakdownV2)?.energy || 0), 0) / v2Scores.length),
+    decisions: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as ScoreBreakdownV2)?.decisions || 0), 0) / v2Scores.length),
+    momentum: Math.round(v2Scores.reduce((s, d) => s + ((d.breakdown as ScoreBreakdownV2)?.momentum || 0), 0) / v2Scores.length),
   } : null;
 
   // Check-in rate
@@ -412,7 +415,7 @@ export async function getStreakDays(): Promise<number> {
   return getStreakDaysInternal(supabase, user.id);
 }
 
-async function getStreakDaysInternal(supabase: any, userId: string): Promise<number> {
+async function getStreakDaysInternal(supabase: import('@supabase/supabase-js').SupabaseClient, userId: string): Promise<number> {
   const { data } = await supabase
     .from('operator_scores')
     .select('date, score, version')

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { CATEGORY_KEYWORDS, suggestCategory } from '@/lib/bank-categories';
+import { suggestCategory } from '@/lib/bank-categories';
 
 export type TransactionType = 'income' | 'expense' | 'transfer' | 'dividend' | 'salary' | 'tax' | 'vat' | 'pension';
 
@@ -52,11 +52,6 @@ const PENSION_KEYWORDS = [
   'pension', 'nest', 'workplace pension', 'auto enrolment',
   'pension contribution', 'retirement',
 ];
-
-function isLikelyTransfer(description: string): boolean {
-  const lower = description.toLowerCase();
-  return TRANSFER_KEYWORDS.some(kw => lower.includes(kw));
-}
 
 /** Detect special outgoing transaction types that are NOT regular business expenses */
 function detectSpecialType(description: string, baseType: 'income' | 'expense'): TransactionType {
@@ -702,7 +697,7 @@ export async function importTransactions(
         // Retry without expense_type if column doesn't exist
         const { error: retryError } = await supabase
           .from('expenses')
-          .insert(expensesToInsert.map(({ expense_type: _et, ...rest }) => rest));
+          .insert(expensesToInsert.map(({ expense_type: _, ...rest }) => rest));
 
         if (retryError) {
           console.error('Retry also failed:', retryError.message);
@@ -799,7 +794,7 @@ export async function importTransactions(
       const { error } = await supabase.from('expenses').insert(rows);
       if (error) {
         // Fallback without expense_type
-        await supabase.from('expenses').insert(rows.map(({ expense_type: _et, ...rest }) => rest));
+        await supabase.from('expenses').insert(rows.map(({ expense_type: _, ...rest }) => rest));
       }
     }
   }

@@ -21,7 +21,7 @@ async function buildFinancialContext(): Promise<string> {
     getFinancialSnapshot(currentMonth).catch(() => null),
     getFinancialHistory(12).catch(() => []),
     getSavingsGoals().catch(() => []),
-    Promise.resolve(supabase.from('profiles').select('salary, staff_cost').eq('id', user.id).single()).then(r => r.data).catch(() => null),
+    Promise.resolve(supabase.from('profiles').select('monthly_salary, staff_cost').eq('id', user.id).single()).then(r => r.data).catch(() => null),
     getStaffMembers().catch(() => []),
   ]);
 
@@ -57,7 +57,7 @@ async function buildFinancialContext(): Promise<string> {
     `- Business expenses: £${businessExpenses.toLocaleString()}`,
     `- Personal expenses: £${personalExpenses.toLocaleString()}`,
     `- Total expenses: £${(snapshot?.total_expenses || (businessExpenses + personalExpenses)).toLocaleString()}`,
-    ...(profileRes?.salary ? [`- Monthly salary: £${profileRes.salary.toLocaleString()}`] : []),
+    ...(profileRes?.monthly_salary ? [`- Monthly salary: £${profileRes.monthly_salary.toLocaleString()}`] : []),
     '',
     `### Tax & Reserves`,
     `- Corp tax reserve (19%): £${snapshot?.corp_tax_reserve?.toLocaleString() || 'N/A'}`,

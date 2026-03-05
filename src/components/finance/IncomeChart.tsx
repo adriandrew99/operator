@@ -30,13 +30,14 @@ const RANGE_OPTIONS = [
 
 const PROJECTION_MONTHS = 2;
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipPayloadItem { name?: string; value?: number; color?: string }
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadItem[]; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">
       {label && <p className="chart-tooltip-label">{label}</p>}
       <div className="space-y-1.5">
-        {payload.map((entry: any, i: number) => {
+        {payload.map((entry: TooltipPayloadItem, i: number) => {
           if (entry.value == null) return null;
           return (
             <div key={i} className="flex items-center justify-between gap-6">

@@ -39,11 +39,11 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
   useEffect(() => {
     const weekId = getWeekId();
     const viewed = localStorage.getItem('debrief-viewed') === weekId;
-    setDebriefViewed(viewed);
+    setDebriefViewed(viewed); // eslint-disable-line react-hooks/set-state-in-effect
 
     if (pathname.startsWith('/analytics') && debriefReady && !viewed) {
       localStorage.setItem('debrief-viewed', weekId);
-      setDebriefViewed(true);
+      setDebriefViewed(true); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [pathname, debriefReady]);
 

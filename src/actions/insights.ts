@@ -1432,7 +1432,6 @@ export async function detectPatterns(): Promise<DetectedPattern[]> {
     correlations.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
     if (correlations.length > 0 && Math.abs(correlations[0].diff) >= 5) {
       const top = correlations[0];
-      const direction = top.diff > 0 ? 'higher' : 'lower';
       const label = top.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       patterns.push({
         category: 'correlation',
@@ -1798,7 +1797,7 @@ async function backfillDebriefHistory(): Promise<void> {
       .select('week_start')
       .eq('user_id', user.id)
   ).catch(() => ({ data: null }));
-  const existingWeeks = new Set((existingRes?.data || []).map((r: any) => r.week_start));
+  const existingWeeks = new Set((existingRes?.data || []).map((r: { week_start: string }) => r.week_start));
 
   // Get all weeks that have completed tasks
   const tasksRes = await supabase
@@ -1859,7 +1858,8 @@ async function backfillDebriefHistory(): Promise<void> {
   const allTasks = allTasksRes.data || [];
   const clientsData = clientsRes.data || [];
   const clientMap = new Map(clientsData.map(c => [c.id, c]));
-  const allOverrides = (overridesRes as { data: any[] }).data || [];
+  interface ClientOverrideRow { client_id: string; amount: number | null; month: string }
+  const allOverrides: ClientOverrideRow[] = (overridesRes as { data: ClientOverrideRow[] }).data || [];
 
   // Process each missing week
   for (const weekMon of weeksToBackfill) {

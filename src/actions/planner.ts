@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import type { TimePeriod } from '@/lib/types/database';
+import type { TimePeriod, Task } from '@/lib/types/database';
 import { getTaskMLU } from '@/lib/utils/mental-load';
 import { ENERGY_PERIOD_MAP } from '@/lib/constants';
 
@@ -239,7 +239,7 @@ export async function suggestPlan(weekStart: string): Promise<SuggestionResult[]
 
   const allTasks = tasksRes.data || [];
   // Exclude personal tasks from planning — they don't contribute to MLU
-  const tasks = allTasks.filter((t: any) => !t.is_personal);
+  const tasks = allTasks.filter((t: Task) => !t.is_personal);
   if (tasks.length === 0) return [];
 
   const events = eventsRes.data || [];
@@ -452,7 +452,7 @@ function getDayIndex(dateStr: string): number {
   return dow === 0 ? 6 : dow - 1; // Convert Sun=0 → 6, Mon=1 → 0
 }
 
-function getThemeScore(theme: string | undefined, task: any): number {
+function getThemeScore(theme: string | undefined, task: Task): number {
   if (!theme) return 0;
   const t = theme.toLowerCase();
   if (t.includes('client') && task.client_id) return 3;
@@ -479,7 +479,7 @@ function mergePreferences(energyPref: TimePeriod[], weightPref: TimePeriod[]): T
 }
 
 function buildReasoning(
-  task: any,
+  task: Task,
   date: string,
   period: TimePeriod,
   themeMap: Record<number, string>,

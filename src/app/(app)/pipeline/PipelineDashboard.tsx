@@ -16,7 +16,7 @@ interface PipelineDashboardProps {
   leads: PipelineLead[];
 }
 
-const STAGE_COLORS: Record<string, string> = {
+const _STAGE_COLORS: Record<string, string> = {
   lead: 'text-text-secondary',
   conversation: 'text-text-secondary',
   proposal_sent: 'text-text-secondary',
@@ -169,69 +169,86 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
     });
   }
 
+  const activeLeads = leads.filter((l) => l.stage !== 'lost' && l.stage !== 'closed');
+  const weightedValue = activeLeads.reduce((sum, l) => sum + (l.estimated_value || 0) * ((l.probability ?? STAGE_PROBABILITY_DEFAULTS[l.stage] ?? 0) / 100), 0);
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-page-title text-text-primary">Pipeline</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Pipeline</h1>
+          <p className="text-sm text-text-tertiary mt-0.5">Track leads from first contact to close</p>
+        </div>
         <Button size="sm" onClick={() => setShowModal(true)}>+ Add Lead</Button>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Pipeline Value</p>
+          <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(pipelineValue)}</p>
+        </div>
+        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5 bg-gradient-to-br from-accent-green/[0.04] to-transparent">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Closed Value</p>
+          <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(closedValue)}</p>
+        </div>
+        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Weighted</p>
+          <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(weightedValue)}</p>
+        </div>
+        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Active Leads</p>
+          <p className="text-2xl font-bold text-text-primary tabular-nums">{activeLeads.length}</p>
+          <p className="text-xs text-text-tertiary">{leads.length} total</p>
+        </div>
       </div>
 
       {/* Next Action Banner */}
       {nextAction && (
-        <div className="card-elevated rounded-2xl p-5 flex items-center justify-between">
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-text-tertiary ">Next Action</p>
-            <p className="text-sm text-text-primary">{nextAction.next_action}</p>
-            <p className="text-xs text-text-secondary">{nextAction.name} {nextAction.company ? `@ ${nextAction.company}` : ''} &middot; {nextAction.next_action_date}</p>
+        <div className="bg-surface-secondary border border-border rounded-2xl p-4 flex items-center gap-4">
+          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-accent">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-text-tertiary mb-0.5">Next Action</p>
+            <p className="text-sm font-medium text-text-primary">{nextAction.next_action}</p>
+            <p className="text-xs text-text-tertiary mt-0.5">{nextAction.name} {nextAction.company ? `@ ${nextAction.company}` : ''} · {nextAction.next_action_date}</p>
           </div>
         </div>
       )}
 
-      {/* Funnel Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card-elevated rounded-2xl p-6 space-y-2">
-          <p className="text-xs font-medium text-text-tertiary ">Pipeline Value</p>
-          <p className="text-xl font-bold text-text-primary">{formatCurrency(pipelineValue)}</p>
-        </div>
-        <div className="card-elevated rounded-2xl p-6 space-y-2">
-          <p className="text-xs font-medium text-text-tertiary ">Closed Value</p>
-          <p className="text-xl font-bold text-text-primary">{formatCurrency(closedValue)}</p>
-        </div>
-        <div className="card-elevated rounded-2xl p-6 space-y-2">
-          <p className="text-xs font-medium text-text-tertiary ">Active Leads</p>
-          <p className="text-xl font-bold text-text-primary">{leads.filter((l) => l.stage !== 'lost' && l.stage !== 'closed').length}</p>
-        </div>
-        <div className="card-elevated rounded-2xl p-6 space-y-2">
-          <p className="text-xs font-medium text-text-tertiary ">Total Leads</p>
-          <p className="text-xl font-bold text-text-secondary">{leads.length}</p>
-        </div>
-      </div>
-
-      {/* Stage Columns */}
-      <div className="space-y-6">
-        {stages.map((stage) => {
+      {/* Stage Sections */}
+      <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+        {stages.map((stage, stageIdx) => {
           const stageLeads = leads.filter((l) => l.stage === stage);
           const stageLabel = LEAD_STAGES.find((s) => s.value === stage)?.label || stage;
           const stageValue = stageLeads.reduce((sum, l) => sum + (l.estimated_value || 0), 0);
+          const stageDot = stage === 'closed' ? 'bg-accent-green' : stage === 'lost' ? 'bg-text-tertiary' : 'bg-accent';
 
           return (
-            <div key={stage} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className={`text-section-heading ${STAGE_COLORS[stage] || 'text-text-primary'}`}>{stageLabel}</h3>
-                  <span className="text-xs text-text-tertiary">({stageLeads.length})</span>
+            <div key={stage} className={cn(stageIdx > 0 && 'border-t border-border')}>
+              {/* Stage header */}
+              <div className="flex items-center justify-between px-5 py-3 bg-surface-tertiary/50">
+                <div className="flex items-center gap-2.5">
+                  <div className={cn('w-2 h-2 rounded-full', stageDot)} />
+                  <span className="text-sm font-semibold text-text-primary">{stageLabel}</span>
+                  <span className="text-xs text-text-tertiary bg-surface-tertiary rounded-full px-2 py-0.5">{stageLeads.length}</span>
                 </div>
                 {stageValue > 0 && (
-                  <span className="text-xs text-text-secondary">{formatCurrency(stageValue)}</span>
+                  <span className="text-xs font-medium text-text-secondary tabular-nums">{formatCurrency(stageValue)}</span>
                 )}
               </div>
 
+              {/* Lead rows */}
               {stageLeads.length === 0 ? (
-                <div className="card-elevated rounded-2xl p-5 text-center">
+                <div className="px-5 py-4">
                   <p className="text-xs text-text-tertiary">No leads in this stage</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="divide-y divide-border">
                   {stageLeads.map((lead) => (
                     <LeadCard
                       key={lead.id}
@@ -295,74 +312,66 @@ function LeadCard({
   const stages: LeadStage[] = ['lead', 'conversation', 'proposal_sent', 'closed', 'lost'];
   const currentIndex = stages.indexOf(lead.stage);
 
+  const prob = lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0;
+
   return (
-    <div className="card-elevated rounded-2xl p-5 space-y-2 group">
-      <div className="flex items-start justify-between">
+    <div className="px-5 py-3.5 group hover:bg-surface-tertiary/30 transition-colors">
+      <div className="flex items-center gap-4">
+        {/* Lead info */}
         <div className="min-w-0 flex-1 cursor-pointer" onClick={onEdit}>
-          <p className="text-sm font-medium text-text-primary">{lead.name}</p>
-          {lead.company && <p className="text-xs text-text-secondary">{lead.company}</p>}
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-text-primary truncate">{lead.name}</p>
+            {lead.company && (
+              <span className="text-xs text-text-tertiary truncate hidden sm:inline">@ {lead.company}</span>
+            )}
+          </div>
+          {lead.next_action && (
+            <p className="text-xs text-text-tertiary mt-0.5 truncate">
+              Next: {lead.next_action}
+              {lead.next_action_date && <span> · {lead.next_action_date}</span>}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2 ml-3">
+
+        {/* Metadata chips */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {lead.source && (
+            <span className="text-xs text-text-tertiary bg-surface-tertiary rounded-full px-2 py-0.5 hidden sm:inline">{lead.source}</span>
+          )}
           {lead.estimated_value != null && lead.estimated_value > 0 && (
-            <span className="text-sm font-medium text-text-primary">{formatCurrency(lead.estimated_value)}</span>
+            <span className="text-sm font-semibold text-text-primary tabular-nums">{formatCurrency(lead.estimated_value)}</span>
           )}
           <span className={cn(
-            'text-xs font-medium px-1.5 py-0.5 rounded-md',
-            (lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0) >= 60
-              ? 'bg-surface-tertiary text-text-primary'
-              : (lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0) >= 30
-                ? 'bg-surface-tertiary text-text-secondary'
-                : 'bg-surface-tertiary text-text-tertiary'
+            'text-xs font-medium px-2 py-0.5 rounded-full tabular-nums',
+            prob >= 60 ? 'bg-accent-green/10 text-accent-green' : prob >= 30 ? 'bg-surface-tertiary text-text-secondary' : 'bg-surface-tertiary text-text-tertiary'
           )}>
-            {lead.probability ?? STAGE_PROBABILITY_DEFAULTS[lead.stage] ?? 0}%
+            {prob}%
           </span>
         </div>
-      </div>
 
-      {lead.source && (
-        <p className="text-xs text-text-tertiary">Source: {lead.source}</p>
-      )}
-
-      {lead.next_action && (
-        <p className="text-xs text-text-secondary">
-          Next: {lead.next_action}
-          {lead.next_action_date && <span className="text-text-tertiary"> &middot; {lead.next_action_date}</span>}
-        </p>
-      )}
-
-      {lead.notes && <p className="text-xs text-text-tertiary line-clamp-2">{lead.notes}</p>}
-
-      <div className="flex items-center gap-2 pt-1">
-        {lead.stage !== 'closed' && lead.stage !== 'lost' && currentIndex < stages.length - 2 && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => onMoveStage(stages[currentIndex + 1])}
-          >
-            Advance
-          </Button>
-        )}
-        {lead.stage !== 'lost' && lead.stage !== 'closed' && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => onMoveStage('lost')}
-          >
-            Mark Lost
-          </Button>
-        )}
-        <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onEdit}
-            className="text-xs text-text-tertiary hover:text-text-primary transition-colors px-1.5 py-0.5"
-          >
+        {/* Action buttons */}
+        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {lead.stage !== 'closed' && lead.stage !== 'lost' && currentIndex < stages.length - 2 && (
+            <button
+              onClick={() => onMoveStage(stages[currentIndex + 1])}
+              className="text-xs text-accent hover:text-accent/80 transition-colors px-2 py-1 rounded-md hover:bg-accent/10 cursor-pointer font-medium"
+            >
+              Advance
+            </button>
+          )}
+          {lead.stage !== 'lost' && lead.stage !== 'closed' && (
+            <button
+              onClick={() => onMoveStage('lost')}
+              className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-1.5 py-1 cursor-pointer"
+            >
+              Lost
+            </button>
+          )}
+          <button onClick={onEdit} className="text-xs text-text-tertiary hover:text-text-primary transition-colors px-1.5 py-1 cursor-pointer">
             Edit
           </button>
-          <button
-            onClick={onDelete}
-            className="text-xs text-text-tertiary hover:text-danger transition-colors px-1.5 py-0.5"
-          >
-            Delete
+          <button onClick={onDelete} className="text-xs text-text-tertiary hover:text-danger transition-colors px-1.5 py-1 cursor-pointer">
+            ×
           </button>
         </div>
       </div>

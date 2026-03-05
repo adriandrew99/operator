@@ -14,7 +14,7 @@ import { WeeklyDebrief } from '@/components/insights/WeeklyDebrief';
 import { ScopeCreepRadar } from '@/components/insights/ScopeCreepRadar';
 import { LayoutCustomiser } from '@/components/layout/LayoutCustomiser';
 import { ExportButton } from '@/components/ui/ExportButton';
-import { InfoTip, LabelWithTip } from '@/components/ui/InfoTip';
+import { InfoTip } from '@/components/ui/InfoTip';
 import { TabBar } from '@/components/ui/TabBar';
 import type { Client } from '@/lib/types/database';
 import type { ClientEnergyProfile, RevenueInsight, RevenueTrend, EnergyTrend, WeeklyDebrief as WeeklyDebriefData, DetectedPattern, MonthlyTrend, ClientHealthScore, ScopeCreepAnalysis } from '@/actions/insights';
@@ -62,13 +62,15 @@ interface AnalyticsDashboardProps {
 }
 
 // ━━━ Shared tooltip ━━━
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipPayloadItem { name?: string; value?: number; color?: string }
+interface TooltipProps { active?: boolean; payload?: TooltipPayloadItem[]; label?: string }
+const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">
       {label && <p className="chart-tooltip-label">{label}</p>}
       <div className="space-y-1.5">
-        {payload.map((entry: any, i: number) => (
+        {payload.map((entry: TooltipPayloadItem, i: number) => (
           <div key={i} className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
@@ -106,14 +108,14 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="card-elevated rounded-2xl overflow-hidden">
+    <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 sm:px-6 py-4 cursor-pointer hover:bg-surface-hover transition-colors"
+        className="w-full flex items-center justify-between px-4 sm:px-6 py-4 cursor-pointer hover:bg-surface-tertiary/50 transition-colors"
       >
         <div className="flex items-center gap-2">
           {icon && <span className="text-sm">{icon}</span>}
-          <p className="text-xs font-medium text-text-tertiary ">{title}</p>
+          <p className="text-xs font-medium text-text-tertiary">{title}</p>
         </div>
         <svg
           width="14"
@@ -144,7 +146,7 @@ function CollapsibleSection({
 
 export function AnalyticsDashboard({
   projectEnergy,
-  clientEfficiency,
+  clientEfficiency: _clientEfficiency,
   weeklyTrend,
   clients,
   clientEnergyProfiles,
@@ -217,9 +219,11 @@ export function AnalyticsDashboard({
   const capacityUsedPct = monthlyCapacity > 0 ? Math.round((totalMLUSpent / monthlyCapacity) * 100) : 0;
 
   // Backward compat fallbacks for layout keys
-  const showHero = layout.hero_section ?? (layout as any).summary_cards ?? true;
-  const showClientEnergy = layout.client_energy_revenue ?? (layout as any).energy_per_client ?? true;
-  const showInsightsPatterns = layout.insights_patterns ?? (layout as any).insights ?? true;
+  type LayoutWithLegacy = DashboardLayoutPreferences & { summary_cards?: boolean; energy_per_client?: boolean; insights?: boolean };
+  const layoutWithLegacy = layout as LayoutWithLegacy;
+  const showHero = layout.hero_section ?? layoutWithLegacy.summary_cards ?? true;
+  const showClientEnergy = layout.client_energy_revenue ?? layoutWithLegacy.energy_per_client ?? true;
+  const showInsightsPatterns = layout.insights_patterns ?? layoutWithLegacy.insights ?? true;
 
   // Sorted client profiles for Client Energy vs Revenue section
   const sortedProfiles = useMemo(() => {
@@ -247,6 +251,14 @@ export function AnalyticsDashboard({
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Analytics</h1>
+          <p className="text-sm text-text-tertiary mt-0.5">Client energy, revenue efficiency, and trends</p>
+        </div>
+      </div>
 
       {/* ═══ Tabs + Layout Customiser + Export ═══ */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -513,13 +525,13 @@ export function AnalyticsDashboard({
               <CartesianGrid stroke="var(--border-color)" strokeOpacity={0.5} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} />
-              <Tooltip content={({ active, payload, label }: any) => {
+              <Tooltip content={({ active, payload, label }: TooltipProps) => {
                 if (!active || !payload?.length) return null;
                 return (
                   <div className="chart-tooltip">
                     <p className="chart-tooltip-label">{label}</p>
                     <div className="space-y-1.5">
-                      {payload.map((entry: any, i: number) => (
+                      {payload.map((entry: TooltipPayloadItem, i: number) => (
                         <div key={i} className="flex items-center justify-between gap-6">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
@@ -555,14 +567,14 @@ export function AnalyticsDashboard({
               <CartesianGrid stroke="var(--border-color)" strokeOpacity={0.5} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={({ active, payload, label }: any) => {
+              <Tooltip content={({ active, payload, label }: TooltipProps) => {
                 if (!active || !payload?.length) return null;
-                const total = payload.reduce((s: number, p: any) => s + (p.value || 0), 0);
+                const total = payload.reduce((s: number, p: TooltipPayloadItem) => s + (p.value || 0), 0);
                 return (
                   <div className="chart-tooltip">
                     <p className="chart-tooltip-label">{label}</p>
                     <div className="space-y-1.5">
-                      {payload.map((entry: any, i: number) => (
+                      {payload.map((entry: TooltipPayloadItem, i: number) => (
                         <div key={i} className="flex items-center justify-between gap-6">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
@@ -1017,8 +1029,6 @@ function ClientHealthCard({ score }: { score: ClientHealthScore }) {
     : score.healthScore >= 40
       ? 'bg-amber-400'
       : 'bg-red-400';
-
-  const scoreBorderColor = 'border-border';
 
   const trendIcon = score.trend === 'improving' ? '\u2191' : score.trend === 'declining' ? '\u2193' : '\u2192';
   const trendColor = score.trend === 'improving'

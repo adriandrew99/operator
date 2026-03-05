@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { createClient } from '@/lib/supabase/client';
-import { createCustomFundamental, updateCustomFundamental, deleteCustomFundamental } from '@/actions/fundamentals';
+import { createCustomFundamental, deleteCustomFundamental } from '@/actions/fundamentals';
 import { updateMLUCapacity, updateWorkSchedule, updateFinanceSettings, saveDashboardLayout } from '@/actions/settings';
 import { saveCalendarSources, testCalendarUrl } from '@/actions/external-calendar';
 import type { DashboardLayoutPreferences } from '@/lib/types/dashboard-layout';
@@ -71,7 +71,7 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (emoji: str
         <div className="absolute z-50 top-full mt-2 left-0 w-72 max-w-[calc(100vw-2rem)] p-3 tooltip-glass rounded-xl animate-fade-in max-h-64 overflow-y-auto">
           {EMOJI_CATEGORIES.map((cat) => (
             <div key={cat.label} className="mb-3 last:mb-0">
-              <p className="text-xs font-medium text-text-tertiary  mb-1.5">{cat.label}</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary mb-1.5">{cat.label}</p>
               <div className="grid grid-cols-10 gap-0.5">
                 {cat.emojis.map((emoji) => (
                   <button
@@ -199,20 +199,26 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
   ];
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto space-y-8">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Settings</h1>
+        <p className="text-sm text-text-tertiary mt-0.5">Configure your workspace, integrations, and preferences</p>
+      </div>
+
       {/* ━━━ Desktop: Vertical sidebar tabs + content ━━━ */}
       <div className="hidden md:flex gap-6">
         {/* Sidebar nav */}
-        <nav className="w-[200px] flex-shrink-0 space-y-1.5">
+        <nav className="w-[200px] flex-shrink-0 space-y-1">
           {settingsTabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left cursor-pointer',
+                'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-left cursor-pointer',
                 activeTab === tab.key
                   ? 'bg-surface-tertiary text-text-primary'
-                  : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary'
+                  : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary/50'
               )}
             >
               <span className="text-sm">{tab.icon}</span>
@@ -227,7 +233,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
             <>
               {/* Account */}
               <div className="space-y-3">
-                <p className="text-xs font-medium text-text-tertiary ">Account</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Account</p>
                 <Card>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -251,7 +257,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
               {/* Identity Goals */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-text-tertiary ">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
                     I Am Building Toward
                   </p>
                   <Button size="sm" onClick={() => { setEditingGoal(null); setShowGoalForm(true); }}>
@@ -276,7 +282,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                       return (
                         <div
                           key={goal.id}
-                          className="card-elevated rounded-2xl p-5 group"
+                          className="bg-surface-secondary border border-border rounded-2xl p-5 group hover:border-border-light transition-colors"
                         >
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-medium text-text-primary">{goal.label}</p>
@@ -336,7 +342,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
               {/* Daily Fundamentals */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-text-tertiary ">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
                     Daily Fundamentals
                   </p>
                   <Button size="sm" onClick={() => setShowFundamentalForm(true)}>
@@ -356,7 +362,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                     {fundamentals.map((f) => (
                       <div
                         key={f.id}
-                        className="card-elevated rounded-2xl card-hover px-4 py-3 flex items-center justify-between group"
+                        className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-base">{f.icon}</span>
@@ -408,7 +414,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
 
               {/* Integrations */}
               <div className="space-y-3">
-                <p className="text-xs font-medium text-text-tertiary ">
+                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
                   Integrations
                 </p>
                 <p className="text-xs text-text-secondary">
@@ -418,7 +424,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                   {INTEGRATIONS.map((integration) => (
                     <div
                       key={integration.id}
-                      className="card-elevated rounded-2xl card-hover px-4 py-3 flex items-center justify-between"
+                      className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-lg">{integration.icon}</span>
@@ -445,35 +451,30 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
 
       {/* ━━━ Mobile: Horizontal TabBar + content ━━━ */}
       <div className="md:hidden space-y-6">
-        <div className="border-b border-border -mx-3 px-1">
-          <div className="flex overflow-x-auto scrollbar-none">
-            {settingsTabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                title={tab.label}
-                className={cn(
-                  'flex items-center gap-1 px-2.5 py-2.5 text-xs font-medium whitespace-nowrap transition-colors relative flex-shrink-0',
-                  activeTab === tab.key
-                    ? 'text-text-primary'
-                    : 'text-text-tertiary'
-                )}
-              >
-                <span className="text-xs">{tab.icon}</span>
-                {tab.label}
-                {activeTab === tab.key && (
-                  <span className="absolute bottom-0 left-1.5 right-1.5 h-0.5 bg-text-primary rounded-full" />
-                )}
-              </button>
-            ))}
-          </div>
+        <div className="flex overflow-x-auto scrollbar-none gap-1 bg-surface-secondary border border-border rounded-xl p-1">
+          {settingsTabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              title={tab.label}
+              className={cn(
+                'flex items-center gap-1 px-3 py-2 text-xs font-medium whitespace-nowrap transition-all rounded-lg flex-shrink-0',
+                activeTab === tab.key
+                  ? 'bg-surface-tertiary text-text-primary shadow-sm'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              )}
+            >
+              <span className="text-xs">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         <div className="space-y-8">
           {activeTab === 'profile' && (
             <>
               <div className="space-y-3">
-                <p className="text-xs font-medium text-text-tertiary ">Account</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Account</p>
                 <Card>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -496,7 +497,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-text-tertiary ">I Am Building Toward</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">I Am Building Toward</p>
                   <Button size="sm" onClick={() => { setEditingGoal(null); setShowGoalForm(true); }}>Add Goal</Button>
                 </div>
                 {goals.length === 0 ? (
@@ -511,7 +512,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                         ? Number(goal.target_value) - Number(goal.current_value)
                         : Number(goal.current_value) - Number(goal.target_value);
                       return (
-                        <div key={goal.id} className="card-elevated rounded-2xl p-5 group">
+                        <div key={goal.id} className="bg-surface-secondary border border-border rounded-2xl p-5 group hover:border-border-light transition-colors">
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-medium text-text-primary">{goal.label}</p>
                             <div className="flex items-center gap-2">
@@ -542,7 +543,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
             <>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-text-tertiary ">Daily Fundamentals</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Daily Fundamentals</p>
                   <Button size="sm" onClick={() => setShowFundamentalForm(true)}>Add</Button>
                 </div>
                 <p className="text-xs text-text-secondary">These are the daily habits you track on your Today page.</p>
@@ -551,7 +552,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                 ) : (
                   <div className="space-y-2">
                     {fundamentals.map((f) => (
-                      <div key={f.id} className="card-elevated rounded-2xl card-hover px-4 py-3 flex items-center justify-between group">
+                      <div key={f.id} className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between group">
                         <div className="flex items-center gap-3">
                           <span className="text-base">{f.icon}</span>
                           <span className="text-sm text-text-primary">{f.label}</span>
@@ -581,11 +582,11 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
               <SlackSection initialWebhookUrl={initialSlackUrl || null} />
               <CalendarFeedSection initialFeedUrl={initialFeedUrl || null} />
               <div className="space-y-3">
-                <p className="text-xs font-medium text-text-tertiary ">Integrations</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Integrations</p>
                 <p className="text-xs text-text-secondary">Connect external tools to auto-import tasks and financial data.</p>
                 <div className="space-y-2">
                   {INTEGRATIONS.map((integration) => (
-                    <div key={integration.id} className="card-elevated rounded-2xl card-hover px-4 py-3 flex items-center justify-between">
+                    <div key={integration.id} className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-lg">{integration.icon}</span>
                         <div>
@@ -679,7 +680,7 @@ function MentalLoadSection({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-text-tertiary ">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
           Mental Load
         </p>
         <Button size="sm" onClick={() => setShowQuiz(!showQuiz)}>
@@ -864,8 +865,8 @@ function WorkScheduleSection({ profile }: { profile: Profile | null }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-medium text-text-tertiary ">Work Schedule</p>
-      <div className="card-elevated rounded-2xl p-5 space-y-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Work Schedule</p>
+      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
         <p className="text-xs text-text-tertiary">Auto-schedule will only place tasks within these hours and days.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -978,8 +979,8 @@ function CalendarSection({ initialSources }: { initialSources: CalendarSource[] 
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-medium text-text-tertiary ">Calendars</p>
-      <div className="card-elevated rounded-2xl p-5 space-y-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Calendars</p>
+      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
         <div>
           <p className="text-xs text-text-secondary mb-1">
             Add your calendars&apos; iCal/ICS URLs to see events on your Today page.
@@ -1132,7 +1133,7 @@ function DashboardLayoutSection({ initialLayout }: { initialLayout: DashboardLay
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-text-tertiary ">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
           Dashboard Layout
         </p>
         <div className="flex items-center gap-2">
@@ -1142,7 +1143,7 @@ function DashboardLayoutSection({ initialLayout }: { initialLayout: DashboardLay
           </Button>
         </div>
       </div>
-      <div className="card-elevated rounded-2xl overflow-hidden">
+      <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
         <p className="text-xs text-text-tertiary px-5 pt-4 pb-2">
           Show or hide sections on your dashboard pages. Today&apos;s Plan is always visible.
         </p>
@@ -1244,8 +1245,8 @@ function FinanceSettingsSection({ profile }: { profile: Profile | null }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-medium text-text-tertiary ">Finance</p>
-      <div className="card-elevated rounded-2xl p-5 space-y-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Finance</p>
+      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
         <p className="text-xs text-text-tertiary">Monthly salary and staff costs are factored into your Finance dashboard P&L calculations.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Your Monthly Salary (GBP)" type="number" step="0.01" value={salary} onChange={e => setSalary(e.target.value)} />
@@ -1315,7 +1316,7 @@ function SlackSection({ initialWebhookUrl }: { initialWebhookUrl: string | null 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-text-tertiary ">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
           Slack Daily Summary
         </p>
         {isConnected && (
@@ -1325,7 +1326,7 @@ function SlackSection({ initialWebhookUrl }: { initialWebhookUrl: string | null 
           </span>
         )}
       </div>
-      <div className="card-elevated rounded-2xl p-5 space-y-4">
+      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
         <p className="text-xs text-text-secondary">
           Receive a daily task summary in Slack. Create an{' '}
           <a
@@ -1439,7 +1440,7 @@ function CalendarFeedSection({ initialFeedUrl }: { initialFeedUrl: string | null
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-text-tertiary ">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
           Calendar Feed
         </p>
         {hasToken && (
@@ -1449,7 +1450,7 @@ function CalendarFeedSection({ initialFeedUrl }: { initialFeedUrl: string | null
           </span>
         )}
       </div>
-      <div className="card-elevated rounded-2xl p-5 space-y-4">
+      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
         <p className="text-xs text-text-secondary">
           Subscribe to your Nexus tasks from any calendar app. This feed includes today&apos;s flagged tasks, upcoming deadlines (14 days), and recurring tasks.
         </p>
