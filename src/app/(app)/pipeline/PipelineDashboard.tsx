@@ -177,7 +177,7 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Pipeline</h1>
+          <h1 className="text-page-title text-text-primary">Pipeline</h1>
           <p className="text-sm text-text-tertiary mt-0.5">Track leads from first contact to close</p>
         </div>
         <Button size="sm" onClick={() => setShowModal(true)}>+ Add Lead</Button>

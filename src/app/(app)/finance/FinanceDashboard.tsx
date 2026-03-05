@@ -593,7 +593,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
     <div className="max-w-6xl mx-auto space-y-5 relative z-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Finance</h1>
+          <h1 className="text-page-title text-text-primary">Finance</h1>
           <p className="text-sm text-text-tertiary mt-0.5">Revenue, expenses & projections</p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
@@ -1701,6 +1701,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           onDeleteClient={(id) => {
             deleteClient(id).catch(e => console.error('Failed to delete client:', e));
           }}
+          sixtyDaysFromNowRef={sixtyDaysFromNowRef}
         />
       )}
 
@@ -3268,9 +3269,9 @@ function SnapshotEditModal({ snapshot, onClose, onSave, isPending }: {
 
 // ━━━ CLIENTS TAB ━━━
 function ClientsTab({
-  clients, monthlyRevenue, overrideMap, currentMonth, onAddClient, onDeleteClient,
+  clients, monthlyRevenue, overrideMap, currentMonth, onAddClient, onDeleteClient, sixtyDaysFromNowRef,
 }: {
-  clients: Client[]; monthlyRevenue: number; overrideMap: Record<string, number>; currentMonth: string; onAddClient: () => void; onDeleteClient: (id: string) => void;
+  clients: Client[]; monthlyRevenue: number; overrideMap: Record<string, number>; currentMonth: string; onAddClient: () => void; onDeleteClient: (id: string) => void; sixtyDaysFromNowRef: { current: number };
 }) {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 

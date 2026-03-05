@@ -41,7 +41,7 @@ export function TopBar() {
 
   return (
     <div
-      className="sticky top-0 z-30 safe-area-inset-top bg-surface-primary border-b border-border"
+      className="sticky top-0 z-30 safe-area-inset-top bg-surface-primary/95 backdrop-blur-md border-b border-border shadow-[0_1px_0_0_var(--border-color)]"
       onMouseDown={handleDrag}
     >
       {/* Invisible drag region */}
@@ -49,12 +49,12 @@ export function TopBar() {
         className="absolute inset-0 z-0"
         data-tauri-drag-region=""
       />
-      <div className="w-full mx-auto px-5 sm:px-8 lg:px-10 h-16 flex items-center justify-between relative z-10">
+      <div className="w-full mx-auto px-5 sm:px-8 lg:px-10 h-[72px] flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3 pointer-events-none">
           {/* Mobile: page title + date */}
           <div className="md:hidden flex items-baseline gap-2">
-            <h1 className="text-[17px] font-semibold text-text-primary tracking-tight">{title}</h1>
-            <span className="text-xs text-text-tertiary tabular-nums">{formatShortDate()}</span>
+            <h1 className="text-xl font-bold text-text-primary tracking-tight md:text-2xl">{title}</h1>
+            <span className="text-caption tabular-nums ml-2">{formatShortDate()}</span>
           </div>
 
           {/* Desktop: date on left */}
@@ -64,6 +64,15 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-3 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-colors border border-transparent hover:border-border cursor-pointer"
+            title="Open command palette (⌘K)"
+          >
+            <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-tertiary text-text-secondary">⌘K</kbd>
+            <span>Search</span>
+          </button>
           <ThemeToggle size="compact" />
         </div>
       </div>

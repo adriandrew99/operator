@@ -166,7 +166,7 @@ export function Sidebar({ debriefReady }: SidebarProps) {
             'transition-all duration-300 overflow-hidden whitespace-nowrap',
             collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'
           )}>
-            <h1 className="text-[15px] font-semibold text-text-primary tracking-tight">
+            <h1 className="text-[17px] font-bold text-text-primary tracking-tight">
               Nexus
             </h1>
           </div>
@@ -179,7 +179,8 @@ export function Sidebar({ debriefReady }: SidebarProps) {
         collapsed ? 'px-2' : 'px-3'
       )}>
         {NAV_SECTIONS.map((section, sectionIdx) => (
-          <div key={section.title} className={sectionIdx > 0 ? 'mt-5' : ''}>
+          <div key={section.title} className={sectionIdx > 0 ? 'mt-8' : ''}>
+            {!collapsed && <p className="section-label px-4 mb-2">{section.title}</p>}
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = pathname.startsWith(item.href);
@@ -189,11 +190,11 @@ export function Sidebar({ debriefReady }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center text-[13px] rounded-md transition-colors duration-150 relative group',
-                      collapsed ? 'justify-center px-0 py-3 h-11' : 'gap-3 px-3 py-3 h-11',
+                      'flex items-center text-[14px] rounded-xl transition-all duration-200 relative group',
+                      collapsed ? 'justify-center px-0 py-3.5 h-12' : 'gap-3 px-4 py-3.5 h-12',
                       isActive
-                        ? 'bg-accent-muted text-text-primary'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+                        ? 'bg-accent-muted text-text-primary font-semibold'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover font-medium'
                     )}
                     title={item.label}
                   >
@@ -258,8 +259,8 @@ export function Sidebar({ debriefReady }: SidebarProps) {
         <button
           onClick={toggle}
           className={cn(
-            'flex items-center w-full rounded-lg py-2 text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-all duration-200',
-            collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+            'flex items-center w-full rounded-xl py-3 text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-all duration-200',
+            collapsed ? 'justify-center px-0' : 'gap-3 px-4'
           )}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >

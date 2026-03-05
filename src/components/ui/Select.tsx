@@ -10,19 +10,19 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, options, ...props }, ref) => {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {label && (
-          <label className="text-xs font-medium text-text-secondary">
+          <label className="text-sm font-medium text-text-primary">
             {label}
           </label>
         )}
         <select
           ref={ref}
           className={cn(
-            'w-full bg-surface-inset border border-border rounded-lg px-4 py-2.5 text-sm text-text-primary',
-            'focus:border-accent/40 focus:ring-1 focus:ring-accent/20 focus:bg-surface-secondary',
+            'w-full bg-surface-primary border border-border rounded-xl px-4 py-3 text-[15px] text-text-primary [box-shadow:var(--input-shadow)]',
+            'focus:border-accent focus:ring-2 focus:ring-accent/15 focus:outline-none',
             'transition-all duration-200 appearance-none',
-            error && 'border-danger',
+            error && 'border-danger focus:ring-danger/15',
             className
           )}
           {...props}

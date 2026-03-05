@@ -23,7 +23,7 @@ export function ClientShell({ children, debriefReady }: ClientShellProps) {
         <Sidebar debriefReady={debriefReady} />
         <main className="flex-1 min-w-0 flex flex-col overflow-y-auto overflow-x-hidden">
           <TopBar />
-          <div className="flex-1 w-full max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-12 py-10 sm:py-12 pb-32 md:pb-12 page-enter">
+          <div className="flex-1 w-full max-w-[1200px] mx-auto px-6 sm:px-10 lg:px-16 py-12 sm:py-16 pb-36 md:pb-16 page-enter">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

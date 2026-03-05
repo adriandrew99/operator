@@ -12,22 +12,22 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center font-medium font-sans transition-all duration-200 ease-[cubic-bezier(0.165,0.85,0.45,1)]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-light focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          'inline-flex items-center justify-center font-sans transition-all duration-200 ease-out',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           'disabled:pointer-events-none disabled:opacity-50',
-          'rounded-md active:scale-[0.98]',
+          'rounded-xl active:scale-[0.98]',
           {
-            'bg-accent text-white font-semibold hover:bg-accent-bright': variant === 'primary',
-            'bg-surface-secondary text-text-primary hover:bg-surface-hover border border-border': variant === 'secondary',
-            'text-text-secondary hover:text-text-primary hover:bg-surface-hover': variant === 'ghost',
-            'bg-surface-secondary text-danger hover:bg-surface-hover border border-border': variant === 'danger',
-            'text-accent hover:bg-accent-muted font-medium': variant === 'accent-ghost',
+            'bg-accent text-white font-semibold shadow-[var(--button-shadow)] hover:bg-accent-bright hover:shadow-[0_2px_8px_rgba(37,99,235,0.25)]': variant === 'primary',
+            'bg-surface-primary text-text-primary font-medium border border-border shadow-[var(--button-shadow)] hover:bg-surface-hover hover:border-border-light': variant === 'secondary',
+            'text-text-secondary font-medium hover:text-text-primary hover:bg-surface-hover': variant === 'ghost',
+            'bg-surface-primary text-danger font-medium border border-border shadow-[var(--button-shadow)] hover:bg-surface-hover': variant === 'danger',
+            'text-accent font-semibold hover:bg-accent-muted': variant === 'accent-ghost',
           },
           {
-            'h-8 px-3 text-xs': size === 'sm',
-            'h-10 px-5 text-sm': size === 'md',
-            'h-11 px-6 text-sm': size === 'lg',
-            'h-9 w-9 p-0': size === 'icon',
+            'h-9 px-4 text-sm': size === 'sm',
+            'h-11 px-6 text-sm': size === 'md',
+            'h-12 px-8 text-base': size === 'lg',
+            'h-10 w-10 p-0 rounded-xl': size === 'icon',
           },
           className
         )}

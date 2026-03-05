@@ -52,7 +52,7 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary tracking-tight">Outbound</h1>
+            <h1 className="text-page-title text-text-primary">Outbound</h1>
             <p className="text-sm text-text-tertiary mt-0.5">Track campaigns and conversion funnels</p>
           </div>
           <button

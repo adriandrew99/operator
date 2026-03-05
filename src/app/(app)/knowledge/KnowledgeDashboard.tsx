@@ -64,7 +64,7 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Knowledge Vault</h1>
+          <h1 className="text-page-title text-text-primary">Knowledge Vault</h1>
           <p className="text-sm text-text-tertiary mt-0.5">Readings, ideas, lessons and mental models</p>
         </div>
         <Button size="sm" onClick={() => { setEditingEntry(null); setShowModal(true); }}>+ Add Entry</Button>

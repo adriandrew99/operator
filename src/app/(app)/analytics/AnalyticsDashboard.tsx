@@ -61,9 +61,9 @@ interface AnalyticsDashboardProps {
   dashboardLayout?: DashboardLayoutPreferences;
 }
 
-// ━━━ Shared tooltip ━━━
+// ━━━ Shared tooltip (shapes match Recharts TooltipContentProps for content callback) ━━━
 interface TooltipPayloadItem { name?: string; value?: number; color?: string }
-interface TooltipProps { active?: boolean; payload?: TooltipPayloadItem[]; label?: string }
+interface TooltipProps { active?: boolean; payload?: readonly TooltipPayloadItem[]; label?: string | number }
 const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
@@ -218,12 +218,12 @@ export function AnalyticsDashboard({
   const monthlyCapacity = capacity * 22;
   const capacityUsedPct = monthlyCapacity > 0 ? Math.round((totalMLUSpent / monthlyCapacity) * 100) : 0;
 
-  // Backward compat fallbacks for layout keys
-  type LayoutWithLegacy = DashboardLayoutPreferences & { summary_cards?: boolean; energy_per_client?: boolean; insights?: boolean };
-  const layoutWithLegacy = layout as LayoutWithLegacy;
-  const showHero = layout.hero_section ?? layoutWithLegacy.summary_cards ?? true;
-  const showClientEnergy = layout.client_energy_revenue ?? layoutWithLegacy.energy_per_client ?? true;
-  const showInsightsPatterns = layout.insights_patterns ?? layoutWithLegacy.insights ?? true;
+  // Backward compat fallbacks for legacy layout keys (stored shape may have old keys)
+  type LegacyLayoutKeys = { summary_cards?: boolean; energy_per_client?: boolean; insights?: boolean };
+  const layoutLegacy = layout as unknown as LegacyLayoutKeys;
+  const showHero = layout.hero_section ?? layoutLegacy.summary_cards ?? true;
+  const showClientEnergy = layout.client_energy_revenue ?? layoutLegacy.energy_per_client ?? true;
+  const showInsightsPatterns = layout.insights_patterns ?? layoutLegacy.insights ?? true;
 
   // Sorted client profiles for Client Energy vs Revenue section
   const sortedProfiles = useMemo(() => {
@@ -255,7 +255,7 @@ export function AnalyticsDashboard({
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Analytics</h1>
+          <h1 className="text-page-title text-text-primary">Analytics</h1>
           <p className="text-sm text-text-tertiary mt-0.5">Client energy, revenue efficiency, and trends</p>
         </div>
       </div>
@@ -537,7 +537,7 @@ export function AnalyticsDashboard({
                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
                             <span className="text-[11px] text-text-secondary">{entry.name}</span>
                           </div>
-                          <span className="chart-tooltip-value">£{entry.value.toLocaleString()}</span>
+                          <span className="chart-tooltip-value">£{(entry.value ?? 0).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -580,7 +580,7 @@ export function AnalyticsDashboard({
                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: entry.color }} />
                             <span className="text-[11px] text-text-secondary">{entry.name}</span>
                           </div>
-                          <span className="chart-tooltip-value">{entry.value.toFixed(1)} MLU</span>
+                          <span className="chart-tooltip-value">{(entry.value ?? 0).toFixed(1)} MLU</span>
                         </div>
                       ))}
                     </div>

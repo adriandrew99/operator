@@ -254,7 +254,7 @@ export function TodayDashboard({
     <div className="max-w-7xl mx-auto space-y-5">
 
       {/* ━━━ HERO SECTION ━━━ */}
-      <div className="relative overflow-hidden rounded-lg card-enter">
+      <div className="relative overflow-hidden rounded-2xl card-elevated card-enter">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.08] via-surface-secondary to-surface-secondary" />
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/[0.04] to-transparent" />
@@ -263,8 +263,8 @@ export function TodayDashboard({
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             {/* Left: Greeting */}
             <div className="space-y-1">
-              <p className="text-xs text-text-tertiary uppercase tracking-[0.1em] font-medium">{dateStr}</p>
-              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
+              <p className="section-label">{dateStr}</p>
+              <h1 className="text-page-title text-text-primary">
                 {greeting}{userName ? `, ${userName}` : ''}
               </h1>
               <p className="text-sm text-text-tertiary italic">
@@ -276,7 +276,9 @@ export function TodayDashboard({
             <div className="flex items-center gap-4">
               {streakDays > 0 && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
-                  <span className="text-sm">🔥</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent flex-shrink-0">
+                    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+                  </svg>
                   <span className="text-xs font-semibold text-accent">{streakDays}d</span>
                 </div>
               )}
@@ -295,7 +297,7 @@ export function TodayDashboard({
       {/* ━━━ METRIC CARDS — 4 distinct cards ━━━ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 card-enter" style={{ animationDelay: '40ms' }}>
         {/* Capacity / Load */}
-        <div className="relative overflow-hidden rounded-xl bg-surface-secondary border border-border p-4 group hover:border-border-light transition-colors">
+        <div className="relative overflow-hidden rounded-xl card-elevated p-5 group hover:shadow-[var(--card-shadow-lg)] transition-all duration-200">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium">Capacity</p>
             <div className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full', getLoadBg(energyData.loadLevel), getLoadAccent(energyData.loadLevel))}>
@@ -328,7 +330,7 @@ export function TodayDashboard({
         </div>
 
         {/* Tasks */}
-        <div className="relative overflow-hidden rounded-xl bg-surface-secondary border border-border p-4 group hover:border-border-light transition-colors">
+        <div className="relative overflow-hidden rounded-xl card-elevated p-5 group hover:shadow-[var(--card-shadow-lg)] transition-all duration-200">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium">Tasks</p>
             {taskCompletionPct === 100 && totalCount > 0 && (
@@ -357,7 +359,7 @@ export function TodayDashboard({
         </div>
 
         {/* MRR */}
-        <div className="relative overflow-hidden rounded-xl bg-surface-secondary border border-border p-4 group hover:border-border-light transition-colors">
+        <div className="relative overflow-hidden rounded-xl card-elevated p-5 group hover:shadow-[var(--card-shadow-lg)] transition-all duration-200">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium">MRR</p>
           </div>
@@ -374,7 +376,7 @@ export function TodayDashboard({
         </div>
 
         {/* Habits */}
-        <div className="relative overflow-hidden rounded-xl bg-surface-secondary border border-border p-4 group hover:border-border-light transition-colors">
+        <div className="relative overflow-hidden rounded-xl card-elevated p-5 group hover:shadow-[var(--card-shadow-lg)] transition-all duration-200">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] text-text-tertiary uppercase tracking-[0.08em] font-medium">Habits</p>
             {allFundamentalsDone && (

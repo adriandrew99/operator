@@ -191,18 +191,19 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
 
   const [activeTab, setActiveTab] = useState<'profile' | 'dashboard' | 'finance' | 'integrations'>('profile');
 
+  const iconClass = 'w-4 h-4 text-text-tertiary shrink-0';
   const settingsTabs = [
-    { key: 'profile' as const, label: 'Profile', icon: '👤' },
-    { key: 'dashboard' as const, label: 'Dashboard', icon: '📊' },
-    { key: 'finance' as const, label: 'Finance', icon: '💰' },
-    { key: 'integrations' as const, label: 'Integrations', icon: '🔗' },
+    { key: 'profile' as const, label: 'Profile', icon: <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg> },
+    { key: 'dashboard' as const, label: 'Dashboard', icon: <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg> },
+    { key: 'finance' as const, label: 'Finance', icon: <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="6" x2="12" y2="18" /><line x1="16" y1="10" x2="8" y2="14" /><line x1="16" y1="14" x2="8" y2="10" /></svg> },
+    { key: 'integrations' as const, label: 'Integrations', icon: <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg> },
   ];
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Settings</h1>
+        <h1 className="text-page-title text-text-primary">Settings</h1>
         <p className="text-sm text-text-tertiary mt-0.5">Configure your workspace, integrations, and preferences</p>
       </div>
 
@@ -221,7 +222,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                   : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary/50'
               )}
             >
-              <span className="text-sm">{tab.icon}</span>
+              <span className="flex items-center justify-center">{tab.icon}</span>
               {tab.label}
             </button>
           ))}

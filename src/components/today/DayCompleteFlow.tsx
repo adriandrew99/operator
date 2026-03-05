@@ -97,7 +97,7 @@ export function DayCompleteFlow({
     <div
       className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto overflow-x-hidden p-4 sm:p-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] min-h-[100vh]"
       style={{
-        pointerEvents: phase === 'idle' ? 'none' : 'auto',
+        pointerEvents: 'auto',
         opacity: isExiting ? 0 : 1,
         transition: 'opacity 0.32s ease-out',
         WebkitOverflowScrolling: 'touch',

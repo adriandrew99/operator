@@ -177,7 +177,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
       {/* ━━━ PAGE HEADER ━━━ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Tasks</h1>
+          <h1 className="text-page-title text-text-primary">Tasks</h1>
           <p className="text-sm text-text-tertiary mt-0.5">
             {tasks.length} active · {completedTasks.length} completed
           </p>
@@ -215,7 +215,10 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
         )}
         {!hadGoodSleep && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/5 border border-amber-500/10">
-            <span className="text-xs text-amber-400">💤 Low sleep — consider lighter tasks</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400 flex-shrink-0">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+            <span className="text-xs text-amber-400">Low sleep — consider lighter tasks</span>
           </div>
         )}
       </div>

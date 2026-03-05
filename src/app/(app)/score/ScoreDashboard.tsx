@@ -69,7 +69,7 @@ export function ScoreDashboard({
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Operator Score</h1>
+        <h1 className="text-page-title text-text-primary">Operator Score</h1>
         <p className="text-sm text-text-tertiary mt-0.5">Track daily performance across all dimensions</p>
       </div>
 

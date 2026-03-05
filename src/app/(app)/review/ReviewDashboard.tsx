@@ -65,7 +65,7 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Weekly Review</h1>
+        <h1 className="text-page-title text-text-primary">Weekly Review</h1>
         <p className="text-sm text-text-tertiary mt-0.5">Reflect on the week and set intentions for the next</p>
       </div>
 

@@ -18,25 +18,25 @@ export function Card({
 }: CardProps) {
   const paddingClasses = {
     none: '',
-    sm: 'p-4',
-    md: 'p-5',
-    lg: 'p-6',
+    sm: 'p-5',
+    md: 'p-6',
+    lg: 'p-8',
   };
 
   return (
     <div
       className={cn(
-        'rounded-lg transition-colors duration-150',
+        'rounded-[14px] transition-all duration-200 ease-out',
         {
           'card-elevated': variant === 'default' || variant === 'elevated',
           'card-inset': variant === 'inset',
           'card-glass': variant === 'glass',
           'card-accent': variant === 'accent',
-          'bg-surface-secondary rounded-lg border border-border': variant === 'flat',
+          'bg-surface-secondary rounded-[14px] border border-border shadow-[var(--card-shadow)]': variant === 'flat',
           'card-gradient': variant === 'gradient',
         },
         paddingClasses[padding],
-        hover && 'cursor-pointer hover:bg-surface-hover',
+        hover && 'cursor-pointer hover:bg-surface-hover hover:shadow-[var(--card-shadow-lg)]',
         glow && 'card-hover-glow',
         className
       )}
@@ -49,7 +49,7 @@ export function Card({
 
 export function CardHeader({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('mb-5', className)} {...props}>
+    <div className={cn('mb-6', className)} {...props}>
       {children}
     </div>
   );
@@ -93,7 +93,7 @@ export function CardDescription({ className, children, ...props }: React.HTMLAtt
 
 export function CardFooter({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('mt-5 pt-5 border-t border-border', className)} {...props}>
+    <div className={cn('mt-6 pt-6 border-t border-border', className)} {...props}>
       {children}
     </div>
   );

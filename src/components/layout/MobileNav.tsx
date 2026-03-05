@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils/cn';
 const MOBILE_ITEMS = [
   { href: '/today', label: 'Today', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { href: '/tasks', label: 'Tasks', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-  { href: '/planner', label: 'Plan', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { href: '/planner', label: 'Planner', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
   { href: '/finance', label: 'Finance', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   { href: '/analytics', label: 'Insights', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
 ];
@@ -59,7 +59,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--overlay-bg)' }} />
           <div className="absolute bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-3 right-3 animate-slide-up">
-            <div className="rounded-t-xl rounded-b-lg card-elevated p-1">
+            <div className="rounded-t-2xl rounded-b-xl card-elevated p-2 shadow-[var(--card-shadow-lg)]">
               {MORE_ITEMS.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
@@ -67,7 +67,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3.5 rounded-md transition-colors duration-150',
+                      'flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-200',
                       isActive
                         ? 'bg-accent-muted text-text-primary'
                         : 'text-text-secondary active:bg-surface-hover'
@@ -97,7 +97,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
 
       {/* Bottom tab bar */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-primary border-t border-border"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-primary/95 backdrop-blur-md border-t border-border shadow-[0_-1px_0_0_var(--border-color)]"
       >
         <div className="flex items-stretch justify-around safe-area-inset-bottom">
           {MOBILE_ITEMS.map((item) => {
