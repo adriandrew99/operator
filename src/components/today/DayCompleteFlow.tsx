@@ -95,11 +95,12 @@ export function DayCompleteFlow({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 sm:p-6 py-6 sm:py-8 pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto overflow-x-hidden p-4 sm:p-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] min-h-[100vh]"
       style={{
         pointerEvents: phase === 'idle' ? 'none' : 'auto',
         opacity: isExiting ? 0 : 1,
         transition: 'opacity 0.32s ease-out',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
       {/* Backdrop */}
@@ -175,19 +176,20 @@ export function DayCompleteFlow({
         </>
       )}
 
-      {/* Phase 2: Day in Review card — scales in from center, scrolls if needed */}
+      {/* Phase 2: Day in Review card — viewport-aware max height so bottom never cropped */}
       {(phase === 'review' || phase === 'out') && (
         <div
-          className="relative w-full max-w-lg max-h-[85vh] min-h-0 overflow-y-auto day-complete-card-enter my-auto"
-          style={
-            phase === 'out'
+          className="relative w-full max-w-lg min-h-0 overflow-y-auto day-complete-card-enter mt-auto mb-auto shrink-0"
+          style={{
+            maxHeight: 'min(80vh, calc(100dvh - env(safe-area-inset-bottom) - 3rem))',
+            ...(phase === 'out'
               ? {
                   opacity: 0,
                   transform: 'scale(0.96)',
                   transition: 'opacity 0.32s ease-out, transform 0.32s ease-out',
                 }
-              : undefined
-          }
+              : {}),
+          }}
         >
           {phase === 'review' && (
             <DayInReview
