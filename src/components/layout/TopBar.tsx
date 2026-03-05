@@ -49,7 +49,7 @@ export function TopBar() {
         className="absolute inset-0 z-0"
         data-tauri-drag-region=""
       />
-      <div className="w-full mx-auto px-5 sm:px-8 lg:px-10 h-12 flex items-center justify-between relative z-10">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3 pointer-events-none">
           {/* Mobile: page title + date */}
           <div className="md:hidden flex items-baseline gap-2">

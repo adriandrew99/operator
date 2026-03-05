@@ -26,17 +26,17 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-[14px] transition-all duration-200',
+        'rounded-xl transition-colors duration-200',
         {
           'card-elevated': variant === 'default' || variant === 'elevated',
           'card-inset': variant === 'inset',
           'card-glass': variant === 'glass',
           'card-accent': variant === 'accent',
-          'bg-surface-secondary rounded-[14px]': variant === 'flat',
+          'bg-surface-secondary rounded-xl border border-border': variant === 'flat',
           'card-gradient': variant === 'gradient',
         },
         paddingClasses[padding],
-        hover && 'cursor-pointer hover:scale-[1.005] hover:shadow-lg',
+        hover && 'cursor-pointer hover:bg-surface-hover/50',
         glow && 'card-hover-glow',
         className
       )}

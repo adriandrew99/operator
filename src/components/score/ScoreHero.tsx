@@ -27,7 +27,7 @@ export function ScoreHero({ score, breakdown, hasCheckedIn, streakDays, autoMetr
   const strokeDashoffset = circumference * (1 - score / 100);
 
   return (
-    <section className="card-elevated rounded-2xl p-6">
+    <section className="card-elevated rounded-xl p-6">
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
         {/* Score ring */}
         <div className="relative w-32 h-32 sm:w-36 sm:h-36 flex-shrink-0">

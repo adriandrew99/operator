@@ -20,6 +20,9 @@ interface DayInReviewProps {
   existingNotes: string | null;
   onCheckInSaved: (score: OperatorScore) => void;
   celebrationPlayed: boolean;
+  /** When true, used inside DayCompleteFlow: no visibility delay, always render, show dismiss that calls onDismiss */
+  embeddedInFlow?: boolean;
+  onDismiss?: () => void;
 }
 
 /**
@@ -38,30 +41,29 @@ export function DayInReview({
   existingNotes,
   onCheckInSaved,
   celebrationPlayed,
+  embeddedInFlow = false,
+  onDismiss,
 }: DayInReviewProps) {
   const [dismissed, setDismissed] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(embeddedInFlow);
   const [showCheckIn, setShowCheckIn] = useState(false);
   const notifiedRef = useRef(false);
 
-  // Only show once all tasks are done AND celebration has finished (or wasn't needed)
-  // If celebration played, show immediately after it completes.
-  // If no celebration (e.g. page loaded with tasks already done), show after a short delay.
+  // When embedded in flow, parent controls visibility — we always show when rendered.
+  // Otherwise: show once all tasks done and celebration has finished (or wasn't needed).
   useEffect(() => {
+    if (embeddedInFlow) {
+      setVisible(true);
+      return;
+    }
     if (!allTasksDone || dismissed) {
       setVisible(false);
       return;
     }
-
-    // If celebration hasn't played yet, wait for it
-    if (!celebrationPlayed) {
-      return;
-    }
-
-    // Celebration finished (or was skipped) — slide in after a short beat
-    const timer = setTimeout(() => setVisible(true), 600);
+    if (!celebrationPlayed) return;
+    const timer = setTimeout(() => setVisible(true), 400);
     return () => clearTimeout(timer);
-  }, [allTasksDone, dismissed, celebrationPlayed]);
+  }, [allTasksDone, dismissed, celebrationPlayed, embeddedInFlow]);
 
   // Send push notification when all tasks are done (once per session)
   useEffect(() => {
@@ -152,7 +154,10 @@ export function DayInReview({
     )}>
       {/* Dismiss */}
       <button
-        onClick={() => setDismissed(true)}
+        onClick={() => {
+          setDismissed(true);
+          onDismiss?.();
+        }}
         className="absolute top-3 right-3 text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer z-10"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

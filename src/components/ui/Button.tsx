@@ -17,7 +17,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           'disabled:pointer-events-none disabled:opacity-50',
           'rounded-lg active:scale-[0.98]',
           {
-            'bg-accent text-white font-medium hover:brightness-110': variant === 'primary',
+            'bg-accent text-white font-medium hover:opacity-90': variant === 'primary',
             'bg-surface-tertiary text-text-primary hover:bg-surface-hover border border-border': variant === 'secondary',
             'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary': variant === 'ghost',
             'bg-surface-tertiary text-danger hover:bg-surface-hover border border-border': variant === 'danger',
