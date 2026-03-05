@@ -80,7 +80,7 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
             { label: 'Applied', value: stats.applied, color: stats.applied > 0 ? 'text-accent-green' : 'text-text-tertiary' },
             { label: 'Takeaways', value: stats.withTakeaways, color: 'text-text-tertiary' },
           ].map(s => (
-            <div key={s.label} className="bg-surface-secondary border border-border rounded-2xl px-3 py-3.5 text-center">
+            <div key={s.label} className="card-elevated rounded-lg px-3 py-3.5 text-center">
               <p className={cn('text-xl font-bold tabular-nums', s.color)}>{s.value}</p>
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary mt-1">{s.label}</p>
             </div>
@@ -89,7 +89,7 @@ export function KnowledgeDashboard({ entries }: KnowledgeDashboardProps) {
       )}
 
       {/* Search + Tabs container */}
-      <div className="bg-surface-secondary border border-border rounded-2xl">
+      <div className="card-elevated rounded-lg">
         {/* Search */}
         <div className="relative px-4 pt-4">
           <svg className="absolute left-7 top-1/2 mt-0.5 -translate-y-1/2 text-text-tertiary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

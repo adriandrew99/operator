@@ -23,7 +23,7 @@ export function OperatorScoreWidget({ todayScore, streakDays }: OperatorScoreWid
   return (
     <Link
       href="/score"
-      className="block card-elevated p-5 sm:p-6 hover:bg-surface-hover/50 transition-colors duration-200 cursor-pointer group"
+      className="block card-elevated p-6 hover:bg-surface-hover transition-colors duration-150 cursor-pointer group"
     >
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-section-heading text-text-primary">Operator Score</h2>

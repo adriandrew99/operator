@@ -148,14 +148,14 @@ export function Sidebar({ debriefReady }: SidebarProps) {
       className={cn(
         'hidden md:flex flex-col h-screen border-r border-border overflow-y-auto overflow-x-hidden',
         'transition-[width] duration-300 ease-out bg-surface-primary',
-        collapsed ? 'w-[64px]' : 'w-[216px]'
+        collapsed ? 'w-[56px]' : 'w-[240px]'
       )}
     >
       {/* Logo — drag region for Tauri */}
       <div
         className={cn(
-'pt-8 pb-5 transition-all duration-300 relative',
-        collapsed ? 'px-0 flex justify-center' : 'px-4'
+          'pt-10 pb-8 transition-all duration-300 relative',
+          collapsed ? 'px-0 flex justify-center' : 'px-5'
         )}
         onMouseDown={handleDrag}
       >
@@ -189,8 +189,8 @@ export function Sidebar({ debriefReady }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center text-[13px] rounded-lg transition-colors duration-200 relative group',
-                      collapsed ? 'justify-center px-0 py-2.5 h-10' : 'gap-3 px-3 py-2.5 h-10',
+                      'flex items-center text-[13px] rounded-md transition-colors duration-150 relative group',
+                      collapsed ? 'justify-center px-0 py-3 h-11' : 'gap-3 px-3 py-3 h-11',
                       isActive
                         ? 'bg-accent-muted text-text-primary'
                         : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'

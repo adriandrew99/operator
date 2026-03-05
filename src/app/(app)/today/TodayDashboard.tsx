@@ -12,8 +12,7 @@ import { RevenueRadar } from '@/components/insights/RevenueRadar';
 import { EnergyRouter } from '@/components/insights/EnergyRouter';
 import { InfoBox } from '@/components/ui/InfoBox';
 import { CelebrationBurst } from '@/components/ui/CelebrationBurst';
-import { CompletionCelebration } from '@/components/ui/CompletionCelebration';
-import { DayInReview } from '@/components/today/DayInReview';
+import { DayCompleteFlow } from '@/components/today/DayCompleteFlow';
 import { useUndoStack } from '@/hooks/useUndoStack';
 import { calculateDailyLoad, DAILY_CAPACITY, getLoadLevel, type LoadLevel } from '@/lib/utils/mental-load';
 import { savePinnedNote, unpinNote } from '@/actions/pinned-notes';
@@ -192,12 +191,14 @@ export function TodayDashboard({
     setComputedTaskCounts({ completed, total });
   }, []);
 
-  // Celebration tracking
+  // Celebration tracking — use same “all done” logic as Today’s Plan (parent counts + child-reported counts when available)
   const serverCompletedIds = new Set(completedTodayTasks.map(t => t.id));
   const allCompletedIds = new Set([...sharedCompletedIds, ...serverCompletedIds]);
   const stillActiveTasks = todayTasks.filter(t => !allCompletedIds.has(t.id));
   const totalPlanTasks = stillActiveTasks.length + allCompletedIds.size;
-  const allTasksDone = totalPlanTasks > 0 && allCompletedIds.size >= totalPlanTasks;
+  const allTasksDoneFromParent = totalPlanTasks > 0 && allCompletedIds.size >= totalPlanTasks;
+  const allTasksDoneFromChild = computedTaskCounts != null && computedTaskCounts.total > 0 && computedTaskCounts.completed >= computedTaskCounts.total;
+  const allTasksDone = allTasksDoneFromChild || allTasksDoneFromParent;
   const allFundamentalsDone = fundamentalsTotal > 0 && fundamentalsHitCount >= fundamentalsTotal;
   const completedCount = computedTaskCounts?.completed ?? allCompletedIds.size;
   const totalCount = computedTaskCounts?.total ?? totalPlanTasks;
@@ -253,7 +254,7 @@ export function TodayDashboard({
     <div className="max-w-7xl mx-auto space-y-5">
 
       {/* ━━━ HERO SECTION ━━━ */}
-      <div className="relative overflow-hidden rounded-2xl card-enter">
+      <div className="relative overflow-hidden rounded-lg card-enter">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.08] via-surface-secondary to-surface-secondary" />
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/[0.04] to-transparent" />
@@ -412,7 +413,7 @@ export function TodayDashboard({
         {/* ── LEFT COLUMN: Task Plan ── */}
         <div className="space-y-5">
           {/* Today's Focus / Tasks */}
-          <section className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+          <section className="card-elevated rounded-lg overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-5 pb-1">
               <div className="flex items-center gap-3">
                 <h2 className="text-base font-semibold text-text-primary">Today&apos;s Plan</h2>
@@ -448,7 +449,7 @@ export function TodayDashboard({
           </section>
 
           {/* Week Overview */}
-          <section className="bg-surface-secondary border border-border rounded-2xl p-6">
+          <section className="card-elevated rounded-lg p-6">
             <WeekView
               weekTasks={weekTasks}
               todayStr={today}
@@ -465,7 +466,7 @@ export function TodayDashboard({
         <div className="space-y-4">
 
           {/* Energy Router — "Do Next" */}
-          <div className="bg-surface-secondary border border-border rounded-2xl p-5">
+          <div className="card-elevated rounded-lg p-5">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-5 h-5 rounded-md bg-accent/10 flex items-center justify-center">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -484,7 +485,7 @@ export function TodayDashboard({
 
           {/* Calendar Events */}
           {todayEvents.length > 0 && (
-            <div className="bg-surface-secondary border border-border rounded-2xl p-5">
+            <div className="card-elevated rounded-lg p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-5 h-5 rounded-md bg-accent-blue/10 flex items-center justify-center">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -535,7 +536,7 @@ export function TodayDashboard({
           )}
 
           {/* Fundamentals */}
-          <div className="bg-surface-secondary border border-border rounded-2xl p-5">
+          <div className="card-elevated rounded-lg p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-md bg-accent-green/10 flex items-center justify-center">
@@ -556,7 +557,7 @@ export function TodayDashboard({
           </div>
 
           {/* Recurring Tasks */}
-          <div className="bg-surface-secondary border border-border rounded-2xl p-5">
+          <div className="card-elevated rounded-lg p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-md bg-purple-500/10 flex items-center justify-center">
@@ -579,7 +580,7 @@ export function TodayDashboard({
           </div>
 
           {/* Insights Preview */}
-          <div className="bg-surface-secondary border border-border rounded-2xl p-5">
+          <div className="card-elevated rounded-lg p-5">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-5 h-5 rounded-md bg-amber-500/10 flex items-center justify-center">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgb(245,158,11)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -620,7 +621,7 @@ export function TodayDashboard({
       {showMore && (
         <div className="space-y-5 animate-fade-in">
           {clients.length > 0 && (
-            <section className="bg-surface-secondary border border-border rounded-2xl p-6">
+            <section className="card-elevated rounded-lg p-6">
               <h2 className="text-base font-semibold text-text-primary mb-4">Revenue Radar</h2>
               <RevenueRadar clients={clients} />
             </section>
@@ -630,23 +631,23 @@ export function TodayDashboard({
         </div>
       )}
 
-      {/* ━━━ DAY IN REVIEW ━━━ */}
-      <DayInReview
+      {/* ━━━ DAY COMPLETE FLOW: celebration → Day in Review (one overlay, smooth transition) ━━━ */}
+      {allTasksDone && !celebrationPlayed && (
+        <DayCompleteFlow
+          key="day-complete-flow"
+          trigger={true}
+          onComplete={() => setCelebrationPlayed(true)}
         todayTasks={todayTasks}
         completedTodayTasks={completedTodayTasks}
         clients={clients}
         fundamentalsHit={fundamentalsHitCount}
         fundamentalsTotal={fundamentalsTotal}
-        allTasksDone={allTasksDone}
         dailyCapacity={dailyCapacity}
         existingCheckIn={currentScore?.check_in ?? null}
         existingNotes={currentScore?.notes ?? null}
         onCheckInSaved={setCurrentScore}
-        celebrationPlayed={celebrationPlayed}
-      />
-
-      {/* ━━━ CELEBRATIONS ━━━ */}
-      <CompletionCelebration trigger={allTasksDone} onComplete={() => setCelebrationPlayed(true)} />
+        />
+      )}
       <CelebrationBurst trigger={allFundamentalsDone} message="Fundamentals crushed!" />
 
       {/* ━━━ UNDO TOAST ━━━ */}

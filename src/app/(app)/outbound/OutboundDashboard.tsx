@@ -99,7 +99,7 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
 
         {/* Campaign cards */}
         {campaigns.length === 0 && !showNewForm ? (
-          <div className="bg-surface-secondary border border-border rounded-2xl p-10 text-center">
+          <div className="card-elevated rounded-lg p-10 text-center">
             <p className="text-sm text-text-tertiary mb-3">No campaigns yet</p>
             <button
               onClick={() => setShowNewForm(true)}
@@ -139,7 +139,7 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
           </div>
         </div>
 
-        <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+        <div className="card-elevated rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -208,7 +208,7 @@ export function OutboundDashboard({ campaigns: initialCampaigns }: OutboundDashb
 // ━━━ Metric Pill ━━━
 function MetricPill({ label, value, accent }: { label: string; value: number | string; accent?: boolean }) {
   return (
-    <div className="bg-surface-secondary border border-border rounded-2xl p-4 text-center">
+    <div className="card-elevated rounded-lg p-4 text-center">
       <p className={cn('text-xl font-bold font-mono leading-none tabular-nums', accent ? 'text-accent' : 'text-text-primary')}>
         {value}
       </p>
@@ -225,7 +225,7 @@ function CampaignCard({ campaign, onOpen }: { campaign: OutboundCampaignWithEntr
   return (
     <button
       onClick={onOpen}
-      className="bg-surface-secondary border border-border rounded-2xl p-5 text-left hover:border-border-light transition-all cursor-pointer w-full"
+      className="card-elevated rounded-lg p-5 text-left hover:border-border-light transition-all cursor-pointer w-full"
     >
       <div className="flex items-start justify-between gap-2 mb-4">
         <div className="min-w-0">
@@ -297,7 +297,7 @@ function NewCampaignForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-surface-secondary border border-border rounded-2xl p-6 space-y-3">
+    <form onSubmit={handleSubmit} className="card-elevated rounded-lg p-6 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-text-primary">New Campaign</h3>
         <button type="button" onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">
@@ -436,7 +436,7 @@ function CampaignDetail({
 
       {/* Message template (collapsible) */}
       {campaign.message_template && (
-        <div className="bg-surface-secondary border border-border rounded-2xl">
+        <div className="card-elevated rounded-lg">
           <button
             onClick={() => setShowTemplate(!showTemplate)}
             className="w-full flex items-center justify-between px-5 py-3 text-xs text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
@@ -456,7 +456,7 @@ function CampaignDetail({
       )}
 
       {/* Conversion funnel */}
-      <div className="bg-surface-secondary border border-border rounded-2xl p-6">
+      <div className="card-elevated rounded-lg p-6">
         <h3 className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary mb-4">Conversion Funnel</h3>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <FunnelStep label="Sends" value={campaign.totals.sends} />
@@ -491,11 +491,11 @@ function CampaignDetail({
 
       {/* Entry list */}
       {campaign.entries.length === 0 ? (
-        <div className="bg-surface-secondary border border-border rounded-2xl p-6 text-center">
+        <div className="card-elevated rounded-lg p-6 text-center">
           <p className="text-xs text-text-tertiary">No entries yet. Log your first batch of sends.</p>
         </div>
       ) : (
-        <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+        <div className="card-elevated rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -580,7 +580,7 @@ function AddEntryForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-surface-secondary border border-border rounded-2xl p-4 space-y-3">
+    <form onSubmit={handleSubmit} className="card-elevated rounded-lg p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-medium text-text-primary">Log Activity</h4>
         <button type="button" onClick={onClose} className="text-xs text-text-tertiary hover:text-text-secondary cursor-pointer">Cancel</button>

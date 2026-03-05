@@ -637,7 +637,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* Month Picker Dropdown */}
             {showMonthPicker && (
-              <div className="absolute top-full right-0 mt-2 z-50 w-56 p-3 tooltip-glass rounded-2xl">
+              <div className="absolute top-full right-0 mt-2 z-50 w-56 p-3 tooltip-glass rounded-lg">
                 {(() => {
                   const now = new Date();
                   const currentYear = now.getFullYear();
@@ -774,7 +774,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
       {/* Future month banner */}
       {isFuture && futureProjection && (
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-purple-500/10 border border-border">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-500/10 border border-border">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-text-primary shrink-0">
             <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
           </svg>
@@ -786,7 +786,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
       {/* Past month info banner */}
       {!isCurrent && !isFuture && !snapshot && (
-        <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+        <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
           <p className="text-xs text-amber-400">
             No financial record for {getMonthLabel(currentMonth)}. Revenue shown is based on current active clients.
           </p>
@@ -801,7 +801,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
       {/* ━━━ What-If Scenario Panel ━━━ */}
       {whatIfMode && whatIfCalc && (
-        <div className="p-5 rounded-2xl bg-surface-tertiary border border-border space-y-5 animate-fade-in">
+        <div className="p-5 rounded-lg bg-surface-tertiary border border-border space-y-5 animate-fade-in">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
@@ -1022,7 +1022,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
           {isFuture && futureProjection ? (
             <div className="space-y-3">
               {/* Projected revenue range */}
-              <div className="card-elevated rounded-2xl p-5 sm:p-6 bg-surface-tertiary">
+              <div className="card-elevated rounded-lg p-5 sm:p-6 bg-surface-tertiary">
                 <p className="text-xs font-semibold text-text-primary  mb-2 flex items-center gap-1">Projected Revenue Range <InfoTip text="Low end = confirmed retainers only. High end = confirmed + all pipeline leads. Reality will likely be somewhere in between." position="bottom" /></p>
                 <p className="text-2xl font-bold text-text-primary display-number">
                   {formatCurrency(futureProjection.confirmed)} – {formatCurrency(futureProjection.total)}
@@ -1032,17 +1032,17 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
               {/* Three tier cards */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-elevated rounded-2xl card-hover p-3 sm:p-4 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'ring-1 ring-border-light' : '')}>
+                <button onClick={() => setExpandedBox(expandedBox === 'revenue' ? null : 'revenue')} className={cn('card-elevated rounded-lg card-hover p-3 sm:p-4 text-left transition-all cursor-pointer', expandedBox === 'revenue' ? 'ring-1 ring-border-light' : '')}>
                   <p className="text-xs font-semibold text-emerald-400  mb-1 flex items-center gap-1">Confirmed <InfoTip text="Revenue from active clients with signed retainers. This money is coming in." position="bottom" /></p>
                   <p className="text-lg sm:text-xl font-bold text-emerald-400">{formatCurrency(futureProjection.confirmed)}</p>
                   <p className="text-xs text-text-tertiary mt-1">Active clients</p>
                 </button>
-                <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-elevated rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'ring-1 ring-border-light' : '')}>
+                <button onClick={() => setExpandedBox(expandedBox === 'expenses' ? null : 'expenses')} className={cn('card-elevated rounded-lg card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'expenses' ? 'ring-1 ring-border-light' : '')}>
                   <p className="text-xs font-semibold text-amber-400  mb-1 flex items-center gap-1">Likely <InfoTip text="Pipeline leads with 60%+ close probability. Good chance these convert." position="bottom" /></p>
                   <p className="text-xl font-bold text-amber-400">{formatCurrency(futureProjection.likely)}</p>
                   <p className="text-xs text-text-tertiary mt-1">Pipeline ≥60%</p>
                 </button>
-                <button onClick={() => setExpandedBox(expandedBox === 'possible' ? null : 'possible')} className={cn('card-elevated rounded-2xl card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'possible' ? 'ring-1 ring-border-light' : '')}>
+                <button onClick={() => setExpandedBox(expandedBox === 'possible' ? null : 'possible')} className={cn('card-elevated rounded-lg card-hover p-4 text-left transition-all cursor-pointer', expandedBox === 'possible' ? 'ring-1 ring-border-light' : '')}>
                   <p className="text-xs font-semibold text-text-primary  mb-1 flex items-center gap-1">Possible <InfoTip text="Pipeline leads under 60% probability. Don't count on these yet." position="bottom" /></p>
                   <p className="text-xl font-bold text-text-primary">{formatCurrency(futureProjection.possible)}</p>
                   <p className="text-xs text-text-tertiary mt-1">Pipeline &lt;60%</p>
@@ -1051,12 +1051,12 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
               {/* Bottom row: expenses + left in company */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="card-elevated rounded-2xl p-4">
+                <div className="card-elevated rounded-lg p-4">
                   <p className="text-xs font-semibold text-text-tertiary  mb-1 flex items-center gap-1">Est. Expenses <InfoTip text="Assumes same expenses as current month. Adjust in the Expenses tab if you expect changes." position="bottom" /></p>
                   <p className="text-lg font-bold text-text-secondary">{formatCurrency(effectiveExpenses)}</p>
                   <p className="text-xs text-text-tertiary mt-1">Carried from current</p>
                 </div>
-                <div className="card-elevated rounded-2xl p-4 bg-surface-tertiary">
+                <div className="card-elevated rounded-lg p-4 bg-surface-tertiary">
                   <p className="text-xs font-semibold text-text-primary  mb-1 flex items-center gap-1">Est. Left in Co. <InfoTip text="Confirmed revenue minus estimated expenses. What would stay in the business." position="bottom" /></p>
                   <p className="text-lg font-bold text-text-primary">{formatCurrency(effectiveLeftInCompany)}</p>
                   <p className="text-xs text-amber-400/60 mt-1">~{formatCurrency(effectiveTaxReserve)} tax</p>
@@ -1098,7 +1098,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Metric Breakdown Panel */}
           {expandedBox && (
-            <div className="p-4 rounded-2xl bg-surface-tertiary border border-border animate-fade-in">
+            <div className="p-4 rounded-lg bg-surface-tertiary border border-border animate-fade-in">
               {expandedBox === 'revenue' && isFuture && futureProjection ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-2">
@@ -1466,7 +1466,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Override save error */}
           {overrideError && (
-            <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-between animate-fade-in">
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between animate-fade-in">
               <p className="text-xs text-red-400">{overrideError}</p>
               <button onClick={() => setOverrideError(null)} className="text-xs text-red-400 hover:text-red-300 ml-3">✕</button>
             </div>
@@ -1474,7 +1474,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Stability + Pipeline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <section className="card-elevated rounded-2xl p-5">
+            <section className="card-elevated rounded-lg p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-1 h-5 rounded-full bg-blue-500" />
                 <h2 className="text-section-heading text-text-primary">Revenue Stability</h2>
@@ -1534,7 +1534,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               )}
             </section>
 
-            <section className="card-elevated rounded-2xl p-5">
+            <section className="card-elevated rounded-lg p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-1 h-5 rounded-full bg-purple-500" />
                 <h2 className="text-section-heading text-text-primary">Pipeline</h2>
@@ -1559,7 +1559,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <section className="card-elevated rounded-2xl p-5">
+            <section className="card-elevated rounded-lg p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-1 h-5 rounded-full bg-text-secondary" />
                 <h2 className="text-section-heading text-text-primary">Income Over Time</h2>
@@ -1570,7 +1570,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
               </div>
               <IncomeChart snapshots={patchedHistory} currentMonthRevenue={liveRevenue} currentMonthExpenses={liveExpenses} viewedMonth={currentMonth} projectedIncome={projectedIncome} />
             </section>
-            <section className="card-elevated rounded-2xl p-5">
+            <section className="card-elevated rounded-lg p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-1 h-5 rounded-full bg-cyan-500" />
                 <h2 className="text-section-heading text-text-primary">Revenue by Client</h2>
@@ -1585,7 +1585,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Insights & Recommendations */}
           {insights.length > 0 && (
-            <section className="card-elevated rounded-2xl p-5 space-y-3">
+            <section className="card-elevated rounded-lg p-5 space-y-3">
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-1 h-5 rounded-full bg-amber-500" />
                 <h2 className="text-section-heading text-text-primary">Insights & Recommendations</h2>
@@ -1600,7 +1600,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
           {/* Mental Energy Per Client */}
           {clientEnergyProfiles.length > 0 && clientEnergyProfiles.some(p => p.totalMLU > 0) && (
-            <section className="card-elevated rounded-2xl p-5 space-y-4">
+            <section className="card-elevated rounded-lg p-5 space-y-4">
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-1 h-5 rounded-full bg-purple-500" />
                 <h2 className="text-section-heading text-text-primary">Mental Energy Per Client</h2>
@@ -1822,7 +1822,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             </div>
 
             {/* ━━━ This Month — what you actually took ━━━ */}
-            <div className="card-elevated rounded-2xl p-5 sm:p-6 bg-surface-tertiary">
+            <div className="card-elevated rounded-lg p-5 sm:p-6 bg-surface-tertiary">
               <h4 className="text-xs  text-text-primary font-medium mb-3">This Month — Actuals</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -1917,7 +1917,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             </div>
 
             {/* ━━━ Annual business overview (synced with Overview tab) ━━━ */}
-            <div className="card-elevated rounded-2xl p-5 sm:p-6 space-y-2">
+            <div className="card-elevated rounded-lg p-5 sm:p-6 space-y-2">
               <h4 className="text-xs  text-text-tertiary font-medium mb-2">Annual Business Summary</h4>
               <div className="flex justify-between text-sm">
                 <span className="text-text-secondary">Revenue</span>
@@ -1940,7 +1940,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* ━━━ Tax-Efficient Strategy ━━━ */}
             {annualProfit > 0 && (
-              <div className="card-elevated rounded-2xl overflow-hidden ">
+              <div className="card-elevated rounded-lg overflow-hidden ">
                 <div className="p-5 space-y-4">
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs  text-blue-400 font-medium">Optimal Extraction</h4>
@@ -2021,7 +2021,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* Personal expenses detail */}
             {personalExpensesList.length > 0 && (
-              <div className="card-elevated rounded-2xl p-5 sm:p-6 space-y-2">
+              <div className="card-elevated rounded-lg p-5 sm:p-6 space-y-2">
                 <h4 className="text-xs  text-text-primary font-medium mb-1">Personal Expenses</h4>
                 {personalExpensesList.map(e => (
                   <div key={e.id} className="flex justify-between text-sm">
@@ -2123,15 +2123,15 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
 
             {/* YTD Summary Cards */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <div className="card-elevated rounded-2xl p-3 sm:p-4 bg-surface-tertiary">
+              <div className="card-elevated rounded-lg p-3 sm:p-4 bg-surface-tertiary">
                 <p className="text-xs text-text-primary  font-medium">YTD Revenue</p>
                 <p className="text-lg sm:text-xl font-bold text-text-primary mt-1">{formatCurrency(ytdRevenue)}</p>
               </div>
-              <div className="card-elevated rounded-2xl p-3 sm:p-4">
+              <div className="card-elevated rounded-lg p-3 sm:p-4">
                 <p className="text-xs text-text-tertiary  font-medium">YTD Expenses</p>
                 <p className="text-lg sm:text-xl font-bold text-text-secondary mt-1">{formatCurrency(ytdExpenses)}</p>
               </div>
-              <div className={cn('card-elevated rounded-2xl p-3 sm:p-4', ytdNet > 0 ? '' : 'border border-red-500/20 bg-red-500/5')}>
+              <div className={cn('card-elevated rounded-lg p-3 sm:p-4', ytdNet > 0 ? '' : 'border border-red-500/20 bg-red-500/5')}>
                 <p className={cn('text-xs  font-medium', ytdNet > 0 ? 'text-text-primary' : 'text-red-400')}>Left in Company</p>
                 <p className={cn('text-lg sm:text-xl font-bold mt-1', ytdNet > 0 ? 'text-text-primary' : 'text-red-400')}>{formatCurrency(ytdNet)}</p>
                 <p className="text-xs text-amber-400/60 mt-0.5">~{formatCurrency(ytdTax)} tax</p>
@@ -2139,7 +2139,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             </div>
 
             {/* Projection bar */}
-            <div className="card-elevated rounded-2xl p-5 sm:p-6">
+            <div className="card-elevated rounded-lg p-5 sm:p-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-medium text-text-secondary">Annual Projection</p>
@@ -2166,7 +2166,7 @@ export function FinanceDashboard({ clients, expenses, snapshot, history, pipelin
             </div>
 
             {/* Monthly Breakdown Table */}
-            <div className="card-elevated rounded-2xl overflow-hidden">
+            <div className="card-elevated rounded-lg overflow-hidden">
               <div className="px-4 sm:px-5 py-3 border-b border-border flex items-center justify-between">
                 <p className="text-xs font-medium text-text-secondary">Monthly Breakdown</p>
                 <div className="flex items-center gap-2">
@@ -2626,7 +2626,7 @@ function ForecastTab({
   return (
     <div className="space-y-5 stagger-in">
       {/* Cash Projection */}
-      <section className="card-elevated rounded-2xl p-5">
+      <section className="card-elevated rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-1 h-5 rounded-full bg-text-secondary" />
@@ -2715,7 +2715,7 @@ function ForecastTab({
                       {formatCurrency(row.confirmed + row.likely + row.possible)}
                     </span>
                     {/* Hover tooltip */}
-                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/bar:block w-56 p-3 tooltip-glass rounded-2xl">
+                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/bar:block w-56 p-3 tooltip-glass rounded-lg">
                       <p className="text-xs font-semibold text-text-primary mb-2">{row.month} Breakdown</p>
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs">
@@ -2795,7 +2795,7 @@ function ForecastTab({
                       {formatCurrency(row.cumulative)}
                     </span>
                     {/* Hover tooltip */}
-                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/cum:block w-52 p-3 tooltip-glass rounded-2xl">
+                    <div className="absolute left-16 top-full mt-1 z-50 hidden group-hover/cum:block w-52 p-3 tooltip-glass rounded-lg">
                       <p className="text-xs font-semibold text-text-primary mb-2">{row.month} Cash Position</p>
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs">
@@ -2828,7 +2828,7 @@ function ForecastTab({
 
       {/* Revenue forecast breakdown — 3 tier cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <section className="card-elevated rounded-2xl border border-emerald-500/20 card-hover p-5">
+        <section className="card-elevated rounded-lg border border-emerald-500/20 card-hover p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-1 h-5 rounded-full bg-emerald-500" />
             <h2 className="text-section-heading text-emerald-400">Confirmed</h2>
@@ -2951,7 +2951,7 @@ function ForecastTab({
           </div>
         </section>
 
-        <section className="card-elevated rounded-2xl border border-amber-500/20 card-hover p-5">
+        <section className="card-elevated rounded-lg border border-amber-500/20 card-hover p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-1 h-5 rounded-full bg-amber-500" />
             <h2 className="text-section-heading text-amber-400">Likely</h2>
@@ -2982,7 +2982,7 @@ function ForecastTab({
           </div>
         </section>
 
-        <section className="card-elevated rounded-2xl card-hover p-5">
+        <section className="card-elevated rounded-lg card-hover p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-1 h-5 rounded-full bg-purple-500" />
             <h2 className="text-section-heading text-text-primary">Possible</h2>
@@ -3015,7 +3015,7 @@ function ForecastTab({
       </div>
 
       {/* Expense Overrides */}
-      <section className="card-elevated rounded-2xl border border-red-500/20 card-hover p-5">
+      <section className="card-elevated rounded-lg border border-red-500/20 card-hover p-5">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-1 h-5 rounded-full bg-red-500" />
           <h2 className="text-section-heading text-red-400">Expense Overrides</h2>
@@ -3127,7 +3127,7 @@ function ForecastTab({
       </section>
 
       {/* Monthly P&L */}
-      <section className="card-elevated rounded-2xl p-5">
+      <section className="card-elevated rounded-lg p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-5 rounded-full bg-amber-500" />
           <h2 className="text-section-heading text-text-primary">Monthly P&amp;L Breakdown</h2>
@@ -3136,15 +3136,15 @@ function ForecastTab({
           </InfoBox>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 rounded-2xl bg-surface-tertiary">
+          <div className="p-3 rounded-lg bg-surface-tertiary">
             <p className="text-xs text-text-tertiary mb-1">Revenue</p>
             <p className="text-section-heading text-text-primary">{formatCurrency(monthlyRevenue)}</p>
           </div>
-          <div className="p-3 rounded-2xl bg-surface-tertiary">
+          <div className="p-3 rounded-lg bg-surface-tertiary">
             <p className="text-xs text-text-tertiary mb-1">Expenses</p>
             <p className="text-sm font-bold text-text-secondary">{formatCurrency(monthlyExpenses)}</p>
           </div>
-          <div className="p-3 rounded-2xl bg-surface-tertiary">
+          <div className="p-3 rounded-lg bg-surface-tertiary">
             <p className="text-xs text-text-primary mb-1">Left in Co.</p>
             <p className="text-sm font-bold text-text-primary">{formatCurrency(leftInCompany)}</p>
             <p className="text-xs text-amber-400/60 mt-0.5">~{formatCurrency(Math.max(0, monthlyRevenue - monthlyExpenses) * UK_CORP_TAX_RATE)} tax</p>
@@ -3153,7 +3153,7 @@ function ForecastTab({
       </section>
 
       {/* Historical Snapshots — Editable */}
-      <section className="card-elevated rounded-2xl p-5">
+      <section className="card-elevated rounded-lg p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-5 rounded-full bg-cyan-500" />
           <h2 className="text-section-heading text-text-primary">Monthly History</h2>
@@ -3282,7 +3282,7 @@ function ClientsTab({
       </div>
 
       {clients.length === 0 ? (
-        <div className="card-elevated rounded-2xl p-10">
+        <div className="card-elevated rounded-lg p-10">
           <div className="empty-state">
             <div className="empty-state-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -3299,7 +3299,7 @@ function ClientsTab({
             return (
               <div
                 key={client.id}
-                className="card-elevated rounded-2xl p-4 card-hover cursor-pointer"
+                className="card-elevated rounded-lg p-4 card-hover cursor-pointer"
                 onClick={() => setEditingClient(client)}
               >
                 <div className="flex items-center justify-between">
@@ -3683,7 +3683,7 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
   }
 
   return (
-    <section className="card-elevated rounded-2xl p-5">
+    <section className="card-elevated rounded-lg p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-1 h-5 rounded-full bg-emerald-500" />
@@ -3778,7 +3778,7 @@ function SavingsGoalsSection({ goals, leftInCompany }: {
             const isEditing = editingGoal?.id === g.id;
 
             return (
-              <div key={g.id} className="p-4 rounded-2xl bg-surface-tertiary space-y-3 group">
+              <div key={g.id} className="p-4 rounded-lg bg-surface-tertiary space-y-3 group">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-text-primary">{g.label}</p>
                   <div className="flex items-center gap-2">
@@ -3903,7 +3903,7 @@ function InsightCards({ insights }: { insights: RevenueInsight[] }) {
             key={i}
             onClick={() => setExpandedIdx(isExpanded ? null : i)}
             className={cn(
-              'rounded-2xl border px-4 py-3 text-left transition-all cursor-pointer',
+              'rounded-lg border px-4 py-3 text-left transition-all cursor-pointer',
               style.bg,
               isExpanded && 'ring-1 ring-white/10'
             )}
@@ -4042,14 +4042,14 @@ function ExpensesTab({
 
   function renderExpenseList(items: Expense[]) {
     if (items.length === 0) return (
-      <div className="card-elevated rounded-2xl p-4 sm:p-6 text-center">
+      <div className="card-elevated rounded-lg p-4 sm:p-6 text-center">
         <p className="text-xs text-text-tertiary">No expenses.</p>
       </div>
     );
     return (
       <div className="space-y-2">
         {items.map((expense) => (
-          <div key={expense.id} className="card-elevated rounded-2xl p-4 flex items-center justify-between card-hover group">
+          <div key={expense.id} className="card-elevated rounded-lg p-4 flex items-center justify-between card-hover group">
             <div className="space-y-2 min-w-0 flex-1 cursor-pointer" onClick={() => onEditExpense(expense)}>
               <p className="text-sm font-medium text-text-primary">{expense.description}</p>
               <div className="flex items-center gap-3 text-xs text-text-secondary">
@@ -4080,7 +4080,7 @@ function ExpensesTab({
       </div>
 
       {/* Salary & Staff Costs */}
-      <div className="card-elevated rounded-2xl p-5 sm:p-6 space-y-4">
+      <div className="card-elevated rounded-lg p-5 sm:p-6 space-y-4">
         <h4 className="text-xs text-text-tertiary font-medium">Salary & Staff Costs</h4>
 
         {/* Personal Salary */}

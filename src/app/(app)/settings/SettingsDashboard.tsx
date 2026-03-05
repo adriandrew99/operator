@@ -282,7 +282,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                       return (
                         <div
                           key={goal.id}
-                          className="bg-surface-secondary border border-border rounded-2xl p-5 group hover:border-border-light transition-colors"
+                          className="card-elevated rounded-lg p-5 group hover:border-border-light transition-colors"
                         >
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-medium text-text-primary">{goal.label}</p>
@@ -362,7 +362,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                     {fundamentals.map((f) => (
                       <div
                         key={f.id}
-                        className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between group"
+                        className="card-elevated rounded-lg px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-base">{f.icon}</span>
@@ -424,7 +424,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                   {INTEGRATIONS.map((integration) => (
                     <div
                       key={integration.id}
-                      className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between"
+                      className="card-elevated rounded-lg px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-lg">{integration.icon}</span>
@@ -512,7 +512,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                         ? Number(goal.target_value) - Number(goal.current_value)
                         : Number(goal.current_value) - Number(goal.target_value);
                       return (
-                        <div key={goal.id} className="bg-surface-secondary border border-border rounded-2xl p-5 group hover:border-border-light transition-colors">
+                        <div key={goal.id} className="card-elevated rounded-lg p-5 group hover:border-border-light transition-colors">
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-medium text-text-primary">{goal.label}</p>
                             <div className="flex items-center gap-2">
@@ -552,7 +552,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                 ) : (
                   <div className="space-y-2">
                     {fundamentals.map((f) => (
-                      <div key={f.id} className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between group">
+                      <div key={f.id} className="card-elevated rounded-lg px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between group">
                         <div className="flex items-center gap-3">
                           <span className="text-base">{f.icon}</span>
                           <span className="text-sm text-text-primary">{f.label}</span>
@@ -586,7 +586,7 @@ export function SettingsDashboard({ profile, goals, fundamentals, userEmail, com
                 <p className="text-xs text-text-secondary">Connect external tools to auto-import tasks and financial data.</p>
                 <div className="space-y-2">
                   {INTEGRATIONS.map((integration) => (
-                    <div key={integration.id} className="bg-surface-secondary border border-border rounded-2xl px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between">
+                    <div key={integration.id} className="card-elevated rounded-lg px-4 py-3 hover:border-border-light transition-colors flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-lg">{integration.icon}</span>
                         <div>
@@ -866,13 +866,13 @@ function WorkScheduleSection({ profile }: { profile: Profile | null }) {
   return (
     <div className="space-y-3">
       <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Work Schedule</p>
-      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
+      <div className="card-elevated rounded-lg p-5 space-y-4">
         <p className="text-xs text-text-tertiary">Auto-schedule will only place tasks within these hours and days.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-text-secondary mb-1 block">Start hour</label>
             <select value={startHour} onChange={e => setStartHour(e.target.value)}
-              className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary cursor-pointer">
+              className="w-full card-elevated rounded-lg px-3 py-2 text-sm text-text-primary cursor-pointer">
               {Array.from({ length: 16 }, (_, i) => i + 5).map(h => (
                 <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
               ))}
@@ -881,7 +881,7 @@ function WorkScheduleSection({ profile }: { profile: Profile | null }) {
           <div>
             <label className="text-xs text-text-secondary mb-1 block">End hour</label>
             <select value={endHour} onChange={e => setEndHour(e.target.value)}
-              className="w-full bg-surface-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary cursor-pointer">
+              className="w-full card-elevated rounded-lg px-3 py-2 text-sm text-text-primary cursor-pointer">
               {Array.from({ length: 16 }, (_, i) => i + 8).map(h => (
                 <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
               ))}
@@ -980,7 +980,7 @@ function CalendarSection({ initialSources }: { initialSources: CalendarSource[] 
   return (
     <div className="space-y-3">
       <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Calendars</p>
-      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
+      <div className="card-elevated rounded-lg p-5 space-y-4">
         <div>
           <p className="text-xs text-text-secondary mb-1">
             Add your calendars&apos; iCal/ICS URLs to see events on your Today page.
@@ -1143,7 +1143,7 @@ function DashboardLayoutSection({ initialLayout }: { initialLayout: DashboardLay
           </Button>
         </div>
       </div>
-      <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+      <div className="card-elevated rounded-lg overflow-hidden">
         <p className="text-xs text-text-tertiary px-5 pt-4 pb-2">
           Show or hide sections on your dashboard pages. Today&apos;s Plan is always visible.
         </p>
@@ -1246,7 +1246,7 @@ function FinanceSettingsSection({ profile }: { profile: Profile | null }) {
   return (
     <div className="space-y-3">
       <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Finance</p>
-      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
+      <div className="card-elevated rounded-lg p-5 space-y-4">
         <p className="text-xs text-text-tertiary">Monthly salary and staff costs are factored into your Finance dashboard P&L calculations.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Your Monthly Salary (GBP)" type="number" step="0.01" value={salary} onChange={e => setSalary(e.target.value)} />
@@ -1326,7 +1326,7 @@ function SlackSection({ initialWebhookUrl }: { initialWebhookUrl: string | null 
           </span>
         )}
       </div>
-      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
+      <div className="card-elevated rounded-lg p-5 space-y-4">
         <p className="text-xs text-text-secondary">
           Receive a daily task summary in Slack. Create an{' '}
           <a
@@ -1450,7 +1450,7 @@ function CalendarFeedSection({ initialFeedUrl }: { initialFeedUrl: string | null
           </span>
         )}
       </div>
-      <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-4">
+      <div className="card-elevated rounded-lg p-5 space-y-4">
         <p className="text-xs text-text-secondary">
           Subscribe to your Nexus tasks from any calendar app. This feed includes today&apos;s flagged tasks, upcoming deadlines (14 days), and recurring tasks.
         </p>

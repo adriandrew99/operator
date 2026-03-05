@@ -185,19 +185,19 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5">
+        <div className="card-elevated rounded-lg p-5 space-y-1.5">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Pipeline Value</p>
           <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(pipelineValue)}</p>
         </div>
-        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5 bg-gradient-to-br from-accent-green/[0.04] to-transparent">
+        <div className="card-elevated rounded-lg p-5 space-y-1.5 bg-gradient-to-br from-accent-green/[0.04] to-transparent">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Closed Value</p>
           <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(closedValue)}</p>
         </div>
-        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5">
+        <div className="card-elevated rounded-lg p-5 space-y-1.5">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Weighted</p>
           <p className="text-2xl font-bold text-text-primary tabular-nums">{formatCurrency(weightedValue)}</p>
         </div>
-        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-1.5">
+        <div className="card-elevated rounded-lg p-5 space-y-1.5">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">Active Leads</p>
           <p className="text-2xl font-bold text-text-primary tabular-nums">{activeLeads.length}</p>
           <p className="text-xs text-text-tertiary">{leads.length} total</p>
@@ -206,7 +206,7 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
 
       {/* Next Action Banner */}
       {nextAction && (
-        <div className="bg-surface-secondary border border-border rounded-2xl p-4 flex items-center gap-4">
+        <div className="card-elevated rounded-lg p-4 flex items-center gap-4">
           <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-accent">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
@@ -221,7 +221,7 @@ export function PipelineDashboard({ leads: initialLeads }: PipelineDashboardProp
       )}
 
       {/* Stage Sections */}
-      <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+      <div className="card-elevated rounded-lg overflow-hidden">
         {stages.map((stage, stageIdx) => {
           const stageLeads = leads.filter((l) => l.stage === stage);
           const stageLabel = LEAD_STAGES.find((s) => s.value === stage)?.label || stage;
@@ -507,7 +507,7 @@ function ConvertToClientModal({
   return (
     <Modal open={open} onClose={onClose} title="Convert to Client">
       <div className="space-y-4">
-        <div className="card-elevated rounded-2xl p-4">
+        <div className="card-elevated rounded-lg p-4">
           <p className="text-xs text-text-tertiary font-medium  mb-1">Won Deal</p>
           <p className="text-sm font-semibold text-text-primary">{lead.name}</p>
           {lead.company && <p className="text-xs text-text-secondary">{lead.company}</p>}

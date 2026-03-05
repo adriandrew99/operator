@@ -152,7 +152,7 @@ export function FocusBlock({
   }
 
   return (
-    <div className="card-glass rounded-xl p-8 sm:p-10">
+    <div className="card-glass rounded-lg p-8 sm:p-10">
       <div className="flex flex-col gap-6">
         {/* ━━━ TOP: Key metrics row ━━━ */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">

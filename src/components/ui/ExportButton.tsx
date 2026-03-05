@@ -68,7 +68,7 @@ export function ExportButton({ options, className }: ExportButtonProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-surface-secondary border border-border rounded-xl py-1 animate-scale-in">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-surface-secondary border border-border rounded-lg py-1 animate-scale-in">
           {options.map((opt, i) => (
             <button
               key={i}

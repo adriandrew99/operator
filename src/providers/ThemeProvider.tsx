@@ -53,14 +53,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
       attribute="data-theme"
-      defaultTheme="system"
+      defaultTheme="light"
       enableSystem={false}
       themes={['light', 'dark', 'system']}
       disableTransitionOnChange
       value={{
         light: 'light',
         dark: 'dark',
-        system: 'dark', // fallback resolved value for 'system' (AutoThemeSwitcher overrides immediately)
+        system: 'light', // fallback for 'system' (AutoThemeSwitcher overrides when active)
       }}
     >
       <AutoThemeSwitcher />

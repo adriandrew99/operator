@@ -221,7 +221,7 @@ export function TasksDashboard({ tasks, completedTasks, archivedTasks, clients, 
       </div>
 
       {/* ━━━ VIEW TABS + TOOLBAR ━━━ */}
-      <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+      <div className="bg-surface-secondary border border-border rounded-lg overflow-hidden">
 
         {/* Tab header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-2">

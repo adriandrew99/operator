@@ -78,7 +78,7 @@ export function DailyCheckIn({ existingCheckIn, existingNotes, onSaved, variant 
   if (hasExisting && !isEditing) {
     const Wrapper = isInline ? 'div' : 'section';
     return (
-      <Wrapper className={isInline ? 'pt-4 border-t border-border' : 'card-elevated rounded-2xl p-6'}>
+      <Wrapper className={isInline ? 'pt-4 border-t border-border' : 'card-elevated rounded-lg p-6'}>
         <div className="flex items-center justify-between mb-3">
           <h2 className={isInline ? 'text-xs font-medium text-text-secondary' : 'text-section-heading text-text-primary'}>
             {isInline ? 'Check-In' : 'Daily Check-In'}

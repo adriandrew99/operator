@@ -21,7 +21,7 @@ export function ScoreMilestones({
   totalDays,
 }: ScoreMilestonesProps) {
   return (
-    <section className="card-elevated rounded-2xl p-6">
+    <section className="card-elevated rounded-lg p-6">
       <h2 className="text-section-heading text-text-primary mb-4">Milestones</h2>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

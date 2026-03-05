@@ -89,7 +89,7 @@ export function RetroactiveCheckIn({ scoreHistory }: RetroactiveCheckInProps) {
   }
 
   return (
-    <section className="card-elevated rounded-2xl p-6">
+    <section className="card-elevated rounded-lg p-6">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <h2 className="text-section-heading text-text-primary">Backfill Check-Ins</h2>

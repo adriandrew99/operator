@@ -76,7 +76,7 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {PROMPTS.map((prompt) => (
-            <div key={prompt.field} className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-3 hover:border-border-light transition-colors">
+            <div key={prompt.field} className="card-elevated rounded-lg p-5 space-y-3 hover:border-border-light transition-colors">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-surface-tertiary flex items-center justify-center flex-shrink-0">
                   <span className="text-text-secondary text-xs">{prompt.icon}</span>
@@ -100,7 +100,7 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
             Operator Score Trend
           </p>
-          <div className="bg-surface-secondary border border-border rounded-2xl p-6">
+          <div className="card-elevated rounded-lg p-6">
             <div className="h-36 flex items-end gap-2">
               {weeklyScores.slice(-8).map((w, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
@@ -125,7 +125,7 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
         <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
           Focus Areas for Next Week
         </p>
-        <div className="bg-surface-secondary border border-border rounded-2xl p-5 space-y-2.5">
+        <div className="card-elevated rounded-lg p-5 space-y-2.5">
           {['focus_area_1', 'focus_area_2', 'focus_area_3'].map((field, i) => (
             <div key={field} className="flex items-center gap-3">
               <span className="w-6 h-6 rounded-lg bg-surface-tertiary flex items-center justify-center text-xs text-text-tertiary font-mono flex-shrink-0">{i + 1}</span>
@@ -146,7 +146,7 @@ export function ReviewDashboard({ review, scores, history }: ReviewDashboardProp
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
             Past Reviews
           </p>
-          <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden divide-y divide-border">
+          <div className="card-elevated rounded-lg overflow-hidden divide-y divide-border">
             {history.slice(1).map((r) => (
               <div key={r.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-surface-tertiary/30 transition-colors">
                 <div>

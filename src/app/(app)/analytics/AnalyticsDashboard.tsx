@@ -108,7 +108,7 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-surface-secondary border border-border rounded-2xl overflow-hidden">
+    <div className="card-elevated rounded-lg overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-4 sm:px-6 py-4 cursor-pointer hover:bg-surface-tertiary/50 transition-colors"
@@ -338,14 +338,14 @@ export function AnalyticsDashboard({
 
       {/* ═══ 1. Weekly Debrief ═══ */}
       {layout.weekly_debrief && weeklyDebrief && (
-        <div className="card-elevated rounded-2xl p-5">
+        <div className="card-elevated rounded-lg p-5">
           <WeeklyDebrief debrief={weeklyDebrief} history={debriefHistory} collapsible />
         </div>
       )}
 
       {/* ═══ 2. Hero Section — Portfolio Performance ═══ */}
       {showHero && (
-        <div className="card-elevated rounded-2xl p-5 space-y-4">
+        <div className="card-elevated rounded-lg p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <p className="text-xs font-medium text-text-tertiary ">Portfolio Performance</p>
@@ -403,7 +403,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ Client Energy vs Revenue ═══ */}
       {showClientEnergy && clientEnergyProfiles.length > 0 && (
-        <div className="card-elevated rounded-2xl p-6 space-y-4">
+        <div className="card-elevated rounded-lg p-6 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <div className="flex items-center gap-1.5">
@@ -484,7 +484,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ Scope Creep Radar ═══ */}
       {layout.scope_creep_radar && scopeCreepAnalysis && (
-        <div className="card-elevated rounded-2xl p-6">
+        <div className="card-elevated rounded-lg p-6">
           <h3 className="text-section-heading text-text-primary mb-4">Scope Creep Radar</h3>
           <ScopeCreepRadar analysis={scopeCreepAnalysis} />
         </div>
@@ -502,7 +502,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ Revenue & Profit Over Time ═══ */}
       {layout.revenue_profit_chart && revenueTrends.length > 0 && (
-        <div className="card-elevated rounded-2xl p-6 space-y-4">
+        <div className="card-elevated rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm">📈</span>
             <h3 className="text-section-heading text-text-primary">Revenue & Profit Over Time</h3>
@@ -554,7 +554,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ Weekly Energy Investment ═══ */}
       {layout.energy_investment_chart && energyTrends.length > 0 && (
-        <div className="card-elevated rounded-2xl p-6 space-y-4">
+        <div className="card-elevated rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm">⚡</span>
             <h3 className="text-section-heading text-text-primary">Weekly Energy Investment</h3>
@@ -600,7 +600,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ Task Volume ═══ */}
       {layout.task_volume_chart && (
-        <div className="card-elevated rounded-2xl p-6 space-y-4">
+        <div className="card-elevated rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm">📊</span>
             <h3 className="text-section-heading text-text-primary">Weekly Task Volume</h3>
@@ -629,7 +629,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ Energy by Client ═══ */}
       {layout.energy_by_client && (
-        <div className="card-elevated rounded-2xl p-6 space-y-4">
+        <div className="card-elevated rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm">🔋</span>
             <h3 className="text-section-heading text-text-primary">Energy by Client</h3>
@@ -651,7 +651,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ Revenue Radar ═══ */}
       {layout.revenue_radar && clients.length > 0 && (
-        <div className="card-elevated rounded-2xl p-6">
+        <div className="card-elevated rounded-lg p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm">📡</span>
             <h3 className="text-section-heading text-text-primary">Revenue Radar</h3>
@@ -671,7 +671,7 @@ export function AnalyticsDashboard({
 
       {/* ═══ How MLU Works ═══ */}
       {layout.mlu_explainer && (
-        <div className="card-elevated rounded-2xl p-6 space-y-4">
+        <div className="card-elevated rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm">🧠</span>
             <h3 className="text-section-heading text-text-primary">How Mental Load Units (MLU) Work</h3>
@@ -725,7 +725,7 @@ export function AnalyticsDashboard({
 // ━━━ Hero Stat ━━━
 function HeroStat({ label, value, unit, color, tip }: { label: string; value: string; unit?: string; color?: string; tip?: string }) {
   return (
-    <div className="bg-surface-tertiary rounded-2xl px-2.5 sm:px-3 py-2.5 sm:py-3">
+    <div className="bg-surface-tertiary rounded-lg px-2.5 sm:px-3 py-2.5 sm:py-3">
       <p className="text-xs sm:text-xs text-text-tertiary  truncate flex items-center gap-1">
         {label}
         {tip && <InfoTip text={tip} position="bottom" />}
@@ -763,7 +763,7 @@ function ClientEnergyRow({
     rating === 'Average' ? 'bg-text-secondary/40' : 'bg-text-tertiary/40';
 
   return (
-    <div className="rounded-2xl border border-border hover:border-border-light px-3 sm:px-4 py-3 transition-colors space-y-2">
+    <div className="rounded-lg border border-border hover:border-border-light px-3 sm:px-4 py-3 transition-colors space-y-2">
       {/* Top row: rank, name, £/MLU, badge */}
       <div className="flex items-center gap-2 sm:gap-3">
         <span className="text-xs text-text-tertiary font-mono w-4 text-right flex-shrink-0">{rank}</span>
@@ -832,7 +832,7 @@ function InsightsPatternsPanel({
   const hasMore = items.length > 3;
 
   return (
-    <div className="card-elevated rounded-2xl p-5 space-y-3">
+    <div className="card-elevated rounded-lg p-5 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm">💡</span>
@@ -900,7 +900,7 @@ function MonthlyTrendsSection({ trends }: { trends: MonthlyTrend[] }) {
   const recentTrends = trends.slice(-3);
 
   return (
-    <div className="card-elevated rounded-2xl p-6 space-y-4">
+    <div className="card-elevated rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-2">
         <span className="text-sm">📊</span>
         <h3 className="text-section-heading text-text-primary">Monthly Trends</h3>
@@ -992,7 +992,7 @@ function DeltaBadge({ value }: { value: number }) {
 // ━━━ Client Health Scores Section ━━━
 function ClientHealthScoresSection({ scores }: { scores: ClientHealthScore[] }) {
   return (
-    <div className="card-elevated rounded-2xl p-6 space-y-4">
+    <div className="card-elevated rounded-lg p-6 space-y-4">
       <div className="flex items-center gap-2">
         <span className="text-sm">💊</span>
         <h3 className="text-section-heading text-text-primary">Client Health Scores</h3>

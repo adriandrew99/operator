@@ -17,7 +17,7 @@ const SIZES = {
  */
 export function NexusLogo({ size = 'md', className }: NexusLogoProps) {
   return (
-    <div className={cn('rounded-lg bg-accent/90 flex items-center justify-center', SIZES[size], size === 'lg' && 'rounded-xl', className)}>
+    <div className={cn('rounded-md bg-accent flex items-center justify-center', SIZES[size], size === 'lg' && 'rounded-lg', className)}>
       <svg
         viewBox="0 0 512 512"
         fill="none"

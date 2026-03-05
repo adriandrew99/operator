@@ -60,7 +60,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
       <div
         className={cn(
           'relative z-10 w-full max-w-lg bg-surface-elevated border border-border overflow-hidden',
-          'rounded-t-2xl sm:rounded-xl animate-slide-up max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
+          'rounded-t-2xl sm:rounded-lg animate-slide-up max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
           className
         )}
       >

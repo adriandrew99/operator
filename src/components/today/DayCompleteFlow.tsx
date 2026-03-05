@@ -51,17 +51,10 @@ export function DayCompleteFlow({
   const [phase, setPhase] = useState<'idle' | 'celebrate' | 'review' | 'out'>('idle');
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
-  const hasTriggeredRef = useRef(false);
-  const wasEverFalseRef = useRef(!trigger);
 
+  // When mounted with trigger=true we always run (parent only mounts us when allTasksDone && !celebrationPlayed)
   useEffect(() => {
-    if (!trigger) {
-      wasEverFalseRef.current = true;
-      hasTriggeredRef.current = false;
-      return;
-    }
-    if (hasTriggeredRef.current || !wasEverFalseRef.current) return;
-    hasTriggeredRef.current = true;
+    if (!trigger) return;
 
     const today = new Date().toISOString().split('T')[0];
     const alreadyCelebrated = localStorage.getItem(CELEBRATION_KEY) === today;
@@ -186,11 +179,15 @@ export function DayCompleteFlow({
       {(phase === 'review' || phase === 'out') && (
         <div
           className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto day-complete-card-enter"
-          style={{
-            opacity: phase === 'out' ? 0 : 1,
-            transform: phase === 'out' ? 'scale(0.96)' : 'scale(1)',
-            transition: 'opacity 0.32s ease-out, transform 0.32s ease-out',
-          }}
+          style={
+            phase === 'out'
+              ? {
+                  opacity: 0,
+                  transform: 'scale(0.96)',
+                  transition: 'opacity 0.32s ease-out, transform 0.32s ease-out',
+                }
+              : undefined
+          }
         >
           {phase === 'review' && (
             <DayInReview

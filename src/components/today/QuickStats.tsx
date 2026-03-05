@@ -39,9 +39,9 @@ export function QuickStats({
   ];
 
   return (
-    <div className="card-elevated p-5 sm:p-6 h-full flex flex-col justify-center">
-      <h3 className="section-label mb-4">Quick Stats</h3>
-      <div className="grid grid-cols-2 gap-5">
+    <div className="card-elevated p-6 sm:p-7 h-full flex flex-col justify-center">
+      <h3 className="section-label mb-5">Quick Stats</h3>
+      <div className="grid grid-cols-2 gap-6">
         {stats.map(s => (
           <div key={s.label}>
             <p className="text-caption mb-1">{s.label}</p>

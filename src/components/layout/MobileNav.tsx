@@ -59,7 +59,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--overlay-bg)' }} />
           <div className="absolute bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-3 right-3 animate-slide-up">
-            <div className="rounded-t-2xl rounded-b-xl card-elevated p-1.5">
+            <div className="rounded-t-xl rounded-b-lg card-elevated p-1">
               {MORE_ITEMS.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
@@ -67,7 +67,7 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150',
+                      'flex items-center gap-3 px-4 py-3.5 rounded-md transition-colors duration-150',
                       isActive
                         ? 'bg-accent-muted text-text-primary'
                         : 'text-text-secondary active:bg-surface-hover'
@@ -108,12 +108,12 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 py-2 flex-1 min-h-[60px] transition-all duration-200 relative',
+                  'flex flex-col items-center justify-center gap-1 py-3 flex-1 min-h-[64px] transition-colors duration-150 relative',
                   isActive ? 'text-accent' : 'text-text-tertiary active:text-text-secondary'
                 )}
               >
                 <div className={cn(
-                  'relative flex items-center justify-center w-10 h-7 rounded-full transition-colors duration-200',
+                  'relative flex items-center justify-center w-10 h-7 rounded-full transition-colors duration-150',
                   isActive && 'bg-accent-muted'
                 )}>
                   <svg
@@ -146,12 +146,12 @@ export function MobileNav({ debriefReady }: MobileNavProps) {
           <button
             onClick={() => setMoreOpen(prev => !prev)}
             className={cn(
-              'flex flex-col items-center justify-center gap-0.5 py-2 flex-1 min-h-[60px] transition-all duration-200 relative',
+              'flex flex-col items-center justify-center gap-1 py-3 flex-1 min-h-[64px] transition-colors duration-150 relative',
               moreOpen || isMoreActive ? 'text-accent' : 'text-text-tertiary'
             )}
           >
             <div className={cn(
-              'flex items-center justify-center w-10 h-7 rounded-full transition-colors duration-200',
+              'flex items-center justify-center w-10 h-7 rounded-full transition-colors duration-150',
               (moreOpen || isMoreActive) && 'bg-accent-muted'
             )}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

@@ -102,7 +102,7 @@ export function ScoreDashboard({
         {/* ━━━ 30-DAY TREND ━━━ */}
         {scoreHistory.length > 0 && (
           <BentoItem span="full" delay={120}>
-            <section className="bg-surface-secondary border border-border rounded-2xl p-6">
+            <section className="card-elevated rounded-lg p-6">
               <h2 className="text-sm font-semibold text-text-primary mb-4">30-Day Trend</h2>
               <ScoreTrendChart history={scoreHistory} />
             </section>
@@ -112,7 +112,7 @@ export function ScoreDashboard({
         {/* ━━━ DIMENSION BREAKDOWN ━━━ */}
         {scoreStats?.dimensionAvgs && (
           <BentoItem span="wide" delay={180}>
-            <section className="bg-surface-secondary border border-border rounded-2xl p-6 h-full">
+            <section className="card-elevated rounded-lg p-6 h-full">
               <h2 className="text-sm font-semibold text-text-primary mb-4">Dimension Averages</h2>
               <DimensionBreakdown averages={scoreStats.dimensionAvgs} />
             </section>
@@ -122,7 +122,7 @@ export function ScoreDashboard({
         {/* ━━━ WEEKLY AVERAGES ━━━ */}
         {scoreStats && scoreStats.weeklyAverages.length > 0 && (
           <BentoItem span="wide" delay={240}>
-            <section className="bg-surface-secondary border border-border rounded-2xl p-6 h-full">
+            <section className="card-elevated rounded-lg p-6 h-full">
               <h2 className="text-sm font-semibold text-text-primary mb-4">Weekly Progress</h2>
               <WeeklyAverages weeks={scoreStats.weeklyAverages} />
             </section>

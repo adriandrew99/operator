@@ -28,7 +28,7 @@ export function ThemeToggle({ size = 'default' }: { size?: 'default' | 'compact'
     <button
       onClick={cycleTheme}
       className={cn(
-        'rounded-xl flex items-center justify-center transition-all duration-300 btn-press',
+        'rounded-md flex items-center justify-center transition-all duration-300 btn-press',
         'border border-border hover:border-border-light',
         'hover:bg-surface-tertiary',
         size === 'compact' ? 'w-8 h-8' : 'w-10 h-10',

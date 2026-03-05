@@ -152,7 +152,7 @@ export function CommandPalette() {
       {/* Palette */}
       <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] px-4">
         <div
-          className="w-full max-w-lg bg-surface-secondary border border-border rounded-xl overflow-hidden animate-scale-in"
+          className="w-full max-w-lg bg-surface-secondary border border-border rounded-lg overflow-hidden animate-scale-in"
           onKeyDown={handleInternalKeyDown}
         >
           {/* Search input */}
