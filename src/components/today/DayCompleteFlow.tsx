@@ -95,7 +95,7 @@ export function DayCompleteFlow({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 sm:p-6 py-6 sm:py-8 pb-[env(safe-area-inset-bottom)]"
       style={{
         pointerEvents: phase === 'idle' ? 'none' : 'auto',
         opacity: isExiting ? 0 : 1,
@@ -175,10 +175,10 @@ export function DayCompleteFlow({
         </>
       )}
 
-      {/* Phase 2: Day in Review card — scales in from center */}
+      {/* Phase 2: Day in Review card — scales in from center, scrolls if needed */}
       {(phase === 'review' || phase === 'out') && (
         <div
-          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto day-complete-card-enter"
+          className="relative w-full max-w-lg max-h-[85vh] min-h-0 overflow-y-auto day-complete-card-enter my-auto"
           style={
             phase === 'out'
               ? {
