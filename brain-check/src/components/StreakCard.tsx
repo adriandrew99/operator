@@ -1,5 +1,5 @@
-import { useRef, useCallback } from 'react';
-import BrainCharacter from './BrainCharacter';
+import { useCallback } from 'react';
+import { getScoreColor } from '../store';
 
 interface StreakCardProps {
   streak: number;
@@ -8,13 +8,10 @@ interface StreakCardProps {
 }
 
 export default function StreakCard({ streak, healthScore, dayNumber }: StreakCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const scoreColor = getScoreColor(healthScore);
 
   const handleShare = useCallback(async () => {
-    if (!cardRef.current) return;
-
     try {
-      // Use canvas to render shareable card
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
       const w = 600;
@@ -22,71 +19,73 @@ export default function StreakCard({ streak, healthScore, dayNumber }: StreakCar
       canvas.width = w;
       canvas.height = h;
 
-      // Background
-      ctx.fillStyle = '#faf7f2';
+      // Background gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#1a1a1a');
+      grad.addColorStop(1, '#2a2a2a');
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.roundRect(0, 0, w, h, 20);
+      ctx.roundRect(0, 0, w, h, 24);
       ctx.fill();
 
-      // Header
-      ctx.fillStyle = '#2d2a26';
-      ctx.font = 'bold 32px Nunito, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🧠 Brain Check', w / 2, 55);
-
-      // Day
-      ctx.fillStyle = '#8a8680';
-      ctx.font = '18px Nunito, sans-serif';
-      ctx.fillText(`Day ${dayNumber}`, w / 2, 85);
-
-      // Streak
-      const scoreColor = healthScore >= 70 ? '#5ecc8b' : healthScore >= 40 ? '#f0c060' : '#e06060';
+      // Accent bar at top
       ctx.fillStyle = scoreColor;
-      ctx.font = 'bold 80px Nunito, sans-serif';
+      ctx.fillRect(0, 0, w, 4);
+
+      // Title
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px Nunito, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Brain Check', w / 2, 50);
+
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '14px Nunito, system-ui, sans-serif';
+      ctx.fillText(`Day ${dayNumber} — Dopamine Detox`, w / 2, 75);
+
+      // Streak number
+      ctx.fillStyle = scoreColor;
+      ctx.font = 'bold 96px Nunito, system-ui, sans-serif';
       ctx.fillText(`${streak}`, w / 2, 200);
 
-      ctx.fillStyle = '#2d2a26';
-      ctx.font = 'bold 24px Nunito, sans-serif';
-      ctx.fillText('day streak', w / 2, 235);
-
-      // Health score
-      ctx.font = '20px Nunito, sans-serif';
-      ctx.fillStyle = '#8a8680';
-      ctx.fillText(`Health Score: ${healthScore}/100`, w / 2, 290);
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = 'bold 18px Nunito, system-ui, sans-serif';
+      ctx.fillText('DAY STREAK', w / 2, 230);
 
       // Health bar
-      const barW = 300;
-      const barH = 12;
+      const barW = 280;
+      const barH = 10;
       const barX = (w - barW) / 2;
-      const barY = 310;
+      const barY = 270;
 
-      ctx.fillStyle = '#e8e4de';
+      ctx.fillStyle = '#374151';
       ctx.beginPath();
-      ctx.roundRect(barX, barY, barW, barH, 6);
+      ctx.roundRect(barX, barY, barW, barH, 5);
       ctx.fill();
 
       ctx.fillStyle = scoreColor;
       ctx.beginPath();
-      ctx.roundRect(barX, barY, barW * (healthScore / 100), barH, 6);
+      ctx.roundRect(barX, barY, barW * (healthScore / 100), barH, 5);
       ctx.fill();
 
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '14px Nunito, system-ui, sans-serif';
+      ctx.fillText(`Health Score: ${healthScore}/100`, w / 2, 310);
+
       // Footer
-      ctx.fillStyle = '#b0aaa0';
-      ctx.font = '14px Nunito, sans-serif';
-      ctx.fillText('Dopamine Detox Tracker', w / 2, 370);
+      ctx.fillStyle = '#4b5563';
+      ctx.font = '12px Nunito, system-ui, sans-serif';
+      ctx.fillText('braincheck.app', w / 2, 370);
 
       canvas.toBlob(async (blob) => {
         if (!blob) return;
-
         if (navigator.share) {
           const file = new File([blob], 'brain-check-streak.png', { type: 'image/png' });
           await navigator.share({
             title: 'Brain Check Streak',
-            text: `Day ${streak} streak! Health score: ${healthScore}/100 🧠`,
+            text: `${streak} day streak! Health: ${healthScore}/100 🧠`,
             files: [file],
           });
         } else {
-          // Fallback: download
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -96,28 +95,33 @@ export default function StreakCard({ streak, healthScore, dayNumber }: StreakCar
         }
       }, 'image/png');
     } catch {
-      // Share cancelled or failed silently
+      // cancelled
     }
-  }, [streak, healthScore, dayNumber]);
+  }, [streak, healthScore, dayNumber, scoreColor]);
 
   return (
     <div>
-      <div
-        ref={cardRef}
-        className="bg-white rounded-2xl p-6 border border-[#e8e4de] shadow-sm text-center"
-      >
-        <div className="flex justify-center mb-2">
-          <BrainCharacter healthScore={healthScore} size={80} />
+      {/* Preview card */}
+      <div className="bg-[#1a1a1a] rounded-2xl p-6 text-center overflow-hidden relative">
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: scoreColor }} />
+        <p className="text-xs font-bold text-[#6b7280] mb-1">Day {dayNumber}</p>
+        <div className="text-5xl font-extrabold mb-1" style={{ color: scoreColor }}>{streak}</div>
+        <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">Day Streak</p>
+        <div className="mt-4 mx-auto w-48">
+          <div className="w-full h-2 bg-[#374151] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${healthScore}%`, backgroundColor: scoreColor }}
+            />
+          </div>
+          <p className="text-[11px] text-[#6b7280] mt-1.5">Health: {healthScore}/100</p>
         </div>
-        <div className="text-4xl font-extrabold text-[#2d2a26]">{streak}</div>
-        <div className="text-sm font-semibold text-[#8a8680]">day streak</div>
-        <div className="text-xs text-[#b0aaa0] mt-1">Day {dayNumber} · Score {healthScore}/100</div>
       </div>
       <button
         onClick={handleShare}
-        className="mt-3 w-full py-3 rounded-2xl bg-[#2d2a26] text-white font-bold text-sm hover:bg-[#3d3a36] transition-colors"
+        className="mt-3 w-full py-3 rounded-2xl bg-[#1a1a1a] text-white font-bold text-sm hover:bg-[#2a2a2a] transition-all active:scale-[0.98]"
       >
-        Share Streak Card
+        Share Image
       </button>
     </div>
   );

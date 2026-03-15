@@ -19,9 +19,9 @@ export function calculateHealthScore(rules: Record<RuleKey, boolean>, streakDays
 }
 
 export function getScoreColor(score: number): string {
-  if (score >= 70) return '#5ecc8b';
-  if (score >= 40) return '#f0c060';
-  return '#e06060';
+  if (score >= 70) return '#22c55e';
+  if (score >= 40) return '#f59e0b';
+  return '#ef4444';
 }
 
 export function getScoreLabel(score: number): string {

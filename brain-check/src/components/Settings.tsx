@@ -20,105 +20,90 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const enableNotifications = async () => {
     if (!('Notification' in window)) {
-      setNotifStatus('Notifications not supported in this browser');
+      setNotifStatus('Not supported in this browser');
       return;
     }
-
     const perm = await Notification.requestPermission();
     if (perm === 'granted') {
-      // Schedule notification using service worker
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.ready;
-        // Store notification time preference
         const updated = { ...data, notificationTime: notifTime };
         saveData(updated);
         setData(updated);
-        setNotifStatus('Notifications enabled! You\'ll be reminded at ' + notifTime);
-
-        // Show a test notification
-        reg.showNotification('Brain Check 🧠', {
-          body: 'Notifications are set up! You\'ll be reminded daily.',
-          icon: '/brain-icon-192.png',
-          badge: '/brain-icon-192.png',
+        setNotifStatus('Enabled! Reminders at ' + notifTime);
+        reg.showNotification('Brain Check', {
+          body: 'Notifications set up! You\'ll be reminded daily.',
+          icon: '/brain-icon-192.svg',
         });
       }
     } else {
-      setNotifStatus('Permission denied. Enable in browser settings.');
+      setNotifStatus('Permission denied. Check browser settings.');
     }
   };
 
   const resetData = () => {
-    if (confirm('Are you sure? This will delete ALL your data.')) {
+    if (confirm('Delete ALL your data? This cannot be undone.')) {
       localStorage.removeItem('brain-check-data');
       window.location.reload();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center">
-      <div className="bg-[#faf7f2] w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 max-h-[80vh] overflow-y-auto animate-slide-up">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-[#faf8f5] w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 max-h-[85vh] overflow-y-auto animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-extrabold text-[#2d2a26]">Settings</h2>
+          <h2 className="text-xl font-extrabold text-[#1a1a1a]">Settings</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#e8e4de] flex items-center justify-center text-sm font-bold"
+            className="w-9 h-9 rounded-xl bg-[#f0ece6] flex items-center justify-center text-sm font-bold text-[#9ca3af] hover:bg-[#e8e4de]"
           >
             ✕
           </button>
         </div>
 
         <div className="space-y-5">
-          {/* Notification Time */}
-          <div>
-            <label className="text-sm font-bold text-[#2d2a26] block mb-2">
-              📱 Reminder Time
-            </label>
+          <div className="card-solid p-4">
+            <label className="text-sm font-bold text-[#1a1a1a] block mb-2">Daily Reminder</label>
             <input
               type="time"
               value={notifTime}
               onChange={(e) => setNotifTime(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-[#e8e4de] bg-white text-sm focus:outline-none focus:border-[#5ecc8b]"
+              className="w-full px-4 py-3 rounded-xl border border-[#f0ece6] bg-[#faf8f5] text-sm focus:outline-none focus:border-[#22c55e]"
             />
             <button
               onClick={enableNotifications}
-              className="mt-2 w-full py-2.5 rounded-xl bg-[#5ecc8b] text-white font-bold text-sm"
+              className="mt-2 w-full py-2.5 rounded-xl bg-[#22c55e] text-white font-bold text-sm hover:bg-[#16a34a] transition-colors"
             >
-              Enable Push Notifications
+              Enable Notifications
             </button>
-            {notifStatus && (
-              <p className="mt-2 text-xs text-[#8a8680]">{notifStatus}</p>
-            )}
+            {notifStatus && <p className="mt-2 text-xs text-[#9ca3af]">{notifStatus}</p>}
           </div>
 
-          {/* API Key */}
-          <div>
-            <label className="text-sm font-bold text-[#2d2a26] block mb-2">
-              🔑 Anthropic API Key
-            </label>
+          <div className="card-solid p-4">
+            <label className="text-sm font-bold text-[#1a1a1a] block mb-1">AI Coach API Key</label>
+            <p className="text-[11px] text-[#9ca3af] mb-2">Anthropic API key. Stored on your device only.</p>
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-ant-..."
-              className="w-full px-4 py-3 rounded-xl border border-[#e8e4de] bg-white text-sm focus:outline-none focus:border-[#5ecc8b]"
+              className="w-full px-4 py-3 rounded-xl border border-[#f0ece6] bg-[#faf8f5] text-sm focus:outline-none focus:border-[#22c55e]"
             />
-            <p className="mt-1 text-xs text-[#8a8680]">
-              Stored locally only. Used for AI coaching messages.
-            </p>
           </div>
 
-          {/* Save */}
           <button
             onClick={handleSave}
-            className="w-full py-3 rounded-2xl bg-[#2d2a26] text-white font-bold text-sm"
+            className="w-full py-3.5 rounded-2xl bg-[#1a1a1a] text-white font-bold text-sm hover:bg-[#2a2a2a] transition-all"
           >
             Save Settings
           </button>
 
-          {/* Reset */}
           <button
             onClick={resetData}
-            className="w-full py-3 rounded-2xl border-2 border-[#e06060] text-[#e06060] font-bold text-sm"
+            className="w-full py-3 rounded-2xl border-2 border-[#ef4444]/30 text-[#ef4444] font-bold text-sm hover:bg-[#ef4444]/5 transition-all"
           >
             Reset All Data
           </button>

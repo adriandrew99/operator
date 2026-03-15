@@ -5,19 +5,29 @@ import { SCIENCE_MILESTONES } from '../constants';
 export default function Science() {
   const data = useMemo(loadData, []);
   const currentDay = getDayNumber(data);
+  const unlockedCount = SCIENCE_MILESTONES.filter((m) => currentDay >= m.day).length;
 
   return (
-    <div className="px-4 pt-6 pb-24 max-w-lg mx-auto space-y-5 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-extrabold text-[#2d2a26]">Science Timeline</h1>
-        <p className="text-sm text-[#8a8680] font-semibold mt-1">
-          Your brain's recovery journey — Day {currentDay}
-        </p>
+    <div className="px-4 pt-4 pb-24 max-w-lg mx-auto">
+      <h1 className="text-xl font-extrabold text-[#1a1a1a] mb-1">Science Timeline</h1>
+      <p className="text-sm text-[#9ca3af] font-semibold mb-2">
+        Your brain's recovery — Day {currentDay}
+      </p>
+      <div className="flex items-center gap-2 mb-6">
+        <div className="flex-1 h-2 bg-[#f0ece6] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#22c55e] rounded-full transition-all duration-500"
+            style={{ width: `${(unlockedCount / SCIENCE_MILESTONES.length) * 100}%` }}
+          />
+        </div>
+        <span className="text-xs font-bold text-[#9ca3af]">
+          {unlockedCount}/{SCIENCE_MILESTONES.length}
+        </span>
       </div>
 
       <div className="relative">
         {/* Timeline line */}
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-[#e8e4de]" />
+        <div className="absolute left-[23px] top-6 bottom-6 w-[2px] bg-[#f0ece6]" />
 
         <div className="space-y-4">
           {SCIENCE_MILESTONES.map((milestone, i) => {
@@ -25,54 +35,72 @@ export default function Science() {
             const isNext =
               !unlocked &&
               (i === 0 || currentDay >= SCIENCE_MILESTONES[i - 1].day);
+            const daysLeft = milestone.day - currentDay;
+            const progress = isNext ? Math.min(((currentDay - (i > 0 ? SCIENCE_MILESTONES[i-1].day : 0)) / (milestone.day - (i > 0 ? SCIENCE_MILESTONES[i-1].day : 0))) * 100, 99) : 0;
 
             return (
               <div key={milestone.day} className="relative flex gap-4">
-                {/* Timeline dot */}
+                {/* Timeline node */}
                 <div
-                  className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 border-2 transition-all ${
+                  className={`relative z-10 w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-all ${
                     unlocked
-                      ? 'bg-[#5ecc8b]/10 border-[#5ecc8b]'
+                      ? 'bg-[#22c55e] shadow-lg shadow-[#22c55e]/20'
                       : isNext
-                      ? 'bg-[#f0c060]/10 border-[#f0c060] animate-pulse'
-                      : 'bg-[#e8e4de] border-[#d0ccc6]'
+                      ? 'bg-[#f59e0b] shadow-lg shadow-[#f59e0b]/20'
+                      : 'bg-[#f0ece6]'
                   }`}
                 >
-                  {unlocked ? milestone.icon : isNext ? '⏳' : '🔒'}
+                  {unlocked ? (
+                    <span className="text-white text-lg">{milestone.icon}</span>
+                  ) : isNext ? (
+                    <span className="text-white text-base">⏳</span>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#c0bbb4" stroke="none">
+                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                    </svg>
+                  )}
                 </div>
 
-                {/* Content */}
+                {/* Content card */}
                 <div
-                  className={`flex-1 rounded-2xl p-4 border shadow-sm transition-all ${
+                  className={`flex-1 rounded-2xl p-4 transition-all ${
                     unlocked
-                      ? 'bg-white border-[#e8e4de]'
-                      : 'bg-[#f5f3f0] border-[#e8e4de] opacity-60'
+                      ? 'card-solid'
+                      : isNext
+                      ? 'bg-gradient-to-r from-[#f59e0b]/5 to-[#f59e0b]/10 border border-[#f59e0b]/20 rounded-2xl'
+                      : 'bg-[#f5f3f0]/60 border border-[#e8e4de] rounded-2xl opacity-50'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-[#8a8680]">Day {milestone.day}</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold text-[#9ca3af] uppercase">Day {milestone.day}</span>
                     {unlocked && (
-                      <span className="text-[10px] font-bold text-[#5ecc8b] bg-[#5ecc8b]/10 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-bold text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md">
                         UNLOCKED
                       </span>
                     )}
                     {isNext && (
-                      <span className="text-[10px] font-bold text-[#f0c060] bg-[#f0c060]/10 px-2 py-0.5 rounded-full">
-                        {milestone.day - currentDay} DAYS LEFT
+                      <span className="text-[10px] font-bold text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded-md">
+                        {daysLeft}d LEFT
                       </span>
                     )}
                   </div>
-                  <h3 className="font-bold text-[15px] text-[#2d2a26] mb-1">{milestone.title}</h3>
+                  <h3 className="font-bold text-[15px] text-[#1a1a1a] mb-1.5">{milestone.title}</h3>
                   {unlocked ? (
-                    <p className="text-sm text-[#2d2a26] leading-relaxed">
-                      {milestone.description}
-                    </p>
+                    <p className="text-[13px] text-[#4b5563] leading-relaxed">{milestone.description}</p>
+                  ) : isNext ? (
+                    <div>
+                      <div className="w-full h-1.5 bg-[#f59e0b]/20 rounded-full overflow-hidden mb-2">
+                        <div
+                          className="h-full bg-[#f59e0b] rounded-full transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <p className="text-[13px] text-[#9ca3af] italic">
+                        {daysLeft} more day{daysLeft > 1 ? 's' : ''} to unlock this milestone.
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-sm text-[#8a8680] italic">
-                      {isNext
-                        ? `Keep going! ${milestone.day - currentDay} more day${milestone.day - currentDay > 1 ? 's' : ''} to unlock this milestone.`
-                        : 'Complete earlier milestones to reveal this science fact.'}
-                    </p>
+                    <p className="text-[13px] text-[#9ca3af] italic">Keep going to unlock.</p>
                   )}
                 </div>
               </div>
