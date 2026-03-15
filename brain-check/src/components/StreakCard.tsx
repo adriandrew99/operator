@@ -19,45 +19,40 @@ export default function StreakCard({ streak, healthScore, dayNumber }: StreakCar
       canvas.width = w;
       canvas.height = h;
 
-      // Background gradient
       const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#1a1a1a');
-      grad.addColorStop(1, '#2a2a2a');
+      grad.addColorStop(0, '#0f0f14');
+      grad.addColorStop(1, '#1a1a24');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.roundRect(0, 0, w, h, 24);
       ctx.fill();
 
-      // Accent bar at top
       ctx.fillStyle = scoreColor;
       ctx.fillRect(0, 0, w, 4);
 
-      // Title
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 20px Nunito, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Brain Check', w / 2, 50);
 
-      ctx.fillStyle = '#6b7280';
+      ctx.fillStyle = '#6b6b80';
       ctx.font = '14px Nunito, system-ui, sans-serif';
       ctx.fillText(`Day ${dayNumber} — Dopamine Detox`, w / 2, 75);
 
-      // Streak number
       ctx.fillStyle = scoreColor;
       ctx.font = 'bold 96px Nunito, system-ui, sans-serif';
       ctx.fillText(`${streak}`, w / 2, 200);
 
-      ctx.fillStyle = '#9ca3af';
+      ctx.fillStyle = '#6b6b80';
       ctx.font = 'bold 18px Nunito, system-ui, sans-serif';
       ctx.fillText('DAY STREAK', w / 2, 230);
 
-      // Health bar
       const barW = 280;
       const barH = 10;
       const barX = (w - barW) / 2;
       const barY = 270;
 
-      ctx.fillStyle = '#374151';
+      ctx.fillStyle = '#2a2a3a';
       ctx.beginPath();
       ctx.roundRect(barX, barY, barW, barH, 5);
       ctx.fill();
@@ -67,12 +62,11 @@ export default function StreakCard({ streak, healthScore, dayNumber }: StreakCar
       ctx.roundRect(barX, barY, barW * (healthScore / 100), barH, 5);
       ctx.fill();
 
-      ctx.fillStyle = '#6b7280';
+      ctx.fillStyle = '#6b6b80';
       ctx.font = '14px Nunito, system-ui, sans-serif';
       ctx.fillText(`Health Score: ${healthScore}/100`, w / 2, 310);
 
-      // Footer
-      ctx.fillStyle = '#4b5563';
+      ctx.fillStyle = '#4b4b60';
       ctx.font = '12px Nunito, system-ui, sans-serif';
       ctx.fillText('braincheck.app', w / 2, 370);
 
@@ -101,25 +95,24 @@ export default function StreakCard({ streak, healthScore, dayNumber }: StreakCar
 
   return (
     <div>
-      {/* Preview card */}
-      <div className="bg-[#1a1a1a] rounded-2xl p-6 text-center overflow-hidden relative">
+      <div className="card p-6 text-center overflow-hidden relative">
         <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: scoreColor }} />
-        <p className="text-xs font-bold text-[#6b7280] mb-1">Day {dayNumber}</p>
+        <p className="text-xs font-bold text-[#6b6b80] mb-1">Day {dayNumber}</p>
         <div className="text-5xl font-extrabold mb-1" style={{ color: scoreColor }}>{streak}</div>
-        <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">Day Streak</p>
+        <p className="text-xs font-bold text-[#6b6b80] uppercase tracking-wider">Day Streak</p>
         <div className="mt-4 mx-auto w-48">
-          <div className="w-full h-2 bg-[#374151] rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full"
               style={{ width: `${healthScore}%`, backgroundColor: scoreColor }}
             />
           </div>
-          <p className="text-[11px] text-[#6b7280] mt-1.5">Health: {healthScore}/100</p>
+          <p className="text-[11px] text-[#6b6b80] mt-1.5">Health: {healthScore}/100</p>
         </div>
       </div>
       <button
         onClick={handleShare}
-        className="mt-3 w-full py-3 rounded-2xl bg-[#1a1a1a] text-white font-bold text-sm hover:bg-[#2a2a2a] transition-all active:scale-[0.98]"
+        className="mt-3 w-full py-3 rounded-2xl bg-white/[0.06] border border-white/[0.06] text-white font-bold text-sm hover:bg-white/[0.08] transition-all active:scale-[0.98]"
       >
         Share Image
       </button>

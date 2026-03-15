@@ -8,26 +8,29 @@ export default function Science() {
   const unlockedCount = SCIENCE_MILESTONES.filter((m) => currentDay >= m.day).length;
 
   return (
-    <div className="px-4 pt-4 pb-24 max-w-lg mx-auto">
-      <h1 className="text-xl font-extrabold text-[#1a1a1a] mb-1">Science Timeline</h1>
-      <p className="text-sm text-[#9ca3af] font-semibold mb-2">
-        Your brain's recovery — Day {currentDay}
-      </p>
-      <div className="flex items-center gap-2 mb-6">
-        <div className="flex-1 h-2 bg-[#f0ece6] rounded-full overflow-hidden">
+    <div className="px-4 md:px-6 pt-6 md:pt-8 space-y-5">
+      <div className="animate-fade-in-up" style={{ opacity: 0 }}>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-white mb-1">Science Timeline</h1>
+        <p className="text-sm text-[#6b6b80] font-semibold">
+          Your brain's recovery — Day {currentDay}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2 animate-fade-in-up" style={{ opacity: 0, animationDelay: '80ms' }}>
+        <div className="flex-1 h-2 bg-white/[0.06] rounded-full overflow-hidden">
           <div
             className="h-full bg-[#22c55e] rounded-full transition-all duration-500"
             style={{ width: `${(unlockedCount / SCIENCE_MILESTONES.length) * 100}%` }}
           />
         </div>
-        <span className="text-xs font-bold text-[#9ca3af]">
+        <span className="text-xs font-bold text-[#6b6b80]">
           {unlockedCount}/{SCIENCE_MILESTONES.length}
         </span>
       </div>
 
-      <div className="relative">
+      <div className="relative animate-fade-in-up" style={{ opacity: 0, animationDelay: '160ms' }}>
         {/* Timeline line */}
-        <div className="absolute left-[23px] top-6 bottom-6 w-[2px] bg-[#f0ece6]" />
+        <div className="absolute left-[23px] top-6 bottom-6 w-[2px] bg-white/[0.06]" />
 
         <div className="space-y-4">
           {SCIENCE_MILESTONES.map((milestone, i) => {
@@ -47,7 +50,7 @@ export default function Science() {
                       ? 'bg-[#22c55e] shadow-lg shadow-[#22c55e]/20'
                       : isNext
                       ? 'bg-[#f59e0b] shadow-lg shadow-[#f59e0b]/20'
-                      : 'bg-[#f0ece6]'
+                      : 'bg-white/[0.06]'
                   }`}
                 >
                   {unlocked ? (
@@ -55,7 +58,7 @@ export default function Science() {
                   ) : isNext ? (
                     <span className="text-white text-base">⏳</span>
                   ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#c0bbb4" stroke="none">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#6b6b80" stroke="none">
                       <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
                     </svg>
                   )}
@@ -65,14 +68,14 @@ export default function Science() {
                 <div
                   className={`flex-1 rounded-2xl p-4 transition-all ${
                     unlocked
-                      ? 'card-solid'
+                      ? 'card'
                       : isNext
-                      ? 'bg-gradient-to-r from-[#f59e0b]/5 to-[#f59e0b]/10 border border-[#f59e0b]/20 rounded-2xl'
-                      : 'bg-[#f5f3f0]/60 border border-[#e8e4de] rounded-2xl opacity-50'
+                      ? 'bg-[#f59e0b]/5 border border-[#f59e0b]/20 rounded-2xl'
+                      : 'bg-white/[0.02] border border-white/[0.04] rounded-2xl opacity-50'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold text-[#9ca3af] uppercase">Day {milestone.day}</span>
+                    <span className="text-[10px] font-bold text-[#6b6b80] uppercase">Day {milestone.day}</span>
                     {unlocked && (
                       <span className="text-[10px] font-bold text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md">
                         UNLOCKED
@@ -84,9 +87,9 @@ export default function Science() {
                       </span>
                     )}
                   </div>
-                  <h3 className="font-bold text-[15px] text-[#1a1a1a] mb-1.5">{milestone.title}</h3>
+                  <h3 className="font-bold text-[15px] text-white mb-1.5">{milestone.title}</h3>
                   {unlocked ? (
-                    <p className="text-[13px] text-[#4b5563] leading-relaxed">{milestone.description}</p>
+                    <p className="text-[13px] text-[#c8c7d4] leading-relaxed">{milestone.description}</p>
                   ) : isNext ? (
                     <div>
                       <div className="w-full h-1.5 bg-[#f59e0b]/20 rounded-full overflow-hidden mb-2">
@@ -95,12 +98,12 @@ export default function Science() {
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <p className="text-[13px] text-[#9ca3af] italic">
+                      <p className="text-[13px] text-[#6b6b80] italic">
                         {daysLeft} more day{daysLeft > 1 ? 's' : ''} to unlock this milestone.
                       </p>
                     </div>
                   ) : (
-                    <p className="text-[13px] text-[#9ca3af] italic">Keep going to unlock.</p>
+                    <p className="text-[13px] text-[#6b6b80] italic">Keep going to unlock.</p>
                   )}
                 </div>
               </div>

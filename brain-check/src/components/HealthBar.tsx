@@ -13,24 +13,16 @@ export default function HealthBar({ score, showLabel = true }: HealthBarProps) {
     <div className="w-full">
       {showLabel && (
         <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color }}>
-              {label}
-            </span>
-          </div>
+          <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color }}>{label}</span>
           <span className="text-sm font-extrabold" style={{ color }}>
-            {score}<span className="text-[#9ca3af] font-semibold">/100</span>
+            {score}<span className="text-[#6b6b80] font-semibold">/100</span>
           </span>
         </div>
       )}
-      <div className="w-full h-2.5 bg-[#f0ece6] rounded-full overflow-hidden">
+      <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden"
-          style={{
-            width: `${Math.max(score, 2)}%`,
-            background: `linear-gradient(90deg, ${color}, ${color}dd)`,
-          }}
+          style={{ width: `${Math.max(score, 2)}%`, backgroundColor: color }}
         >
           {score > 20 && <div className="absolute inset-0 shimmer" />}
         </div>

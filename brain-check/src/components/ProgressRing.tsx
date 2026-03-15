@@ -1,5 +1,3 @@
-import { getScoreColor } from '../store';
-
 interface ProgressRingProps {
   score: number;
   rulesHeld: number;
@@ -7,67 +5,61 @@ interface ProgressRingProps {
   size?: number;
 }
 
-export default function ProgressRing({ score, rulesHeld, totalRules, size = 220 }: ProgressRingProps) {
-  const radius = 85;
+export default function ProgressRing({ score, rulesHeld, totalRules, size = 200 }: ProgressRingProps) {
+  const radius = 80;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
-  const color = getScoreColor(score);
 
-  const segments = totalRules;
-  const segmentAngle = 360 / segments;
+  // Color based on score
+  const color = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : score >= 1 ? '#ef4444' : '#3b3b50';
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       <svg viewBox="0 0 200 200" width={size} height={size} className="transform -rotate-90">
-        {/* Background track */}
-        <circle
-          cx="100" cy="100" r={radius}
-          fill="none"
-          stroke="#f0ece6"
-          strokeWidth="12"
-          strokeLinecap="round"
-        />
-        {/* Progress arc */}
+        {/* Glow */}
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        {/* Track */}
+        <circle cx="100" cy="100" r={radius} fill="none" stroke="#1e1e2e" strokeWidth="10" />
+        {/* Progress */}
         <circle
           cx="100" cy="100" r={radius}
           fill="none"
           stroke={color}
-          strokeWidth="12"
+          strokeWidth="10"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="animate-ring transition-all duration-700 ease-out"
-          style={{ filter: `drop-shadow(0 0 8px ${color}40)` }}
+          className="animate-ring transition-all duration-700"
+          filter={score > 0 ? 'url(#glow)' : undefined}
         />
-        {/* Rule segment dots around the ring */}
-        {Array.from({ length: segments }).map((_, i) => {
-          const angle = (i * segmentAngle - 90) * (Math.PI / 180);
-          const dotRadius = radius + 16;
-          const cx = 100 + dotRadius * Math.cos(angle);
-          const cy = 100 + dotRadius * Math.sin(angle);
-          const isHeld = i < rulesHeld;
-
-          return (
-            <circle
-              key={i}
-              cx={cx} cy={cy} r="4"
-              fill={isHeld ? color : '#e0dcd6'}
-              className="transition-all duration-300"
-              style={isHeld ? { filter: `drop-shadow(0 0 4px ${color}60)` } : {}}
-            />
-          );
-        })}
       </svg>
-      {/* Center content */}
+      {/* Center */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div
-          className="text-5xl font-extrabold transition-all duration-500"
-          style={{ color }}
-        >
+        <div className="text-4xl font-extrabold transition-all duration-500" style={{ color }}>
           {score}
         </div>
-        <div className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider mt-0.5">
-          Health Score
+        <div className="text-[10px] font-bold text-[#6b6b80] uppercase tracking-widest mt-1">
+          Health
+        </div>
+        <div className="flex gap-1 mt-2">
+          {Array.from({ length: totalRules }).map((_, i) => (
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full transition-all duration-300"
+              style={{
+                backgroundColor: i < rulesHeld ? color : '#2a2a3a',
+                boxShadow: i < rulesHeld ? `0 0 6px ${color}60` : 'none',
+              }}
+            />
+          ))}
         </div>
       </div>
     </div>
